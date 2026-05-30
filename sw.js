@@ -1,34 +1,80 @@
-const CACHE_NAME = 'woops-v1';
-const ASSETS = [
-  'index.html',
-  'manifest.json'
+const CACHE_NAME = 'woops-v2'; // увеличиваем версию при обновлении
+
+const ASSETS_TO_CACHE = [
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json',
+  // Иконки (добавь свои)
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
-// Установка воркера и кэширование базовых файлов
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
+// ==================== INSTALL ====================
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Woops: Кэшируем статические файлы');
+        return cache.addAll(ASSETS_TO_CACHE);
+      })
+      .then(() => self.skipWaiting())
   );
 });
 
-// Активация и очистка старого кэша
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
+// ==================== ACTIVATE ====================
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then(keys => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
+        keys.map(key => {
+          if (key !== CACHE_NAME) {
+            console.log('Woops: Удаляем старый кэш:', key);
+            return caches.delete(key);
+          }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
-// Стратегия: сначала сеть, если сети нет — берем из кэша
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+// ==================== FETCH ====================
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Пропускаем Firebase и внешние запросы (они должны идти по сети)
+  if (url.hostname.includes('firebase') || 
+      url.hostname.includes('googleapis') || 
+      url.hostname.includes('gstatic')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Стратегия Stale-While-Revalidate для статических файлов
+  event.respondWith(
+    caches.match(event.request)
+      .then(cachedResponse => {
+        // Возвращаем кэш сразу, а в фоне обновляем
+        const fetchPromise = fetch(event.request)
+          .then(networkResponse => {
+            // Кэшируем только успешные ответы
+            if (networkResponse && networkResponse.status === 200) {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME)
+                .then(cache => cache.put(event.request, responseToCache));
+            }
+            return networkResponse;
+          })
+          .catch(() => null);
+
+        return cachedResponse || fetchPromise;
+      })
   );
+});
+
+// Обновление при новом контенте
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
