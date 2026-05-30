@@ -130,3 +130,72 @@ async function loadChatsList() {
     li.innerHTML = `<div class="avatar">${(u.name||'?')[0].toUpperCase()}</div><div><h4>${u.name||'Аноним'}</h4><p>Нажмите, чтобы написать</p></div>`;
     li.onclick = () => openChat(docSnap.id, u.name);
     chatList.appendChild(li);
+    count++;
+  });
+  if (count === 0) chatList.innerHTML = '<li style="padding:16px;color:#888">Нет других пользователей. Попроси друга зарегистрироваться!</li>';
+}
+
+// 💬 Открытие чата
+function openChat(userId, userName) {
+  currentChat = { id: userId, name: userName };
+  mainScreen.classList.remove('active');
+  chatScreen.classList.add('active');
+  document.getElementById('chat-name').textContent = userName;
+  document.getElementById('chat-avatar').textContent = (userName||'?')[0].toUpperCase();
+  msgArea.innerHTML = '';
+  
+  // Комната чата = сортировка ID двух пользователей
+  const room = [currentUser.uid, userId].sort().join('_');
+  const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
+  
+  if (unsubscribeChat) unsubscribeChat();
+  unsubscribeChat = onSnapshot(q, (snap) => {
+    msgArea.innerHTML = '';
+    snap.forEach(doc => {
+      const m = doc.data();
+      appendMessage(m.text, m.senderId === currentUser.uid);
+    });
+    msgArea.scrollTop = msgArea.scrollHeight;
+  });
+}
+
+backBtn.addEventListener('click', () => {
+  chatScreen.classList.remove('active');
+  mainScreen.classList.add('active');
+  if (unsubscribeChat) unsubscribeChat();
+  currentChat = null;
+});
+
+// ➤ Отправка текста
+async function sendMessage(text) {
+  if (!currentChat || !text) return;
+  const room = [currentUser.uid, currentChat.id].sort().join('_');
+  await addDoc(collection(db, 'messages'), {
+    room, senderId: currentUser.uid, text,
+    createdAt: serverTimestamp()
+  });
+}
+
+function appendMessage(text, isMine) {
+  const div = document.createElement('div');
+  div.className = `msg ${isMine ? 'out' : 'in'}`;
+  div.textContent = text;
+  msgArea.appendChild(div);
+}
+
+sendBtn.addEventListener('click', () => {
+  const val = textInput.value.trim();
+  if (val) { sendMessage(val); textInput.value = ''; }
+});
+textInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendBtn.click(); });
+
+// 🔄 Переключение вкладок
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    navBtns.forEach(b => b.classList.remove('active'));
+    tabs.forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    tabTitle.textContent = btn.textContent.replace(/[^\wа-яА-ЯёЁ\s]/g, '').trim();
+  });
+});
