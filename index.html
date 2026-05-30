@@ -2,23 +2,23 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Woops — быстрый мессенджер</title>
   
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
   
-  <!-- Шрифты и иконки -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- 🔐 Экран авторизации -->
   <section id="auth-screen" class="screen active">
     <div class="auth-container">
       <div class="auth-box card">
@@ -26,41 +26,45 @@
         <h1>Woops</h1>
         <p class="auth-subtitle">Быстрый. Красивый. Твой.</p>
         
+        <div id="register-fields" class="form-group-animate hidden">
+          <input type="text" id="auth-username" placeholder="Имя пользователя" autocomplete="username">
+        </div>
+        
         <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
         <input type="password" id="auth-pass" placeholder="Пароль (мин. 6)" autocomplete="current-password">
         
-        <button id="login-btn" class="btn btn-primary btn-full">Войти</button>
-        <button id="register-btn" class="btn btn-outline btn-full">Создать аккаунт</button>
+        <div class="auth-buttons">
+          <button id="login-btn" class="btn btn-primary btn-full">Войти</button>
+          <button id="register-btn" class="btn btn-outline btn-full">Создать аккаунт</button>
+        </div>
+        
+        <button id="toggle-auth-mode" class="btn btn-link hidden">Уже есть аккаунт? Войти</button>
         
         <p id="auth-error" class="error" role="alert"></p>
       </div>
     </div>
   </section>
 
-  <!-- 📱 Основной экран (мобильный) / 🖥️ Сайдбар (десктоп) -->
   <section id="main-screen" class="screen">
     
-    <!-- Десктоп: боковая панель -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="logo">💬 <strong>Woops</strong></div>
         <button id="menu-btn" class="icon-btn" aria-label="Меню">⋮</button>
       </div>
       
-      <!-- Мой профиль в сайдбаре -->
       <div class="my-profile-card card">
         <div class="avatar-wrapper">
           <img id="my-avatar" class="avatar avatar-lg" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" alt="Аватар">
-          <span class="status-indicator status-online" id="my-status-dot"></span>
+          <span class="status-indicator" id="my-status-dot"></span>
         </div>
         <div class="my-profile-info">
           <h4 id="my-name">Загрузка...</h4>
-          <small id="my-status-text" class="text-muted">● В сети</small>
+          <small id="my-status-text" class="text-muted">Загрузка...</small>
         </div>
-        <button id="edit-profile" class="btn btn-sm btn-ghost">✏️</button>
+        <button id="edit-profile" class="btn btn-sm btn-ghost" aria-label="Редактировать профиль">✏️</button>
       </div>
       
-      <!-- Навигация -->
       <nav class="sidebar-nav">
         <button class="nav-btn active" data-tab="chats">
           <span class="nav-icon">💬</span> Чаты
@@ -81,24 +85,21 @@
       </div>
     </aside>
 
-    <!-- Контент вкладок -->
     <main class="main-content">
       <header class="top-bar">
         <h2 id="tab-title">Чаты</h2>
         <div class="top-actions">
-          <button class="icon-btn" id="search-btn" aria-label="Поиск">🔍</button>
+          <button class="icon-btn" id="search-btn" aria-label="Поиск контактов">🔍</button>
           <button class="icon-btn" id="new-chat" aria-label="Новый чат">✏️</button>
         </div>
       </header>
 
       <div class="tabs-content">
-        <!-- Вкладка: Чаты -->
         <div id="tab-chats" class="tab active">
           <ul id="chat-list" class="list" role="list"></ul>
-          <p class="empty-state" id="chats-empty">Нет чатов — начните новый! ✨</p>
+          <p class="empty-state" id="chats-empty">Нет чатов — найдите друга через поиск! ✨</p>
         </div>
         
-        <!-- Вкладка: Статус -->
         <div id="tab-status" class="tab">
           <div class="empty card">
             <p>📊 Статусы друзей появятся здесь</p>
@@ -106,7 +107,6 @@
           </div>
         </div>
         
-        <!-- Вкладка: Звонки -->
         <div id="tab-calls" class="tab">
           <div class="empty card">
             <p>📞 История звонков</p>
@@ -114,37 +114,35 @@
           </div>
         </div>
         
-        <!-- Вкладка: Профиль (мобильная версия) -->
         <div id="tab-profile" class="tab">
           <div class="profile-card card">
             <div class="avatar-wrapper center">
               <img id="my-avatar-mobile" class="avatar avatar-xl" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" alt="Аватар">
-              <span class="status-indicator status-online"></span>
+              <span class="status-indicator"></span>
             </div>
             <h3 id="my-name-mobile">Загрузка...</h3>
-            <p id="my-status-mobile" class="text-muted">● В сети</p>
-            <button id="edit-profile-mobile" class="btn btn-outline">✏️ Редактировать профиль</button>
+            <p id="my-status-mobile" class="text-muted">Загрузка...</p>
+            <button id="edit-profile-mobile" class="btn btn-outline btn-full">✏️ Редактировать профиль</button>
           </div>
         </div>
       </div>
     </main>
   </section>
 
-  <!-- 💬 Экран чата -->
   <section id="chat-screen" class="screen">
     <header class="chat-top">
       <button id="back-btn" class="icon-btn" aria-label="Назад">←</button>
       <div class="contact-info">
         <div class="avatar-wrapper">
           <img id="chat-avatar" class="avatar" src="https://ui-avatars.com/api/?name=K&background=22c55e&color=fff" alt="Аватар">
-          <span class="status-indicator status-online" id="chat-status-dot"></span>
+          <span class="status-indicator" id="chat-status-dot"></span>
         </div>
         <div>
           <h4 id="chat-name">Контакт</h4>
-          <small id="chat-online" class="text-success">● в сети</small>
+          <small id="chat-online" class="text-muted">не в сети</small>
         </div>
       </div>
-      <button class="icon-btn" aria-label="Ещё">⋮</button>
+      <button class="icon-btn" id="chat-menu-btn" aria-label="Ещё">⋮</button>
     </header>
     
     <div class="messages" id="msg-area" role="log" aria-live="polite"></div>
@@ -153,20 +151,31 @@
       <div class="input-wrapper">
         <button id="emojiToggle" class="icon-btn emoji-btn" aria-label="Эмодзи" aria-expanded="false">😊</button>
         
-        <!-- Панель эмодзи -->
-        <div class="emoji-picker" id="emojiPicker" role="dialog" aria-label="Выбор эмодзи">
-          <!-- Эмодзи генерируются через JS -->
-        </div>
+        <div class="emoji-picker" id="emojiPicker" role="dialog" aria-label="Выбор эмодзи"></div>
         
-        <input type="text" id="text-input" placeholder="Написать сообщение..." autocomplete="off" aria-label="Текст сообщения">
+        <input type="text" id="text-input" placeholder="Написать сообщение..." autocomplete="off" autocapitalize="sentences" aria-label="Текст сообщения">
         <button id="send-btn" class="btn btn-primary btn-icon" aria-label="Отправить">➤</button>
       </div>
     </footer>
   </section>
 
-  <!-- ✏️ Модальное окно: Редактирование профиля -->
+  <dialog class="modal" id="searchModal" aria-labelledby="search-modal-title">
+    <div class="modal-content card">
+      <header class="modal-header">
+        <h3 id="search-modal-title">Поиск собеседников</h3>
+        <button class="icon-btn modal-close" id="closeSearch" aria-label="Закрыть">✕</button>
+      </header>
+      <div class="modal-body">
+        <div class="form-group search-input-wrapper">
+          <input type="search" id="user-search-input" placeholder="Введите email или имя для поиска...">
+        </div>
+        <ul id="search-results-list" class="list search-results"></ul>
+        <p id="search-empty-state" class="empty-state">Начните вводить текст для поиска пользователей 🔎</p>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="modal" id="profileModal" aria-labelledby="modal-title">
-    <div class="modal-overlay" id="modalOverlay"></div>
     <div class="modal-content card">
       <header class="modal-header">
         <h3 id="modal-title">Редактировать профиль</h3>
@@ -174,27 +183,24 @@
       </header>
       
       <div class="modal-body">
-        <!-- Аватар -->
         <div class="avatar-upload">
           <label for="avatarInput" class="avatar-upload-label">
             <img id="avatarPreview" class="avatar avatar-xl" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" alt="Предпросмотр">
-            <div class="avatar-overlay">
-              <span>📷 Изменить</span>
+            <div class="avatar-overlay-label">
+              <span>📷</span>
             </div>
           </label>
           <input type="file" id="avatarInput" accept="image/*" hidden>
-          <small class="text-muted">JPG, PNG до 2MB</small>
+          <small class="text-muted">PNG, JPG до 2MB</small>
         </div>
         
-        <!-- Имя -->
         <div class="form-group">
           <label for="displayName">Ваше имя</label>
           <input type="text" id="displayName" placeholder="Как вас называть?" maxlength="30">
         </div>
         
-        <!-- Статус -->
         <div class="form-group">
-          <label for="userStatus">Статус</label>
+          <label for="userStatus">Статус доступности</label>
           <select id="userStatus">
             <option value="online">🟢 Онлайн</option>
             <option value="busy">🔴 Занят</option>
@@ -203,10 +209,9 @@
           </select>
         </div>
         
-        <!-- Статус-текст (опционально) -->
         <div class="form-group">
-          <label for="statusText">О себе</label>
-          <input type="text" id="statusText" placeholder="Например: работаю над проектом 🚀" maxlength="60">
+          <label for="statusText">О себе / Статус</label>
+          <input type="text" id="statusText" placeholder="Например: В универе 🎓" maxlength="60">
         </div>
       </div>
       
@@ -217,13 +222,10 @@
     </div>
   </dialog>
 
-  <!-- 🔔 Уведомления (toast) -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <!-- Scripts -->
   <script type="module" src="app.js"></script>
   <script>
-    // Регистрация Service Worker для PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
