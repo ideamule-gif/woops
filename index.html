@@ -3,269 +3,107 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Woops • Messenger</title>
-  
+  <title>Woops Messenger</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Woops">
-  
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .chat-bg {
-      background-image: 
-        linear-gradient(rgba(9, 9, 11, 0.85), rgba(9, 9, 11, 0.85)),
-        url('https://picsum.photos/id/1015/1200/800');
-      background-size: cover;
-      background-position: center;
-    }
-    .message-bubble {
-      max-width: 78%;
-      padding: 11px 16px;
-      border-radius: 18px;
-    }
-    .my-bubble {
-      border-bottom-right-radius: 4px;
-      background: #4f46e5;
-    }
-    .their-bubble {
-      border-bottom-left-radius: 4px;
-      background: #27272a;
-    }
-    /* Скрытие скроллбара для эстетики мобильных */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  </style>
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#4f46e5">
 </head>
-<body class="bg-zinc-950 text-zinc-100 flex h-screen overflow-hidden select-none">
-
-  <div id="sidebar" class="w-full md:w-80 border-r border-zinc-900 flex flex-col flex-shrink-0 bg-zinc-950 z-20">
-    <div class="p-4 pt-6 md:pt-4 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center font-black text-xl tracking-tighter shadow-lg shadow-indigo-500/20">W</div>
-        <h1 class="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">Woops</h1>
-      </div>
-      <button onclick="alert('Поиск новых друзей...')" class="w-9 h-9 hover:bg-zinc-900 rounded-xl flex items-center justify-center transition-colors">
-        <i class="fa-solid fa-user-plus text-zinc-400 text-sm"></i>
-      </button>
+<body>
+  <!-- Экран авторизации -->
+  <section id="auth-screen" class="screen active">
+    <div class="auth-card">
+      <h1>Woops</h1>
+      <p>Быстрый и красивый мессенджер</p>
+      <input type="tel" id="phone-input" placeholder="Телефон: +7...">
+      <input type="email" id="email-input" placeholder="Email">
+      <input type="password" id="pass-input" placeholder="Пароль">
+      <button id="auth-btn">Войти / Регистрация</button>
     </div>
+  </section>
 
-    <div class="px-4 pb-2">
-      <div class="relative">
-        <input type="text" placeholder="Поиск в Woops..." 
-               class="w-full bg-zinc-900 border border-transparent focus:border-indigo-500 rounded-2xl py-2.5 px-4 pl-10 focus:outline-none text-sm transition-all placeholder-zinc-500 text-zinc-200">
-        <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-zinc-500 text-xs"></i>
+  <!-- Основной интерфейс -->
+  <section id="main-screen" class="screen">
+    <!-- Верхняя панель -->
+    <header class="app-header">
+      <h2 id="header-title">Чаты</h2>
+      <div class="header-actions">
+        <button id="btn-search">🔍</button>
+        <button id="btn-menu">⋮</button>
       </div>
-    </div>
+    </header>
 
-    <div id="chats-list" class="flex-1 overflow-y-auto px-2 space-y-1 mt-2 no-scrollbar">
+    <!-- Контент вкладок -->
+    <main class="tab-content">
+      <!-- Вкладка: Чаты -->
+      <div id="tab-chats" class="tab active">
+        <ul class="chat-list" id="chat-list"></ul>
+        <button class="fab" id="fab-new-chat">✏️</button>
       </div>
 
-    <div class="p-3 bg-zinc-900/40 border-t border-zinc-900/60 flex items-center gap-3">
-      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop" class="w-10 h-10 rounded-xl object-cover">
-      <div class="flex-1 min-w-0">
-        <div class="font-semibold text-sm truncate">Создатель Woops</div>
-        <div class="text-[11px] text-emerald-400 flex items-center gap-1">В сети</div>
+      <!-- Вкладка: Статусы -->
+      <div id="tab-status" class="tab">
+        <div class="status-header">
+          <div class="avatar status-avatar" id="my-status-avatar">👤</div>
+          <span>Мой статус</span>
+          <button id="btn-add-status">➕</button>
+        </div>
+        <ul class="status-list" id="status-list"></ul>
       </div>
-      <i class="fa-solid fa-gear text-zinc-500 hover:text-zinc-300 cursor-pointer p-2 text-sm"></i>
-    </div>
-  </div>
 
-  <div id="chat-area" class="fixed inset-0 md:relative md:flex flex-1 flex-col bg-zinc-950 transform translate-x-full md:translate-x-0 transition-transform duration-300 z-30 hidden">
-    <div class="h-16 border-b border-zinc-900 bg-zinc-950/80 backdrop-blur-md flex items-center px-4 md:px-6 justify-between flex-shrink-0">
-      <div class="flex items-center gap-3 min-w-0">
-        <button onclick="closeChat()" class="md:hidden w-8 h-8 flex items-center justify-center text-zinc-400 active:text-indigo-400 text-lg">
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
-        <img id="active-avatar" src="" class="w-10 h-10 rounded-xl object-cover ring-1 ring-zinc-800">
-        <div class="min-w-0">
-          <div id="active-name" class="font-bold text-sm md:text-base text-white truncate">Загрузка...</div>
-          <div class="text-[11px] text-emerald-400 flex items-center gap-1.5 mt-0.5">
-            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-            в сети
+      <!-- Вкладка: Звонки -->
+      <div id="tab-calls" class="tab">
+        <ul class="call-list" id="call-list"></ul>
+      </div>
+
+      <!-- Вкладка: Профиль / Настройки -->
+      <div id="tab-profile" class="tab">
+        <div class="profile-card">
+          <div class="avatar large" id="profile-avatar">👤</div>
+          <input type="file" id="avatar-input" accept="image/*" hidden>
+          <h3 id="profile-name">Имя пользователя</h3>
+          <p id="profile-status">В сети</p>
+          <button id="btn-edit-profile">Редактировать</button>
+          <button id="btn-logout" class="danger">Выйти</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Нижнее меню вкладок -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="chats">💬 Чаты</button>
+      <button class="nav-btn" data-tab="status">🟢 Статус</button>
+      <button class="nav-btn" data-tab="calls">📞 Звонки</button>
+      <button class="nav-btn" data-tab="profile">👤 Профиль</button>
+    </nav>
+
+    <!-- Экран чата -->
+    <section id="chat-screen" class="screen hidden">
+      <header class="chat-header">
+        <button id="btn-back">←</button>
+        <div class="chat-info">
+          <span class="avatar small" id="chat-avatar">👤</span>
+          <div>
+            <h4 id="chat-name">Контакт</h4>
+            <small id="chat-status">в сети</small>
           </div>
         </div>
-      </div>
-      
-      <div class="flex gap-5 text-lg text-zinc-400">
-        <i class="fa-solid fa-phone cursor-pointer hover:text-indigo-400 transition-colors text-sm md:text-base"></i>
-        <i class="fa-solid fa-video cursor-pointer hover:text-indigo-400 transition-colors text-sm md:text-base"></i>
-      </div>
-    </div>
+      </header>
+      <div class="messages" id="messages-container"></div>
+      <footer class="chat-input">
+        <button id="btn-attach">📎</button>
+        <input type="file" id="media-input" accept="image/*,video/*,.pdf,.doc" hidden>
+        <button id="btn-voice">🎤</button>
+        <input type="text" id="msg-input" placeholder="Сообщение...">
+        <button id="btn-send">➤</button>
+      </footer>
+    </section>
+  </section>
 
-    <div id="messages-container" class="flex-1 chat-bg p-4 md:p-6 overflow-y-auto space-y-4 no-scrollbar">
-      </div>
-
-    <div class="p-3 md:p-4 border-t border-zinc-900 bg-zinc-950 flex-shrink-0">
-      <div class="flex items-center gap-2 bg-zinc-900 rounded-2xl px-3 py-1.5 max-w-4xl mx-auto">
-        <button class="w-8 h-8 text-zinc-500 hover:text-zinc-300 transition-colors text-base"><i class="fa-solid fa-face-smile"></i></button>
-        
-        <input id="message-input" 
-               type="text" 
-               class="flex-1 bg-transparent outline-none text-sm placeholder-zinc-500 text-zinc-100 py-1.5"
-               placeholder="Сообщение..."
-               onkeydown="if(event.key === 'Enter') sendMessage()">
-        
-        <button onclick="sendMessage()" 
-                class="w-8 h-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center transition-all active:scale-90">
-          <i class="fa-solid fa-arrow-up text-xs"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-
-<script>
-  let currentChatIndex = null;
-
-  // Демо-данные
-  const chatsData = [
-    {
-      name: "Анна Ковалёва",
-      avatar: "https://i.pravatar.cc/150?img=47",
-      lastMsg: "Круто, давай сделаем именно так 🔥",
-      time: "14:32",
-      messages: [
-        { from: "them", text: "Привет! Как продвигается разработка приложения Woops?", time: "14:20" },
-        { from: "me", text: "Привет! Уже пишу адаптивный интерфейс, летает просто супер 🚀", time: "14:22" },
-        { from: "them", text: "Круто, давай сделаем именно так 🔥", time: "14:32" }
-      ]
-    },
-    {
-      name: "Дмитрий Морозов",
-      avatar: "https://i.pravatar.cc/150?img=12",
-      lastMsg: "Прислал тебе новый макет логотипа",
-      time: "13:09",
-      messages: [
-        { from: "them", text: "Привет, посмотришь сегодня исходники?", time: "13:01" },
-        { from: "them", text: "Прислал тебе новый макет логотипа", time: "13:09" }
-      ]
-    },
-    {
-      name: "Разработчики Woops",
-      avatar: "https://i.pravatar.cc/150?img=60",
-      lastMsg: "Завтра созваниваемся в 11:00 по PWA",
-      time: "Вчера",
-      messages: [
-        { from: "them", text: "Завтра созваниваемся в 11:00 по PWA", time: "Вчера" }
-      ]
-    }
-  ];
-
-  // Рендеринг списка чатов на панели
-  function renderChatsList() {
-    const list = document.getElementById('chats-list');
-    list.innerHTML = '';
-    
-    chatsData.forEach((chat, idx) => {
-      const activeClass = currentChatIndex === idx ? 'bg-indigo-900/40 border border-indigo-500/20' : 'hover:bg-zinc-900 border border-transparent';
-      
-      list.innerHTML += `
-        <div onclick="openChat(${idx})" class="p-3 rounded-xl flex gap-3 cursor-pointer transition-all duration-200 ${activeClass}">
-          <img src="${chat.avatar}" class="w-11 h-11 rounded-xl object-cover flex-shrink-0">
-          <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-baseline mb-0.5">
-              <span class="font-bold text-xs md:text-sm text-zinc-200 truncate">${chat.name}</span>
-              <span class="text-[10px] text-zinc-500 flex-shrink-0">${chat.time}</span>
-            </div>
-            <div class="text-xs text-zinc-400 truncate">${chat.lastMsg}</div>
-          </div>
-        </div>
-      `;
-    });
-  }
-
-  // Открытие конкретного чата
-  function openChat(idx) {
-    currentChatIndex = idx;
-    const chatArea = document.getElementById('chat-area');
-    
-    // Включаем отображение правой панели (для мобилок важно)
-    chatArea.classList.remove('hidden');
-    setTimeout(() => {
-      chatArea.classList.remove('translate-x-full');
-    }, 10);
-
-    document.getElementById('active-name').textContent = chatsData[idx].name;
-    document.getElementById('active-avatar').src = chatsData[idx].avatar;
-    
-    renderChatsList(); // перерендерить, чтобы подсветить активный
-    renderMessages();
-  }
-
-  // Закрытие чата (назад к списку) для мобилок
-  function closeChat() {
-    const chatArea = document.getElementById('chat-area');
-    chatArea.classList.add('translate-x-full');
-    setTimeout(() => {
-      chatArea.classList.add('hidden');
-      currentChatIndex = null;
-      renderChatsList();
-    }, 300);
-  }
-
-  // Рендеринг сообщений выбранного чата
-  function renderMessages() {
-    if (currentChatIndex === null) return;
-    const container = document.getElementById('messages-container');
-    container.innerHTML = '';
-    
-    chatsData[currentChatIndex].messages.forEach(msg => {
-      const isMe = msg.from === 'me';
-      const wrapper = document.createElement('div');
-      wrapper.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'}`;
-      
-      wrapper.innerHTML = `
-        <div class="message-bubble ${isMe ? 'my-bubble' : 'their-bubble'} text-sm text-white shadow-md">
-          <p class="leading-relaxed break-words">${msg.text}</p>
-          <div class="text-[9px] text-zinc-400 mt-1 text-right">${msg.time}</div>
-        </div>
-      `;
-      container.appendChild(wrapper);
-    });
-    
-    container.scrollTop = container.scrollHeight;
-  }
-
-  // Отправка сообщений
-  function sendMessage() {
-    const input = document.getElementById('message-input');
-    if (!input.value.trim() || currentChatIndex === null) return;
-    
-    const timeStr = new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
-    const text = input.value.trim();
-
-    // Добавляем в локальный массив
-    chatsData[currentChatIndex].messages.push({
-      from: "me",
-      text: text,
-      time: timeStr
-    });
-    
-    // Обновляем последнее сообщение в превью списка
-    chatsData[currentChatIndex].lastMsg = text;
-    chatsData[currentChatIndex].time = timeStr;
-
-    input.value = '';
-    renderMessages();
-    renderChatsList();
-  }
-
-  // Инициализация при загрузке страницы
-  window.onload = () => {
-    renderChatsList();
-    
-    // Регистрация PWA Service Worker
+  <script src="app.js"></script>
+  <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('Woops PWA: Service Worker успешно запущен!'))
-        .catch(err => console.log('Ошибка воркера:', err));
+      navigator.serviceWorker.register('sw.js').catch(console.error);
     }
-  };
-</script>
+  </script>
 </body>
 </html>
