@@ -6,22 +6,22 @@
   <title>Woops</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
 </head>
 <body>
-  <!-- Экран входа -->
   <section id="auth-screen" class="screen active">
     <div class="auth-box">
-      <h1>Woops</h1>
+      <h1>✨ Woops</h1>
+      <p>Быстрый. Красивый. Твой.</p>
       <input type="email" id="auth-email" placeholder="Email">
-      <input type="password" id="auth-pass" placeholder="Пароль (мин. 6 символов)">
+      <input type="password" id="auth-pass" placeholder="Пароль (мин. 6)">
       <button id="login-btn">Войти</button>
-      <button id="register-btn" class="secondary">Регистрация</button>
+      <button id="register-btn">Создать аккаунт</button>
       <p id="auth-error" class="error"></p>
     </div>
   </section>
 
-  <!-- Главный экран -->
   <section id="main-screen" class="screen">
     <header class="top-bar">
       <h2 id="tab-title">Чаты</h2>
@@ -32,27 +32,26 @@
         <ul id="chat-list" class="list"></ul>
         <button class="fab" id="new-chat">✏️</button>
       </div>
-      <div id="tab-status" class="tab"><p class="empty">Статусы пока пусты</p></div>
-      <div id="tab-calls" class="tab"><p class="empty">Нет звонков</p></div>
+      <div id="tab-status" class="tab"><p class="empty">Статусы появятся здесь</p></div>
+      <div id="tab-calls" class="tab"><p class="empty">История звонков</p></div>
       <div id="tab-profile" class="tab">
         <div class="profile-card">
           <div class="avatar" id="my-avatar">👤</div>
           <h3 id="my-name">Загрузка...</h3>
-          <p id="my-status">В сети</p>
-          <button id="edit-profile">Редактировать</button>
-          <button id="logout-btn" class="danger">Выйти</button>
+          <p id="my-status">● В сети</p>
+          <button id="edit-profile">✏️ Редактировать</button>
+          <button id="logout-btn" class="danger">🚪 Выйти</button>
         </div>
       </div>
     </main>
     <nav class="bottom-nav">
-      <button class="nav-btn active" data-tab="chats">💬 Чаты</button>
-      <button class="nav-btn" data-tab="status">🟢 Статус</button>
-      <button class="nav-btn" data-tab="calls">📞 Звонки</button>
-      <button class="nav-btn" data-tab="profile">👤 Профиль</button>
+      <button class="nav-btn active" data-tab="chats">Чаты</button>
+      <button class="nav-btn" data-tab="status">Статус</button>
+      <button class="nav-btn" data-tab="calls">Звонки</button>
+      <button class="nav-btn" data-tab="profile">Профиль</button>
     </nav>
   </section>
 
-  <!-- Экран чата -->
   <section id="chat-screen" class="screen">
     <header class="chat-top">
       <button id="back-btn">←</button>
@@ -60,13 +59,13 @@
         <div class="avatar small" id="chat-avatar">👤</div>
         <div>
           <h4 id="chat-name">Контакт</h4>
-          <small id="chat-online">в сети</small>
+          <small id="chat-online">● в сети</small>
         </div>
       </div>
     </header>
     <div class="messages" id="msg-area"></div>
     <footer class="input-area">
-      <input type="text" id="text-input" placeholder="Сообщение...">
+      <input type="text" id="text-input" placeholder="Написать сообщение..." autocomplete="off">
       <button id="send-btn">➤</button>
     </footer>
   </section>
