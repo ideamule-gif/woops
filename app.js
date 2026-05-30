@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // 🔧 Firebase config
@@ -13,7 +13,6 @@ const firebaseConfig = {
   appId: "1:371589558003:web:9e50637114a1526b9c5186"
 };
 
-// 🚀 Initialize
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -35,7 +34,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const navBtns = document.querySelectorAll('.nav-btn');
 const tabs = document.querySelectorAll('.tab');
 
-// 👤 Элементы профиля (<dialog>)
+// Профиль
 const editProfileBtns = document.querySelectorAll('#edit-profile, #edit-profile-mobile');
 const profileModal = document.getElementById('profileModal');
 const closeProfileBtn = document.getElementById('closeProfile');
@@ -47,14 +46,14 @@ const displayNameInput = document.getElementById('displayName');
 const userStatusSelect = document.getElementById('userStatus');
 const statusTextInput = document.getElementById('statusText');
 
-// 😊 Эмодзи
+// Эмодзи
 const emojiToggle = document.getElementById('emojiToggle');
 const emojiPicker = document.getElementById('emojiPicker');
 
-// 🔔 Toast
+// Toast
 const toast = document.getElementById('toast');
 
-// 🌐 Глобальное состояние
+// Глобальное состояние
 let currentUser = null;
 let currentChat = null;
 let unsubChat = null;
@@ -65,7 +64,7 @@ let userProfile = {};
 const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪','🎯','🌟','💬','🚀','✅','❌','⚡','🎮','🎵','🍕'];
 
 // ============================================
-// 🔐 СЛУШАТЕЛЬ СЕССИИ АВТОРИЗАЦИИ
+// 🔐 АВТОРИЗАЦИЯ
 // ============================================
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -74,7 +73,8 @@ onAuthStateChanged(auth, (user) => {
     mainScreen.classList.add('active');
     
     trackOwnProfile(user.uid);
-    loadChats();
+    loadUsersList();
+    updateLastSeen(); // обновляем lastSeen при входе
   } else {
     currentUser = null;
     userProfile = {};
@@ -85,71 +85,8 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-loginBtn.onclick = async () => {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass = document.getElementById('auth-pass').value;
-  if (authError) authError.textContent = '';
-  
-  if (!email || !pass) {
-    if (authError) authError.textContent = 'Заполните все поля';
-    return;
-  }
-  
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-    showToast('С возвращением! 👋');
-  } catch(e) {
-    if (authError) authError.textContent = getAuthError(e.code);
-    showToast('Ошибка авторизации', 'error');
-  }
-};
-
-registerBtn.onclick = async () => {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass = document.getElementById('auth-pass').value;
-  if (authError) authError.textContent = '';
-  
-  if (!email || pass.length < 6) {
-    if (authError) authError.textContent = 'Email и пароль (минимум 6 символов)';
-    return;
-  }
-  
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    const defaultName = email.split('@')[0];
-    
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      email,
-      displayName: defaultName,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(defaultName)}&background=6366f1&color=fff`,
-      status: 'online',
-      statusText: '',
-      createdAt: serverTimestamp(),
-      lastSeen: serverTimestamp()
-    });
-    
-    showToast('Аккаунт создан! 🎉');
-  } catch(e) {
-    if (authError) authError.textContent = getAuthError(e.code);
-    showToast('Ошибка регистрации', 'error');
-  }
-};
-
-logoutBtn.onclick = async () => {
-  if (currentUser) {
-    try {
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        status: 'offline',
-        lastSeen: serverTimestamp()
-      });
-    } catch(e) { console.error(e); }
-  }
-  await signOut(auth);
-  showToast('Вы вышли из системы');
-};
-
 // ============================================
-// 👤 РАБОТА С ПРОФИЛЕМ (REAL-TIME)
+// 👤 ПРОФИЛЬ
 // ============================================
 function trackOwnProfile(uid) {
   if (unsubOwnProfile) unsubOwnProfile();
@@ -169,169 +106,130 @@ editProfileBtns.forEach(btn => {
     userStatusSelect.value = userProfile.status || 'online';
     statusTextInput.value = userProfile.statusText || '';
     avatarPreview.src = userProfile.avatar || '';
-    
-    if (profileModal) profileModal.showModal();
+    profileModal.showModal();
   };
 });
 
-function closeModal() {
-  if (profileModal) profileModal.close();
-}
-if (closeProfileBtn) closeProfileBtn.onclick = closeModal;
-if (cancelProfileBtn) cancelProfileBtn.onclick = closeModal;
+closeProfileBtn.onclick = cancelProfileBtn.onclick = () => profileModal.close();
 
 avatarInput.onchange = (e) => {
   const file = e.target.files[0];
-  if (file) {
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('Размер файла превышает 2МБ', 'error');
-      avatarInput.value = '';
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => { avatarPreview.src = ev.target.result; };
-    reader.readAsDataURL(file);
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('Файл слишком большой (макс 2МБ)', 'error');
+    avatarInput.value = '';
+    return;
   }
+  const reader = new FileReader();
+  reader.onload = () => avatarPreview.src = reader.result;
+  reader.readAsDataURL(file);
 };
 
 saveProfileBtn.onclick = async () => {
   if (!currentUser) return;
-  
-  const displayName = displayNameInput.value.trim() || userProfile.displayName;
-  const status = userStatusSelect.value;
-  const statusText = statusTextInput.value.trim();
-  
+
+  let avatarUrl = userProfile.avatar;
+
+  if (avatarInput.files[0]) {
+    showToast('Загрузка аватара...');
+    const file = avatarInput.files[0];
+    const storageRef = ref(storage, `avatars/${currentUser.uid}/${Date.now()}_${file.name}`);
+    await uploadBytes(storageRef, file);
+    avatarUrl = await getDownloadURL(storageRef);
+  }
+
   try {
-    let avatarUrl = userProfile.avatar;
-    
-    if (avatarInput.files[0]) {
-      showToast('Загружаем изображение...');
-      const file = avatarInput.files[0];
-      const storageRef = ref(storage, `avatars/${currentUser.uid}/avatar_${Date.now()}`);
-      await uploadBytes(storageRef, file);
-      avatarUrl = await getDownloadURL(storageRef);
-    }
-    
     await updateDoc(doc(db, 'users', currentUser.uid), {
-      displayName, status, statusText, avatar: avatarUrl, lastSeen: serverTimestamp()
+      displayName: displayNameInput.value.trim() || userProfile.displayName,
+      status: userStatusSelect.value,
+      statusText: statusTextInput.value.trim(),
+      avatar: avatarUrl,
+      lastSeen: serverTimestamp()
     });
-    
-    closeModal();
-    showToast('Профиль успешно сохранен! ✨');
-  } catch(e) {
+
+    profileModal.close();
+    showToast('Профиль сохранён ✨');
+  } catch (e) {
     console.error(e);
-    showToast('Ошибка сохранения данных', 'error');
+    showToast('Ошибка сохранения', 'error');
   }
 };
 
-function updateProfileUI(profile) {
-  const name = profile.displayName || 'Пользователь';
-  const avatar = profile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
-  const status = profile.status || 'online';
-  const statusText = profile.statusText;
-  
-  const statusLabels = { online: '● В сети', busy: '🔴 Занят', away: '🟡 Отошёл', offline: '⚫ Не в сети' };
-  const resolvedStatus = statusText ? `${statusLabels[status]} • ${statusText}` : statusLabels[status];
-
-  const bindings = [
-    { nameId: 'my-name', avatarId: 'my-avatar', statusId: 'my-status-text', dotId: 'my-status-dot' },
-    { nameId: 'my-name-mobile', avatarId: 'my-avatar-mobile', statusId: 'my-status-mobile', dotId: null }
-  ];
-
-  bindings.forEach(b => {
-    const n = document.getElementById(b.nameId);
-    const a = document.getElementById(b.avatarId);
-    const s = document.getElementById(b.statusId);
-    const d = b.dotId ? document.getElementById(b.dotId) : null;
-
-    if (n) n.textContent = name;
-    if (a) a.src = avatar;
-    if (s) s.textContent = resolvedStatus;
-    if (d) d.className = `status-indicator status-${status}`;
-  });
-}
-
 // ============================================
-// 💬 ЗАГРУЗКА СПИСКА КОНТАКТОВ
+// 💬 СПИСОК ПОЛЬЗОВАТЕЛЕЙ (ЧАТЫ)
 // ============================================
-function loadChats() {
-  if (!currentUser) return;
-  const q = query(collection(db, 'users'));
-  
+function loadUsersList() {
   if (unsubUsers) unsubUsers();
-  
+
+  const q = query(collection(db, 'users'), limit(50));
+
   unsubUsers = onSnapshot(q, (snap) => {
     chatList.innerHTML = '';
-    let hasChats = false;
-    
+    let hasUsers = false;
+
     snap.forEach(docSnap => {
       if (docSnap.id === currentUser.uid) return;
-      hasChats = true;
-      
+      hasUsers = true;
+
       const user = docSnap.data();
-      const li = document.createElement('li');
-      
-      const wrap = document.createElement('div');
-      wrap.className = 'avatar-wrapper';
-      
-      const img = document.createElement('img');
-      img.className = 'avatar';
-      img.src = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}`;
-      
-      const dot = document.createElement('span');
-      dot.className = `status-indicator status-${user.status || 'offline'}`;
-      
-      wrap.appendChild(img);
-      wrap.appendChild(dot);
-      
-      const info = document.createElement('div');
-      info.className = 'chat-info';
-      info.innerHTML = `
-        <h4>${escapeHtml(user.displayName || 'Аноним')}</h4>
-        <p class="text-muted">${escapeHtml(user.statusText || 'Нажми для начала диалога 💬')}</p>
-      `;
-      
-      li.appendChild(wrap);
-      li.appendChild(info);
-      li.onclick = () => openChat(docSnap.id, user.displayName, user.avatar);
-      
+      const li = createUserListItem(docSnap.id, user);
       chatList.appendChild(li);
     });
-    
-    const empty = document.getElementById('chats-empty');
-    if (empty) empty.style.display = hasChats ? 'none' : 'block';
+
+    document.getElementById('chats-empty').style.display = hasUsers ? 'none' : 'block';
   });
 }
 
+function createUserListItem(uid, user) {
+  const li = document.createElement('li');
+  li.className = 'chat-item';
+  li.innerHTML = `
+    <div class="avatar-wrapper">
+      <img class="avatar" src="${user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}`}" alt="">
+      <span class="status-indicator status-${user.status || 'offline'}"></span>
+    </div>
+    <div class="chat-info">
+      <h4>${escapeHtml(user.displayName || 'Пользователь')}</h4>
+      <p class="text-muted">${escapeHtml(user.statusText || 'Онлайн')}</p>
+    </div>
+  `;
+
+  li.onclick = () => openChat(uid, user.displayName, user.avatar);
+  return li;
+}
+
 // ============================================
-// ✉️ ПЕРЕПИСКА В ЧАТЕ
+// ✉️ ЧАТ
 // ============================================
-function openChat(userId, name, avatar) {
+async function openChat(userId, name, avatar) {
   currentChat = { id: userId, name, avatar };
-  
+
   if (window.innerWidth < 768) mainScreen.classList.remove('active');
   chatScreen.classList.add('active');
-  
+
   document.getElementById('chat-name').textContent = name;
   document.getElementById('chat-avatar').src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
-  
-  msgArea.innerHTML = '<div class="empty-state">Синхронизация сообщений...</div>';
-  
+
+  msgArea.innerHTML = '<div class="empty-state">Загрузка сообщений...</div>';
+
   const room = [currentUser.uid, userId].sort().join('_');
   const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
-  
+
   if (unsubChat) unsubChat();
-  
+
   unsubChat = onSnapshot(q, (snap) => {
     msgArea.innerHTML = '';
+    
     if (snap.empty) {
-      msgArea.innerHTML = '<div class="empty-state">Тут пока пусто. Напишите что-нибудь! ✨</div>';
-    } else {
-      snap.forEach(d => {
-        msgArea.appendChild(renderMessage(d.data()));
-      });
+      msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
+      return;
     }
-    setTimeout(() => { msgArea.scrollTop = msgArea.scrollHeight; }, 300);
+
+    snap.forEach(doc => {
+      msgArea.appendChild(renderMessage(doc.data()));
+    });
+
+    msgArea.scrollTop = msgArea.scrollHeight;
   });
 }
 
@@ -339,29 +237,35 @@ function renderMessage(msg) {
   const div = document.createElement('div');
   const isOwn = msg.senderId === currentUser?.uid;
   div.className = `msg ${isOwn ? 'out' : 'in'}`;
-  div.innerHTML = `${escapeHtml(msg.text)}<span class="time">${formatTime(msg.createdAt)}</span>`;
+  
+  const time = formatTime(msg.createdAt);
+  div.innerHTML = `${escapeHtml(msg.text)}<span class="time">${time}</span>`;
   return div;
 }
 
 function formatTime(timestamp) {
-  if (!timestamp) return '';
-  const d = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (!timestamp) return '--:--';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Отправка сообщения
 sendBtn.onclick = async () => {
   const text = textInput.value.trim();
   if (!text || !currentChat) return;
-  
+
+  const room = [currentUser.uid, currentChat.id].sort().join('_');
+
   try {
-    const room = [currentUser.uid, currentChat.id].sort().join('_');
     await addDoc(collection(db, 'messages'), {
-      room, senderId: currentUser.uid, text, createdAt: serverTimestamp()
+      room,
+      senderId: currentUser.uid,
+      text,
+      createdAt: serverTimestamp()
     });
     textInput.value = '';
-    textInput.focus();
-  } catch(e) {
-    showToast('Ошибка отправки', 'error');
+  } catch (e) {
+    showToast('Не удалось отправить сообщение', 'error');
   }
 };
 
@@ -375,69 +279,39 @@ textInput.onkeypress = (e) => {
 backBtn.onclick = () => {
   chatScreen.classList.remove('active');
   mainScreen.classList.add('active');
+  if (unsubChat) unsubChat();
   currentChat = null;
-  if (unsubChat) { unsubChat(); unsubChat = null; }
 };
 
 // ============================================
-// 😊 ПАНЕЛЬ ЭМОДЗИ
+// Эмодзи + Toast + Helpers
 // ============================================
 function initEmojiPicker() {
-  if (!emojiPicker) return;
   emojiPicker.innerHTML = '';
   EMOJIS.forEach(emoji => {
     const btn = document.createElement('button');
-    btn.type = 'button';
     btn.textContent = emoji;
     btn.onclick = () => {
-      const pos = textInput.selectionStart;
-      textInput.value = textInput.value.substring(0, pos) + emoji + textInput.value.substring(pos);
+      const start = textInput.selectionStart;
+      textInput.value = textInput.value.slice(0, start) + emoji + textInput.value.slice(start);
       textInput.focus();
-      hideEmojiPicker();
+      emojiPicker.classList.remove('active');
     };
     emojiPicker.appendChild(btn);
   });
 }
 
-if (emojiToggle) {
-  emojiToggle.onclick = (e) => {
-    e.stopPropagation();
-    emojiPicker.classList.toggle('active');
-  };
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.emoji-picker') && !e.target.closest('#emojiToggle')) hideEmojiPicker();
-  });
-}
-function hideEmojiPicker() { if (emojiPicker) emojiPicker.classList.remove('active'); }
-initEmojiPicker();
+emojiToggle.onclick = (e) => {
+  e.stopPropagation();
+  emojiPicker.classList.toggle('active');
+};
 
-// ============================================
-// 🧭 ТАБ-НАВИГАЦИЯ
-// ============================================
-navBtns.forEach(btn => {
-  btn.onclick = () => {
-    navBtns.forEach(b => b.classList.remove('active'));
-    tabs.forEach(t => t.classList.remove('active'));
-    
-    btn.classList.add('active');
-    const target = document.getElementById('tab-' + btn.dataset.tab);
-    if (target) target.classList.add('active');
-    
-    const titles = { chats: 'Чаты', status: 'Статус', calls: 'Звонки', profile: 'Профиль' };
-    const titleEl = document.getElementById('tab-title');
-    if (titleEl) titleEl.textContent = titles[btn.dataset.tab] || 'Woops';
-  };
-});
+document.addEventListener('click', () => emojiPicker.classList.remove('active'));
 
-// ============================================
-// 🛡️ СЕРВИСНЫЕ ФУНКЦИИ
-// ============================================
 function showToast(message, type = 'success') {
-  if (!toast) return;
   toast.textContent = message;
-  toast.className = `toast show`;
-  clearTimeout(toast._timeout);
-  toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
+  toast.className = `toast show ${type}`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
 function escapeHtml(text) {
@@ -446,25 +320,38 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function getAuthError(code) {
-  const errors = {
-    'auth/invalid-email': 'Некорректный формат почты',
-    'auth/user-not-found': 'Пользователь не найден',
-    'auth/wrong-password': 'Неверный пароль',
-    'auth/email-already-in-use': 'Почта уже используется'
-  };
-  return errors[code] || 'Ошибка доступа';
+function updateLastSeen() {
+  if (!currentUser) return;
+  setInterval(() => {
+    updateDoc(doc(db, 'users', currentUser.uid), {
+      lastSeen: serverTimestamp(),
+      status: 'online'
+    }).catch(() => {});
+  }, 45000); // каждые 45 секунд
 }
+
+// Навигация
+navBtns.forEach(btn => {
+  btn.onclick = () => {
+    navBtns.forEach(b => b.classList.remove('active'));
+    tabs.forEach(t => t.classList.remove('active'));
+    
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    
+    const titles = { chats: 'Чаты', status: 'Статус', calls: 'Звонки', profile: 'Профиль' };
+    document.getElementById('tab-title').textContent = titles[btn.dataset.tab] || 'Woops';
+  };
+});
 
 function cleanupListeners() {
   if (unsubChat) unsubChat();
   if (unsubUsers) unsubUsers();
   if (unsubOwnProfile) unsubOwnProfile();
-  unsubChat = null; unsubUsers = null; unsubOwnProfile = null; currentChat = null;
 }
 
-function adjustViewport() {
-  document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-}
-window.addEventListener('resize', adjustViewport);
-adjustViewport();
+// Инициализация
+initEmojiPicker();
+updateLastSeen();
+
+console.log('%cWoops Chat успешно загружен', 'color: #6366f1; font-weight: bold');
