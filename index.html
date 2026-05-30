@@ -13,7 +13,6 @@
   <section id="auth-screen" class="screen active">
     <div class="auth-box">
       <h1>Woops</h1>
-      <input type="tel" id="auth-phone" placeholder="+7 (999) 000-00-00">
       <input type="email" id="auth-email" placeholder="Email">
       <input type="password" id="auth-pass" placeholder="Пароль (мин. 6 символов)">
       <button id="login-btn">Войти</button>
@@ -67,15 +66,11 @@
     </header>
     <div class="messages" id="msg-area"></div>
     <footer class="input-area">
-      <button id="attach-btn">📎</button>
-      <input type="file" id="file-input" hidden accept="image/*,.pdf,.doc,.docx">
-      <button id="voice-btn">🎤</button>
       <input type="text" id="text-input" placeholder="Сообщение...">
       <button id="send-btn">➤</button>
     </footer>
   </section>
 
-  <!-- Firebase + приложение -->
   <script type="module" src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
