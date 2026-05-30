@@ -14,8 +14,11 @@
     <div class="auth-box">
       <h1>Woops</h1>
       <input type="tel" id="auth-phone" placeholder="+7 (999) 000-00-00">
-      <input type="email" id="auth-email" placeholder="Email (необязательно)">
+      <input type="email" id="auth-email" placeholder="Email">
+      <input type="password" id="auth-pass" placeholder="Пароль (мин. 6 символов)">
       <button id="login-btn">Войти</button>
+      <button id="register-btn" class="secondary">Регистрация</button>
+      <p id="auth-error" class="error"></p>
     </div>
   </section>
 
@@ -25,7 +28,6 @@
       <h2 id="tab-title">Чаты</h2>
       <button id="menu-btn">⋮</button>
     </header>
-
     <main class="tabs-content">
       <div id="tab-chats" class="tab active">
         <ul id="chat-list" class="list"></ul>
@@ -36,14 +38,13 @@
       <div id="tab-profile" class="tab">
         <div class="profile-card">
           <div class="avatar" id="my-avatar">👤</div>
-          <h3 id="my-name">Гость</h3>
+          <h3 id="my-name">Загрузка...</h3>
           <p id="my-status">В сети</p>
           <button id="edit-profile">Редактировать</button>
           <button id="logout-btn" class="danger">Выйти</button>
         </div>
       </div>
     </main>
-
     <nav class="bottom-nav">
       <button class="nav-btn active" data-tab="chats">💬 Чаты</button>
       <button class="nav-btn" data-tab="status">🟢 Статус</button>
@@ -74,7 +75,8 @@
     </footer>
   </section>
 
-  <script src="app.js"></script>
+  <!-- Firebase + приложение -->
+  <script type="module" src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
   </script>
