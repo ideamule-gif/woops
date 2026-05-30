@@ -1,18 +1,16 @@
 {
   "name": "Woops Messenger",
   "short_name": "Woops",
-  "description": "Быстрый и красивый мессенджер",
-  "start_url": "./index.html",
+  "description": "Быстрый и красивый мессенджер Woops",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#09090b",
   "theme_color": "#4f46e5",
   "orientation": "portrait-primary",
-  "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/5968/5968771.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
+  "icons": [{
+    "src": "https://cdn-icons-png.flaticon.com/512/5968/5968771.png",
+    "sizes": "512x512",
+    "type": "image/png",
+    "purpose": "any maskable"
+  }]
 }
