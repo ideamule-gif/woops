@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, getDocs, doc, setDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // 🔧 Firebase config
@@ -19,7 +19,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// 📦 DOM Elements (основные)
+// 📦 DOM Elements
 const authScreen = document.getElementById('auth-screen');
 const mainScreen = document.getElementById('main-screen');
 const chatScreen = document.getElementById('chat-screen');
@@ -35,7 +35,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const navBtns = document.querySelectorAll('.nav-btn');
 const tabs = document.querySelectorAll('.tab');
 
-// 👤 Профиль элементы
+// 👤 Профиль элементы (Модальное окно <dialog>)
 const editProfileBtns = document.querySelectorAll('#edit-profile, #edit-profile-mobile');
 const profileModal = document.getElementById('profileModal');
 const closeProfileBtn = document.getElementById('closeProfile');
@@ -46,7 +46,6 @@ const avatarPreview = document.getElementById('avatarPreview');
 const displayNameInput = document.getElementById('displayName');
 const userStatusSelect = document.getElementById('userStatus');
 const statusTextInput = document.getElementById('statusText');
-const modalOverlay = document.getElementById('modalOverlay');
 
 // 😊 Эмодзи
 const emojiToggle = document.getElementById('emojiToggle');
@@ -55,29 +54,28 @@ const emojiPicker = document.getElementById('emojiPicker');
 // 🔔 Toast
 const toast = document.getElementById('toast');
 
-// 🌐 Состояние
+// 🌐 Состояние приложения
 let currentUser = null;
 let currentChat = null;
 let unsubChat = null;
 let unsubUsers = null;
+let unsubOwnProfile = null;
 let userProfile = {};
 
-// 🎨 Набор эмодзи
 const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪','🎯','🌟','💬','🚀','✅','❌','⚡','🎮','🎵','🍕'];
 
 // ============================================
-// 🔐 АВТОРИЗАЦИЯ
+// 🔐 АВТОРИЗАЦИЯ И MONITORING СТАТУСА
 // ============================================
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
     authScreen.classList.remove('active');
     mainScreen.classList.add('active');
     
-    // Загружаем профиль и чаты
-    await loadUserProfile(user.uid);
+    // Включаем real-time отслеживание профиля и списка чатов
+    trackOwnProfile(user.uid);
     loadChats();
-    updateProfileUI(userProfile);
   } else {
     currentUser = null;
     userProfile = {};
@@ -100,7 +98,7 @@ loginBtn.onclick = async () => {
   
   try {
     await signInWithEmailAndPassword(auth, email, pass);
-    showToast('Добро пожаловать! 👋', 'success');
+    showToast('С возвращением! 👋', 'success');
   } catch(e) {
     authError.textContent = getAuthError(e.code);
     showToast('Ошибка входа', 'error');
@@ -121,7 +119,6 @@ registerBtn.onclick = async () => {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     const defaultName = email.split('@')[0];
     
-    // Создаём документ пользователя
     await setDoc(doc(db, 'users', cred.user.uid), {
       email,
       displayName: defaultName,
@@ -132,7 +129,7 @@ registerBtn.onclick = async () => {
       lastSeen: serverTimestamp()
     });
     
-    showToast('Аккаунт создан! 🎉', 'success');
+    showToast('Аккаунт успешно создан! 🎉', 'success');
   } catch(e) {
     authError.textContent = getAuthError(e.code);
     showToast('Ошибка регистрации', 'error');
@@ -141,60 +138,55 @@ registerBtn.onclick = async () => {
 
 logoutBtn.onclick = async () => {
   if (currentUser) {
-    // Обновляем статус на офлайн
-    await updateDoc(doc(db, 'users', currentUser.uid), {
-      status: 'offline',
-      lastSeen: serverTimestamp()
-    });
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        status: 'offline',
+        lastSeen: serverTimestamp()
+      });
+    } catch (e) { console.error(e); }
   }
   await signOut(auth);
   showToast('До встречи! 👋', 'success');
 };
 
 // ============================================
-// 👤 ПРОФИЛЬ
+// 👤 ПРОФИЛЬ (REAL-TIME СЛУШАТЕЛЬ)
 // ============================================
-async function loadUserProfile(uid) {
-  try {
-    const userDoc = await getDocs(query(collection(db, 'users'), where('__name__', '==', uid)));
-    if (!userDoc.empty) {
-      userProfile = { id: uid, ...userDoc.docs[0].data() };
+function trackOwnProfile(uid) {
+  if (unsubOwnProfile) unsubOwnProfile();
+  
+  unsubOwnProfile = onSnapshot(doc(db, 'users', uid), (docSnap) => {
+    if (docSnap.exists()) {
+      userProfile = { id: uid, ...docSnap.data() };
+      updateProfileUI(userProfile);
     }
-  } catch(e) {
-    console.error('Ошибка загрузки профиля:', e);
-  }
+  });
 }
 
-// Открытие модального окна профиля
+// Открытие модального окна профиля (через HTML5 Dialog API)
 editProfileBtns.forEach(btn => {
   btn.onclick = () => {
     if (!currentUser) return;
     
-    // Заполняем форму текущими данными
     displayNameInput.value = userProfile.displayName || '';
     userStatusSelect.value = userProfile.status || 'online';
     statusTextInput.value = userProfile.statusText || '';
     avatarPreview.src = userProfile.avatar || `https://ui-avatars.com/api/?name=U&background=6366f1&color=fff`;
     
-    // Показываем модалку
-    profileModal.classList.add('active');
-    profileModal.setAttribute('open', 'true');
-    document.body.style.overflow = 'hidden'; // Блокируем скролл
+    if (profileModal) {
+      profileModal.showModal(); // Нативный метод открытия <dialog>
+    }
   };
 });
 
-// Закрытие модалки
 function closeModal() {
-  profileModal.classList.remove('active');
-  profileModal.removeAttribute('open');
-  document.body.style.overflow = '';
+  if (profileModal) profileModal.close(); // Нативный метод закрытия
 }
 
-closeProfileBtn.onclick = closeModal;
-cancelProfileBtn.onclick = closeModal;
-modalOverlay.onclick = closeModal;
+if (closeProfileBtn) closeProfileBtn.onclick = closeModal;
+if (cancelProfileBtn) cancelProfileBtn.onclick = closeModal;
 
-// Предпросмотр аватара
+// Предпросмотр локального аватара перед отправкой
 avatarInput.onchange = (e) => {
   const file = e.target.files[0];
   if (file) {
@@ -204,12 +196,12 @@ avatarInput.onchange = (e) => {
       return;
     }
     const reader = new FileReader();
-    reader.onload = (ev) => avatarPreview.src = ev.target.result;
+    reader.onload = (ev) => { avatarPreview.src = ev.target.result; };
     reader.readAsDataURL(file);
   }
 };
 
-// Сохранение профиля
+// Сохранение изменений профиля в Firebase
 saveProfileBtn.onclick = async () => {
   if (!currentUser) return;
   
@@ -220,16 +212,14 @@ saveProfileBtn.onclick = async () => {
   try {
     let avatarUrl = userProfile.avatar;
     
-    // Если выбран новый аватар — загружаем в Storage
     if (avatarInput.files[0]) {
       showToast('Загрузка аватара...', 'success');
       const file = avatarInput.files[0];
-      const storageRef = ref(storage, `avatars/${currentUser.uid}/${Date.now()}`);
+      const storageRef = ref(storage, `avatars/${currentUser.uid}/avatar_${Date.now()}`);
       await uploadBytes(storageRef, file);
       avatarUrl = await getDownloadURL(storageRef);
     }
     
-    // Обновляем Firestore
     const updates = {
       displayName,
       status,
@@ -239,64 +229,59 @@ saveProfileBtn.onclick = async () => {
     };
     
     await updateDoc(doc(db, 'users', currentUser.uid), updates);
-    
-    // Обновляем локальный профиль и UI
-    userProfile = { ...userProfile, ...updates };
-    updateProfileUI(userProfile);
-    
     closeModal();
-    showToast('Профиль обновлён! ✨', 'success');
-    
-    // Перезагружаем список чатов для обновления аватаров
-    loadChats();
-    
+    showToast('Профиль успешно обновлён! ✨', 'success');
   } catch(e) {
     console.error('Ошибка сохранения:', e);
-    showToast('Не удалось сохранить', 'error');
+    showToast('Не удалось сохранить изменения', 'error');
   }
 };
 
-// Обновление UI профиля
+// Заполнение интерфейса данными профиля (безопасно, без крашей)
 function updateProfileUI(profile) {
   const name = profile.displayName || 'Пользователь';
   const avatar = profile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`;
   const status = profile.status || 'online';
   const statusText = profile.statusText;
   
-  // Элементы профиля
-  const elements = [
-    { name: document.getElementById('my-name'), avatar: document.getElementById('my-avatar'), status: document.getElementById('my-status-text'), dot: document.getElementById('my-status-dot') },
-    { name: document.getElementById('my-name-mobile'), avatar: document.getElementById('my-avatar-mobile'), status: document.getElementById('my-status-mobile') }
+  const statusLabels = { online: '● В сети', busy: '🔴 Занят', away: '🟡 Отошёл', offline: '⚫ Не в сети' };
+  const resolvedStatus = statusText ? `${statusLabels[status] || '● В сети'} • ${statusText}` : statusLabels[status];
+
+  // Массив селекторов для десктопной и мобильной версий
+  const bindings = [
+    { nameId: 'my-name', avatarId: 'my-avatar', statusId: 'my-status-text', dotId: 'my-status-dot' },
+    { nameId: 'my-name-mobile', avatarId: 'my-avatar-mobile', statusId: 'my-status-mobile', dotId: null }
   ];
-  
-  elements.forEach(el => {
-    if (el.name) el.name.textContent = name;
-    if (el.avatar) el.avatar.src = avatar;
-    if (el.status) {
-      const statusLabels = { online: '● В сети', busy: '🔴 Занят', away: '🟡 Отошёл', offline: '⚫ Не в сети' };
-      el.status.textContent = statusText ? `${statusLabels[status] || '● В сети'} • ${statusText}` : statusLabels[status];
-    }
-    if (el.dot) {
-      el.dot.className = `status-indicator status-${status}`;
+
+  bindings.forEach(b => {
+    const nameEl = document.getElementById(b.nameId);
+    const avatarEl = document.getElementById(b.avatarId);
+    const statusEl = document.getElementById(b.statusId);
+    const dotEl = b.dotId ? document.getElementById(b.dotId) : null;
+
+    if (nameEl) nameEl.textContent = name;
+    if (avatarEl) avatarEl.src = avatar;
+    if (statusEl) statusEl.textContent = resolvedStatus;
+    if (dotEl) {
+      dotEl.className = `status-indicator status-${status}`;
     }
   });
   
-  // Обновляем заголовок в чате, если открыт
   if (currentChat && currentChat.id === currentUser.uid) {
-    document.getElementById('chat-name').textContent = name;
-    document.getElementById('chat-avatar').src = avatar;
+    const chatNameEl = document.getElementById('chat-name');
+    const chatAvatarEl = document.getElementById('chat-avatar');
+    if (chatNameEl) chatNameEl.textContent = name;
+    if (chatAvatarEl) chatAvatarEl.src = avatar;
   }
 }
 
 // ============================================
-// 💬 ЧАТЫ
+// 💬 СПИСОК ЧАТОВ
 // ============================================
 function loadChats() {
   if (!currentUser) return;
   
-  // Подписка на пользователей в реальном времени
   const q = query(collection(db, 'users'));
-  
   if (unsubUsers) unsubUsers();
   
   unsubUsers = onSnapshot(q, (snap) => {
@@ -304,35 +289,35 @@ function loadChats() {
     let hasChats = false;
     
     snap.forEach(docSnap => {
-      if (docSnap.id === currentUser.uid) return;
+      if (docSnap.id === currentUser.uid) return; // Пропускаем себя
       
       hasChats = true;
       const user = docSnap.data();
       const li = document.createElement('li');
       
-      // Аватар
+      // Блок аватара
+      const avatarWrapper = document.createElement('div');
+      avatarWrapper.className = 'avatar-wrapper';
+      
       const avatar = document.createElement('img');
       avatar.className = 'avatar';
       avatar.src = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=6366f1&color=fff`;
       avatar.alt = user.displayName || 'User';
       avatar.onerror = (e) => { e.target.src = `https://ui-avatars.com/api/?name=U&background=6366f1&color=fff`; };
       
-      // Инфо
-      const info = document.createElement('div');
-      info.className = 'chat-info';
-      info.innerHTML = `<h4>${escapeHtml(user.displayName || 'Пользователь')}</h4><p class="text-muted">${user.statusText || 'Напишите первое сообщение 👋'}</p>`;
-      
-      // Статус
       const statusDot = document.createElement('span');
       statusDot.className = `status-indicator status-${user.status || 'offline'}`;
-      statusDot.style.position = 'absolute';
-      statusDot.style.marginLeft = '-4px';
       
-      const avatarWrapper = document.createElement('div');
-      avatarWrapper.className = 'avatar-wrapper';
-      avatarWrapper.style.position = 'relative';
       avatarWrapper.appendChild(avatar);
       avatarWrapper.appendChild(statusDot);
+      
+      // Блок текстовой информации
+      const info = document.createElement('div');
+      info.className = 'chat-info';
+      info.innerHTML = `
+        <h4>${escapeHtml(user.displayName || 'Пользователь')}</h4>
+        <p class="text-muted">${escapeHtml(user.statusText || 'Напишите первое сообщение 👋')}</p>
+      `;
       
       li.appendChild(avatarWrapper);
       li.appendChild(info);
@@ -341,87 +326,74 @@ function loadChats() {
       chatList.appendChild(li);
     });
     
-    // Пустое состояние
     const emptyState = document.getElementById('chats-empty');
     if (emptyState) {
       emptyState.style.display = hasChats ? 'none' : 'block';
     }
   }, (error) => {
-    console.error('Ошибка загрузки чатов:', error);
-    showToast('Не удалось загрузить чаты', 'error');
+    console.error('Ошибка загрузки списка контактов:', error);
+    showToast('Не удалось обновить список чатов', 'error');
   });
 }
 
+// ============================================
+// ✉️ ОКНО ДИАЛОГА И СООБЩЕНИЯ
+// ============================================
 function openChat(userId, name, avatar) {
   currentChat = { id: userId, name, avatar };
   
-  // Переключаем экраны
-  mainScreen.classList.remove('active');
+  // Анимация выезда окна чата
+  if (window.innerWidth < 768) {
+    mainScreen.classList.remove('active');
+  }
   chatScreen.classList.add('active');
   
-  // Обновляем шапку чата
   document.getElementById('chat-name').textContent = name;
   document.getElementById('chat-avatar').src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=22c55e&color=fff`;
   
-  // Очищаем и показываем загрузку
-  msgArea.innerHTML = '<div class="msg in" style="align-self:center;background:var(--surface-2)">Загрузка сообщений...</div>';
+  msgArea.innerHTML = '<div class="msg in" style="align-self:center;background:var(--surface-2-solid)">Загрузка истории...</div>';
   
-  // Room ID (сортируем, чтобы был одинаковым для обоих участников)
   const room = [currentUser.uid, userId].sort().join('_');
   const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
   
-  // Очищаем предыдущий слушатель
   if (unsubChat) unsubChat();
   
-  // Подписка на сообщения
   unsubChat = onSnapshot(q, (snap) => {
     msgArea.innerHTML = '';
     
     if (snap.empty) {
-      msgArea.innerHTML = '<div class="empty" style="padding:40px 20px">💬 Начните беседу — напишите первое сообщение!</div>';
+      msgArea.innerHTML = '<div class="empty-state">Начните беседу — напишите первое сообщение!</div>';
     } else {
       snap.forEach(docSnap => {
-        const msg = docSnap.data();
-        const div = renderMessage(msg);
-        msgArea.appendChild(div);
+        msgArea.appendChild(renderMessage(docSnap.data()));
       });
     }
     
-    // Скролл вниз
-    msgArea.scrollTop = msgArea.scrollHeight;
+    // Плавный скролл вниз к последнему сообщению
+    setTimeout(() => {
+      msgArea.scrollTop = msgArea.scrollHeight;
+    }, 50);
   }, (error) => {
-    console.error('Ошибка чата:', error);
+    console.error('Ошибка стрима сообщений:', error);
     msgArea.innerHTML = '<div class="msg in" style="background:var(--danger);color:white">Ошибка загрузки сообщений</div>';
   });
 }
 
-// Рендер сообщения с поддержкой эмодзи
 function renderMessage(msg) {
   const div = document.createElement('div');
   const isOwn = msg.senderId === currentUser?.uid;
   
   div.className = `msg ${isOwn ? 'out' : 'in'}`;
-  
-  // Обработка эмодзи и экранирование HTML
-  let text = escapeHtml(msg.text);
-  // Простая замена эмодзи-шорткодов (если будут)
-  text = text.replace(/:([a-z_]+):/g, (match, code) => {
-    const emojiMap = { smile: '😀', laugh: '😂', heart: '❤️', fire: '🔥', star: '✨' };
-    return emojiMap[code] || match;
-  });
-  
-  div.innerHTML = `${text}<span class="time">${formatTime(msg.createdAt)}</span>`;
+  div.innerHTML = `${escapeHtml(msg.text)}<span class="time">${formatTime(msg.createdAt)}</span>`;
   return div;
 }
 
-// Форматирование времени
 function formatTime(timestamp) {
   if (!timestamp) return '';
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Отправка сообщения
 sendBtn.onclick = async () => {
   const text = textInput.value.trim();
   if (!text || !currentChat) return;
@@ -438,11 +410,10 @@ sendBtn.onclick = async () => {
     textInput.focus();
   } catch(e) {
     console.error('Ошибка отправки:', e);
-    showToast('Не удалось отправить', 'error');
+    showToast('Не удалось отправить сообщение', 'error');
   }
 };
 
-// Отправка по Enter
 textInput.onkeypress = (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -450,56 +421,43 @@ textInput.onkeypress = (e) => {
   }
 };
 
-// Фокус на поле ввода при открытии чата
+// Авто-фокус на инпут ввода после завершения CSS транзиции выезда чата
 chatScreen.addEventListener('transitionend', () => {
   if (chatScreen.classList.contains('active')) {
-    setTimeout(() => textInput.focus(), 300);
+    textInput.focus();
   }
 });
 
 // ============================================
-// 😊 ЭМОДЗИ
+// 😊 ПАНЕЛЬ ЭМОДЗИ
 // ============================================
-// Генерация панели эмодзи
 function initEmojiPicker() {
   if (!emojiPicker) return;
-  
   emojiPicker.innerHTML = '';
+  
   EMOJIS.forEach(emoji => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'emoji-btn';
     btn.textContent = emoji;
     btn.setAttribute('aria-label', `Вставить ${emoji}`);
     btn.onclick = () => {
-      insertEmoji(emoji);
+      const start = textInput.selectionStart;
+      const end = textInput.selectionEnd;
+      textInput.value = textInput.value.substring(0, start) + emoji + textInput.value.substring(end);
+      textInput.selectionStart = textInput.selectionEnd = start + emoji.length;
+      textInput.focus();
       hideEmojiPicker();
     };
     emojiPicker.appendChild(btn);
   });
 }
 
-// Вставка эмодзи в поле ввода
-function insertEmoji(emoji) {
-  const input = textInput;
-  const start = input.selectionStart;
-  const end = input.selectionEnd;
-  const value = input.value;
-  
-  input.value = value.substring(0, start) + emoji + value.substring(end);
-  input.selectionStart = input.selectionEnd = start + emoji.length;
-  input.focus();
-}
-
-// Показать/скрыть эмодзи
 if (emojiToggle && emojiPicker) {
   emojiToggle.onclick = (e) => {
     e.stopPropagation();
     emojiPicker.classList.toggle('active');
-    emojiToggle.setAttribute('aria-expanded', emojiPicker.classList.contains('active'));
   };
   
-  // Закрыть при клике вне
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.emoji-picker') && !e.target.closest('#emojiToggle')) {
       hideEmojiPicker();
@@ -508,39 +466,31 @@ if (emojiToggle && emojiPicker) {
 }
 
 function hideEmojiPicker() {
-  if (emojiPicker) {
-    emojiPicker.classList.remove('active');
-    if (emojiToggle) emojiToggle.setAttribute('aria-expanded', 'false');
-  }
+  if (emojiPicker) emojiPicker.classList.remove('active');
 }
 
-// Инициализация
 initEmojiPicker();
 
 // ============================================
-// 🧭 НАВИГАЦИЯ
+// 🧭 ТАБ-НАВИГАЦИЯ (МОБИЛЬНАЯ + ДЕСКТОП)
 // ============================================
 navBtns.forEach(btn => {
   btn.onclick = () => {
-    // Убираем активные классы
     navBtns.forEach(b => b.classList.remove('active'));
     tabs.forEach(t => t.classList.remove('active'));
     
-    // Добавляем активный
     btn.classList.add('active');
     const tabId = 'tab-' + btn.dataset.tab;
-    document.getElementById(tabId)?.classList.add('active');
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) targetTab.classList.add('active');
     
-    // Обновляем заголовок
     const titles = { chats: 'Чаты', status: 'Статус', calls: 'Звонки', profile: 'Профиль' };
     const titleEl = document.getElementById('tab-title');
     if (titleEl) titleEl.textContent = titles[btn.dataset.tab] || 'Woops';
   };
 });
 
-// ============================================
-// 🔙 НАЗАД ИЗ ЧАТА
-// ============================================
+// 🔙 Назад к списку чатов (для мобильных девайсов)
 backBtn.onclick = () => {
   chatScreen.classList.remove('active');
   mainScreen.classList.add('active');
@@ -550,121 +500,63 @@ backBtn.onclick = () => {
     unsubChat();
     unsubChat = null;
   }
-  
-  // Возвращаем фокус на список чатов
-  setTimeout(() => {
-    const firstChat = chatList.querySelector('li');
-    if (firstChat) firstChat.scrollIntoView({ behavior: 'smooth' });
-  }, 100);
 };
 
 // ============================================
-// 🔔 TOAST УВЕДОМЛЕНИЯ
+// 🔔 СЕРВИСНЫЕ ФУНКЦИИ И УТИЛИТЫ
 // ============================================
 function showToast(message, type = 'success') {
   if (!toast) return;
-  
   toast.textContent = message;
-  toast.className = `toast ${type} show`;
+  toast.className = `toast show`;
   
-  // Авто-скрытие
   clearTimeout(toast._timeout);
   toast._timeout = setTimeout(() => {
     toast.classList.remove('show');
   }, 3000);
 }
 
-// ============================================
-// 🛡️ УТИЛИТЫ
-// ============================================
-// Экранирование HTML
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-// Читаемые ошибки Firebase Auth
 function getAuthError(code) {
   const errors = {
-    'auth/invalid-email': 'Неверный формат email',
-    'auth/user-disabled': 'Аккаунт заблокирован',
-    'auth/user-not-found': 'Пользователь не найден',
+    'auth/invalid-email': 'Неверный формат почты',
+    'auth/user-disabled': 'Учётная запись деактивирована',
+    'auth/user-not-found': 'Пользователь не зарегистрирован',
     'auth/wrong-password': 'Неверный пароль',
-    'auth/email-already-in-use': 'Email уже занят',
-    'auth/weak-password': 'Пароль слишком простой',
-    'auth/network-request-failed': 'Проверьте подключение к интернету'
+    'auth/email-already-in-use': 'Данный Email уже занят',
+    'auth/weak-password': 'Пароль должен содержать минимум 6 символов',
+    'auth/network-request-failed': 'Проблема с сетью. Проверьте соединение'
   };
-  return errors[code] || 'Произошла ошибка';
+  return errors[code] || 'Ошибка аутентификации';
 }
 
-// Очистка слушателей при выходе
 function cleanupListeners() {
   if (unsubChat) unsubChat();
   if (unsubUsers) unsubUsers();
+  if (unsubOwnProfile) unsubOwnProfile();
   unsubChat = null;
   unsubUsers = null;
+  unsubOwnProfile = null;
   currentChat = null;
 }
 
-// ============================================
-// 🖥️ АДАПТИВ: КЛАВИАТУРА И РАЗМЕРЫ
-// ============================================
-// Корректировка высоты под мобильную клавиатуру
+// Корректный расчет высоты для мобильных браузеров (фикс бага прыгающей строки ввода)
 function adjustViewport() {
-  const vh = window.innerHeight * 0.01;
-  document.documentElement.style.setProperty('--vh', `${vh}px`);
+  document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
 }
 window.addEventListener('resize', adjustViewport);
-window.addEventListener('orientationchange', adjustViewport);
 adjustViewport();
 
-// ============================================
-// 🚀 СТАРТ
-// ============================================
-// Проверка, авторизован ли пользователь при загрузке
-if (auth.currentUser) {
-  loadUserProfile(auth.currentUser.uid).then(() => {
-    loadChats();
-    updateProfileUI(userProfile);
-  });
-}
-
-// Обработка онлайн-статуса
+// Мониторинг системных событий сети
 window.addEventListener('online', () => {
   if (currentUser) {
-    updateDoc(doc(db, 'users', currentUser.uid), { 
-      status: 'online', 
-      lastSeen: serverTimestamp() 
-    });
-    showToast('Вы в сети 🟢', 'success');
+    updateDoc(doc(db, 'users', currentUser.uid), { status: 'online' });
+    showToast('Соединение восстановлено 🟢', 'success');
   }
 });
-
-window.addEventListener('offline', () => {
-  showToast('Нет подключения 🔌', 'error');
-});
-
-// PWA: установка приложения
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  // Можно показать кнопку "Установить"
-});
-
-// Уведомления (запрос разрешения)
-async function requestNotificationPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      showToast('Уведомления включены 🔔', 'success');
-    }
-  }
-}
-// Запрашиваем после входа
-onAuthStateChanged(auth, (user) => {
-  if (user) requestNotificationPermission();
-});
-
-console.log('✨ Woops loaded — готов к общению!');
+window.addEventListener('offline', () => { showToast('Интернет-соединение потеряно 🔌', 'error'); });
