@@ -35,7 +35,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const navBtns = document.querySelectorAll('.nav-btn');
 const tabs = document.querySelectorAll('.tab');
 
-// 👤 Профиль элементы (Модальное окно <dialog>)
+// 👤 Элементы профиля (<dialog>)
 const editProfileBtns = document.querySelectorAll('#edit-profile, #edit-profile-mobile');
 const profileModal = document.getElementById('profileModal');
 const closeProfileBtn = document.getElementById('closeProfile');
@@ -54,7 +54,7 @@ const emojiPicker = document.getElementById('emojiPicker');
 // 🔔 Toast
 const toast = document.getElementById('toast');
 
-// 🌐 Состояние приложения
+// 🌐 Глобальное состояние
 let currentUser = null;
 let currentChat = null;
 let unsubChat = null;
@@ -65,7 +65,7 @@ let userProfile = {};
 const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪','🎯','🌟','💬','🚀','✅','❌','⚡','🎮','🎵','🍕'];
 
 // ============================================
-// 🔐 АВТОРИЗАЦИЯ И MONITORING СТАТУСА
+// 🔐 СЛУШАТЕЛЬ СЕССИИ АВТОРИЗАЦИИ
 // ============================================
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -73,7 +73,6 @@ onAuthStateChanged(auth, (user) => {
     authScreen.classList.remove('active');
     mainScreen.classList.add('active');
     
-    // Включаем real-time отслеживание профиля и списка чатов
     trackOwnProfile(user.uid);
     loadChats();
   } else {
@@ -89,29 +88,29 @@ onAuthStateChanged(auth, (user) => {
 loginBtn.onclick = async () => {
   const email = document.getElementById('auth-email').value.trim();
   const pass = document.getElementById('auth-pass').value;
-  authError.textContent = '';
+  if (authError) authError.textContent = '';
   
   if (!email || !pass) {
-    authError.textContent = 'Заполните все поля';
+    if (authError) authError.textContent = 'Заполните все поля';
     return;
   }
   
   try {
     await signInWithEmailAndPassword(auth, email, pass);
-    showToast('С возвращением! 👋', 'success');
+    showToast('С возвращением! 👋');
   } catch(e) {
-    authError.textContent = getAuthError(e.code);
-    showToast('Ошибка входа', 'error');
+    if (authError) authError.textContent = getAuthError(e.code);
+    showToast('Ошибка авторизации', 'error');
   }
 };
 
 registerBtn.onclick = async () => {
   const email = document.getElementById('auth-email').value.trim();
   const pass = document.getElementById('auth-pass').value;
-  authError.textContent = '';
+  if (authError) authError.textContent = '';
   
   if (!email || pass.length < 6) {
-    authError.textContent = 'Email и пароль (мин. 6 символов)';
+    if (authError) authError.textContent = 'Email и пароль (минимум 6 символов)';
     return;
   }
   
@@ -129,9 +128,9 @@ registerBtn.onclick = async () => {
       lastSeen: serverTimestamp()
     });
     
-    showToast('Аккаунт успешно создан! 🎉', 'success');
+    showToast('Аккаунт создан! 🎉');
   } catch(e) {
-    authError.textContent = getAuthError(e.code);
+    if (authError) authError.textContent = getAuthError(e.code);
     showToast('Ошибка регистрации', 'error');
   }
 };
@@ -143,14 +142,14 @@ logoutBtn.onclick = async () => {
         status: 'offline',
         lastSeen: serverTimestamp()
       });
-    } catch (e) { console.error(e); }
+    } catch(e) { console.error(e); }
   }
   await signOut(auth);
-  showToast('До встречи! 👋', 'success');
+  showToast('Вы вышли из системы');
 };
 
 // ============================================
-// 👤 ПРОФИЛЬ (REAL-TIME СЛУШАТЕЛЬ)
+// 👤 РАБОТА С ПРОФИЛЕМ (REAL-TIME)
 // ============================================
 function trackOwnProfile(uid) {
   if (unsubOwnProfile) unsubOwnProfile();
@@ -163,35 +162,29 @@ function trackOwnProfile(uid) {
   });
 }
 
-// Открытие модального окна профиля (через HTML5 Dialog API)
 editProfileBtns.forEach(btn => {
   btn.onclick = () => {
     if (!currentUser) return;
-    
     displayNameInput.value = userProfile.displayName || '';
     userStatusSelect.value = userProfile.status || 'online';
     statusTextInput.value = userProfile.statusText || '';
-    avatarPreview.src = userProfile.avatar || `https://ui-avatars.com/api/?name=U&background=6366f1&color=fff`;
+    avatarPreview.src = userProfile.avatar || '';
     
-    if (profileModal) {
-      profileModal.showModal(); // Нативный метод открытия <dialog>
-    }
+    if (profileModal) profileModal.showModal();
   };
 });
 
 function closeModal() {
-  if (profileModal) profileModal.close(); // Нативный метод закрытия
+  if (profileModal) profileModal.close();
 }
-
 if (closeProfileBtn) closeProfileBtn.onclick = closeModal;
 if (cancelProfileBtn) cancelProfileBtn.onclick = closeModal;
 
-// Предпросмотр локального аватара перед отправкой
 avatarInput.onchange = (e) => {
   const file = e.target.files[0];
   if (file) {
     if (file.size > 2 * 1024 * 1024) {
-      showToast('Файл слишком большой (макс. 2MB)', 'error');
+      showToast('Размер файла превышает 2МБ', 'error');
       avatarInput.value = '';
       return;
     }
@@ -201,7 +194,6 @@ avatarInput.onchange = (e) => {
   }
 };
 
-// Сохранение изменений профиля в Firebase
 saveProfileBtn.onclick = async () => {
   if (!currentUser) return;
   
@@ -213,75 +205,59 @@ saveProfileBtn.onclick = async () => {
     let avatarUrl = userProfile.avatar;
     
     if (avatarInput.files[0]) {
-      showToast('Загрузка аватара...', 'success');
+      showToast('Загружаем изображение...');
       const file = avatarInput.files[0];
       const storageRef = ref(storage, `avatars/${currentUser.uid}/avatar_${Date.now()}`);
       await uploadBytes(storageRef, file);
       avatarUrl = await getDownloadURL(storageRef);
     }
     
-    const updates = {
-      displayName,
-      status,
-      statusText,
-      avatar: avatarUrl,
-      lastSeen: serverTimestamp()
-    };
+    await updateDoc(doc(db, 'users', currentUser.uid), {
+      displayName, status, statusText, avatar: avatarUrl, lastSeen: serverTimestamp()
+    });
     
-    await updateDoc(doc(db, 'users', currentUser.uid), updates);
     closeModal();
-    showToast('Профиль успешно обновлён! ✨', 'success');
+    showToast('Профиль успешно сохранен! ✨');
   } catch(e) {
-    console.error('Ошибка сохранения:', e);
-    showToast('Не удалось сохранить изменения', 'error');
+    console.error(e);
+    showToast('Ошибка сохранения данных', 'error');
   }
 };
 
-// Заполнение интерфейса данными профиля (безопасно, без крашей)
 function updateProfileUI(profile) {
   const name = profile.displayName || 'Пользователь';
-  const avatar = profile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`;
+  const avatar = profile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
   const status = profile.status || 'online';
   const statusText = profile.statusText;
   
   const statusLabels = { online: '● В сети', busy: '🔴 Занят', away: '🟡 Отошёл', offline: '⚫ Не в сети' };
-  const resolvedStatus = statusText ? `${statusLabels[status] || '● В сети'} • ${statusText}` : statusLabels[status];
+  const resolvedStatus = statusText ? `${statusLabels[status]} • ${statusText}` : statusLabels[status];
 
-  // Массив селекторов для десктопной и мобильной версий
   const bindings = [
     { nameId: 'my-name', avatarId: 'my-avatar', statusId: 'my-status-text', dotId: 'my-status-dot' },
     { nameId: 'my-name-mobile', avatarId: 'my-avatar-mobile', statusId: 'my-status-mobile', dotId: null }
   ];
 
   bindings.forEach(b => {
-    const nameEl = document.getElementById(b.nameId);
-    const avatarEl = document.getElementById(b.avatarId);
-    const statusEl = document.getElementById(b.statusId);
-    const dotEl = b.dotId ? document.getElementById(b.dotId) : null;
+    const n = document.getElementById(b.nameId);
+    const a = document.getElementById(b.avatarId);
+    const s = document.getElementById(b.statusId);
+    const d = b.dotId ? document.getElementById(b.dotId) : null;
 
-    if (nameEl) nameEl.textContent = name;
-    if (avatarEl) avatarEl.src = avatar;
-    if (statusEl) statusEl.textContent = resolvedStatus;
-    if (dotEl) {
-      dotEl.className = `status-indicator status-${status}`;
-    }
+    if (n) n.textContent = name;
+    if (a) a.src = avatar;
+    if (s) s.textContent = resolvedStatus;
+    if (d) d.className = `status-indicator status-${status}`;
   });
-  
-  if (currentChat && currentChat.id === currentUser.uid) {
-    const chatNameEl = document.getElementById('chat-name');
-    const chatAvatarEl = document.getElementById('chat-avatar');
-    if (chatNameEl) chatNameEl.textContent = name;
-    if (chatAvatarEl) chatAvatarEl.src = avatar;
-  }
 }
 
 // ============================================
-// 💬 СПИСОК ЧАТОВ
+// 💬 ЗАГРУЗКА СПИСКА КОНТАКТОВ
 // ============================================
 function loadChats() {
   if (!currentUser) return;
-  
   const q = query(collection(db, 'users'));
+  
   if (unsubUsers) unsubUsers();
   
   unsubUsers = onSnapshot(q, (snap) => {
@@ -289,69 +265,57 @@ function loadChats() {
     let hasChats = false;
     
     snap.forEach(docSnap => {
-      if (docSnap.id === currentUser.uid) return; // Пропускаем себя
-      
+      if (docSnap.id === currentUser.uid) return;
       hasChats = true;
+      
       const user = docSnap.data();
       const li = document.createElement('li');
       
-      // Блок аватара
-      const avatarWrapper = document.createElement('div');
-      avatarWrapper.className = 'avatar-wrapper';
+      const wrap = document.createElement('div');
+      wrap.className = 'avatar-wrapper';
       
-      const avatar = document.createElement('img');
-      avatar.className = 'avatar';
-      avatar.src = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=6366f1&color=fff`;
-      avatar.alt = user.displayName || 'User';
-      avatar.onerror = (e) => { e.target.src = `https://ui-avatars.com/api/?name=U&background=6366f1&color=fff`; };
+      const img = document.createElement('img');
+      img.className = 'avatar';
+      img.src = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}`;
       
-      const statusDot = document.createElement('span');
-      statusDot.className = `status-indicator status-${user.status || 'offline'}`;
+      const dot = document.createElement('span');
+      dot.className = `status-indicator status-${user.status || 'offline'}`;
       
-      avatarWrapper.appendChild(avatar);
-      avatarWrapper.appendChild(statusDot);
+      wrap.appendChild(img);
+      wrap.appendChild(dot);
       
-      // Блок текстовой информации
       const info = document.createElement('div');
       info.className = 'chat-info';
       info.innerHTML = `
-        <h4>${escapeHtml(user.displayName || 'Пользователь')}</h4>
-        <p class="text-muted">${escapeHtml(user.statusText || 'Напишите первое сообщение 👋')}</p>
+        <h4>${escapeHtml(user.displayName || 'Аноним')}</h4>
+        <p class="text-muted">${escapeHtml(user.statusText || 'Нажми для начала диалога 💬')}</p>
       `;
       
-      li.appendChild(avatarWrapper);
+      li.appendChild(wrap);
       li.appendChild(info);
-      li.onclick = () => openChat(docSnap.id, user.displayName || 'Пользователь', user.avatar);
+      li.onclick = () => openChat(docSnap.id, user.displayName, user.avatar);
       
       chatList.appendChild(li);
     });
     
-    const emptyState = document.getElementById('chats-empty');
-    if (emptyState) {
-      emptyState.style.display = hasChats ? 'none' : 'block';
-    }
-  }, (error) => {
-    console.error('Ошибка загрузки списка контактов:', error);
-    showToast('Не удалось обновить список чатов', 'error');
+    const empty = document.getElementById('chats-empty');
+    if (empty) empty.style.display = hasChats ? 'none' : 'block';
   });
 }
 
 // ============================================
-// ✉️ ОКНО ДИАЛОГА И СООБЩЕНИЯ
+// ✉️ ПЕРЕПИСКА В ЧАТЕ
 // ============================================
 function openChat(userId, name, avatar) {
   currentChat = { id: userId, name, avatar };
   
-  // Анимация выезда окна чата
-  if (window.innerWidth < 768) {
-    mainScreen.classList.remove('active');
-  }
+  if (window.innerWidth < 768) mainScreen.classList.remove('active');
   chatScreen.classList.add('active');
   
   document.getElementById('chat-name').textContent = name;
-  document.getElementById('chat-avatar').src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=22c55e&color=fff`;
+  document.getElementById('chat-avatar').src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
   
-  msgArea.innerHTML = '<div class="msg in" style="align-self:center;background:var(--surface-2-solid)">Загрузка истории...</div>';
+  msgArea.innerHTML = '<div class="empty-state">Синхронизация сообщений...</div>';
   
   const room = [currentUser.uid, userId].sort().join('_');
   const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
@@ -360,29 +324,20 @@ function openChat(userId, name, avatar) {
   
   unsubChat = onSnapshot(q, (snap) => {
     msgArea.innerHTML = '';
-    
     if (snap.empty) {
-      msgArea.innerHTML = '<div class="empty-state">Начните беседу — напишите первое сообщение!</div>';
+      msgArea.innerHTML = '<div class="empty-state">Тут пока пусто. Напишите что-нибудь! ✨</div>';
     } else {
-      snap.forEach(docSnap => {
-        msgArea.appendChild(renderMessage(docSnap.data()));
+      snap.forEach(d => {
+        msgArea.appendChild(renderMessage(d.data()));
       });
     }
-    
-    // Плавный скролл вниз к последнему сообщению
-    setTimeout(() => {
-      msgArea.scrollTop = msgArea.scrollHeight;
-    }, 50);
-  }, (error) => {
-    console.error('Ошибка стрима сообщений:', error);
-    msgArea.innerHTML = '<div class="msg in" style="background:var(--danger);color:white">Ошибка загрузки сообщений</div>';
+    setTimeout(() => { msgArea.scrollTop = msgArea.scrollHeight; }, 300);
   });
 }
 
 function renderMessage(msg) {
   const div = document.createElement('div');
   const isOwn = msg.senderId === currentUser?.uid;
-  
   div.className = `msg ${isOwn ? 'out' : 'in'}`;
   div.innerHTML = `${escapeHtml(msg.text)}<span class="time">${formatTime(msg.createdAt)}</span>`;
   return div;
@@ -390,8 +345,8 @@ function renderMessage(msg) {
 
 function formatTime(timestamp) {
   if (!timestamp) return '';
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const d = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
 sendBtn.onclick = async () => {
@@ -401,16 +356,12 @@ sendBtn.onclick = async () => {
   try {
     const room = [currentUser.uid, currentChat.id].sort().join('_');
     await addDoc(collection(db, 'messages'), {
-      room,
-      senderId: currentUser.uid,
-      text,
-      createdAt: serverTimestamp()
+      room, senderId: currentUser.uid, text, createdAt: serverTimestamp()
     });
     textInput.value = '';
     textInput.focus();
   } catch(e) {
-    console.error('Ошибка отправки:', e);
-    showToast('Не удалось отправить сообщение', 'error');
+    showToast('Ошибка отправки', 'error');
   }
 };
 
@@ -421,12 +372,12 @@ textInput.onkeypress = (e) => {
   }
 };
 
-// Авто-фокус на инпут ввода после завершения CSS транзиции выезда чата
-chatScreen.addEventListener('transitionend', () => {
-  if (chatScreen.classList.contains('active')) {
-    textInput.focus();
-  }
-});
+backBtn.onclick = () => {
+  chatScreen.classList.remove('active');
+  mainScreen.classList.add('active');
+  currentChat = null;
+  if (unsubChat) { unsubChat(); unsubChat = null; }
+};
 
 // ============================================
 // 😊 ПАНЕЛЬ ЭМОДЗИ
@@ -434,17 +385,13 @@ chatScreen.addEventListener('transitionend', () => {
 function initEmojiPicker() {
   if (!emojiPicker) return;
   emojiPicker.innerHTML = '';
-  
   EMOJIS.forEach(emoji => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = emoji;
-    btn.setAttribute('aria-label', `Вставить ${emoji}`);
     btn.onclick = () => {
-      const start = textInput.selectionStart;
-      const end = textInput.selectionEnd;
-      textInput.value = textInput.value.substring(0, start) + emoji + textInput.value.substring(end);
-      textInput.selectionStart = textInput.selectionEnd = start + emoji.length;
+      const pos = textInput.selectionStart;
+      textInput.value = textInput.value.substring(0, pos) + emoji + textInput.value.substring(pos);
       textInput.focus();
       hideEmojiPicker();
     };
@@ -452,27 +399,20 @@ function initEmojiPicker() {
   });
 }
 
-if (emojiToggle && emojiPicker) {
+if (emojiToggle) {
   emojiToggle.onclick = (e) => {
     e.stopPropagation();
     emojiPicker.classList.toggle('active');
   };
-  
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.emoji-picker') && !e.target.closest('#emojiToggle')) {
-      hideEmojiPicker();
-    }
+    if (!e.target.closest('.emoji-picker') && !e.target.closest('#emojiToggle')) hideEmojiPicker();
   });
 }
-
-function hideEmojiPicker() {
-  if (emojiPicker) emojiPicker.classList.remove('active');
-}
-
+function hideEmojiPicker() { if (emojiPicker) emojiPicker.classList.remove('active'); }
 initEmojiPicker();
 
 // ============================================
-// 🧭 ТАБ-НАВИГАЦИЯ (МОБИЛЬНАЯ + ДЕСКТОП)
+// 🧭 ТАБ-НАВИГАЦИЯ
 // ============================================
 navBtns.forEach(btn => {
   btn.onclick = () => {
@@ -480,9 +420,8 @@ navBtns.forEach(btn => {
     tabs.forEach(t => t.classList.remove('active'));
     
     btn.classList.add('active');
-    const tabId = 'tab-' + btn.dataset.tab;
-    const targetTab = document.getElementById(tabId);
-    if (targetTab) targetTab.classList.add('active');
+    const target = document.getElementById('tab-' + btn.dataset.tab);
+    if (target) target.classList.add('active');
     
     const titles = { chats: 'Чаты', status: 'Статус', calls: 'Звонки', profile: 'Профиль' };
     const titleEl = document.getElementById('tab-title');
@@ -490,30 +429,15 @@ navBtns.forEach(btn => {
   };
 });
 
-// 🔙 Назад к списку чатов (для мобильных девайсов)
-backBtn.onclick = () => {
-  chatScreen.classList.remove('active');
-  mainScreen.classList.add('active');
-  currentChat = null;
-  
-  if (unsubChat) {
-    unsubChat();
-    unsubChat = null;
-  }
-};
-
 // ============================================
-// 🔔 СЕРВИСНЫЕ ФУНКЦИИ И УТИЛИТЫ
+// 🛡️ СЕРВИСНЫЕ ФУНКЦИИ
 // ============================================
 function showToast(message, type = 'success') {
   if (!toast) return;
   toast.textContent = message;
   toast.className = `toast show`;
-  
   clearTimeout(toast._timeout);
-  toast._timeout = setTimeout(() => {
-    toast.classList.remove('show');
-  }, 3000);
+  toast._timeout = setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
 function escapeHtml(text) {
@@ -524,39 +448,23 @@ function escapeHtml(text) {
 
 function getAuthError(code) {
   const errors = {
-    'auth/invalid-email': 'Неверный формат почты',
-    'auth/user-disabled': 'Учётная запись деактивирована',
-    'auth/user-not-found': 'Пользователь не зарегистрирован',
+    'auth/invalid-email': 'Некорректный формат почты',
+    'auth/user-not-found': 'Пользователь не найден',
     'auth/wrong-password': 'Неверный пароль',
-    'auth/email-already-in-use': 'Данный Email уже занят',
-    'auth/weak-password': 'Пароль должен содержать минимум 6 символов',
-    'auth/network-request-failed': 'Проблема с сетью. Проверьте соединение'
+    'auth/email-already-in-use': 'Почта уже используется'
   };
-  return errors[code] || 'Ошибка аутентификации';
+  return errors[code] || 'Ошибка доступа';
 }
 
 function cleanupListeners() {
   if (unsubChat) unsubChat();
   if (unsubUsers) unsubUsers();
   if (unsubOwnProfile) unsubOwnProfile();
-  unsubChat = null;
-  unsubUsers = null;
-  unsubOwnProfile = null;
-  currentChat = null;
+  unsubChat = null; unsubUsers = null; unsubOwnProfile = null; currentChat = null;
 }
 
-// Корректный расчет высоты для мобильных браузеров (фикс бага прыгающей строки ввода)
 function adjustViewport() {
   document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
 }
 window.addEventListener('resize', adjustViewport);
 adjustViewport();
-
-// Мониторинг системных событий сети
-window.addEventListener('online', () => {
-  if (currentUser) {
-    updateDoc(doc(db, 'users', currentUser.uid), { status: 'online' });
-    showToast('Соединение восстановлено 🟢', 'success');
-  }
-});
-window.addEventListener('offline', () => { showToast('Интернет-соединение потеряно 🔌', 'error'); });
