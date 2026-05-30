@@ -1,18 +1,18 @@
-// Импорт модулей Firebase из CDN (не нужен npm-сборщик)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+// 🔥 Firebase импорты (версия 12.14.0 как в твоей консоли)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { 
-  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-  signOut, onAuthStateChanged, updateProfile 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { 
-  getFirestore, collection, addDoc, query, orderBy, onSnapshot, 
-  serverTimestamp, where, getDocs, doc, setDoc, updateDoc 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { 
-  getStorage, ref, uploadBytes, getDownloadURL 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, updateProfile
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, query, orderBy, onSnapshot,
+  where, getDocs, doc, setDoc, updateDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 
-// 🔥 Твой конфиг
+// 🔥 Твой конфиг из консоли
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
   authDomain: "woops-4ded6.firebaseapp.com",
@@ -29,7 +29,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// DOM элементы
+// DOM
 const authScreen = document.getElementById('auth-screen');
 const mainScreen = document.getElementById('main-screen');
 const chatScreen = document.getElementById('chat-screen');
@@ -74,27 +74,30 @@ onAuthStateChanged(auth, async (user) => {
 loginBtn.addEventListener('click', async () => {
   const email = document.getElementById('auth-email').value.trim();
   const pass = document.getElementById('auth-pass').value;
-  if (!email || pass.length < 6) return showError('Введите email и пароль (мин. 6 символов)');
+  if (!email || pass.length < 6) return showError('Email и пароль (мин. 6 символов)');
   try {
     await signInWithEmailAndPassword(auth, email, pass);
-  } catch (e) { showError(e.message); }
+  } catch (e) { showError(e.code.replace('auth/', '')); }
 });
 
 registerBtn.addEventListener('click', async () => {
   const email = document.getElementById('auth-email').value.trim();
   const pass = document.getElementById('auth-pass').value;
-  const name = document.getElementById('auth-phone').value.trim() || email.split('@')[0];
-  if (!email || pass.length < 6) return showError('Введите email и пароль (мин. 6 символов)');
+  const name = email.split('@')[0];
+  if (!email || pass.length < 6) return showError('Email и пароль (мин. 6 символов)');
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     await updateProfile(cred.user, { displayName: name });
     await setDoc(doc(db, 'users', cred.user.uid), {
       name, email, avatar: null, status: 'В сети', createdAt: serverTimestamp()
     });
-  } catch (e) { showError(e.message); }
+  } catch (e) { showError(e.code.replace('auth/', '')); }
 });
 
-function showError(msg) { authError.textContent = msg; setTimeout(() => authError.textContent = '', 5000); }
+function showError(msg) { 
+  authError.textContent = msg; 
+  setTimeout(() => authError.textContent = '', 5000); 
+}
 
 logoutBtn.addEventListener('click', () => signOut(auth));
 
@@ -135,7 +138,7 @@ editProfileBtn.addEventListener('click', async () => {
   input.click();
 });
 
-// 💬 Список чатов (упрощённо: все пользователи как чаты)
+// 💬 Список чатов
 async function loadChatsList() {
   chatList.innerHTML = '<li style="padding:16px;color:#888">Загрузка...</li>';
   const usersSnap = await getDocs(collection(db, 'users'));
@@ -151,7 +154,7 @@ async function loadChatsList() {
   if (chatList.children.length === 0) chatList.innerHTML = '<li style="padding:16px;color:#888">Нет других пользователей</li>';
 }
 
-// 💬 Открытие чата + подписка на сообщения в реальном времени
+// 💬 Открытие чата
 function openChat(userId, userName, userAvatar) {
   currentChat = { id: userId, name: userName, avatar: userAvatar };
   mainScreen.classList.remove('active');
@@ -164,8 +167,6 @@ function openChat(userId, userName, userAvatar) {
     av.textContent = '';
   }
   msgArea.innerHTML = '';
-
-  // Подписка на сообщения (чат = комната из двух ID, отсортированных)
   const room = [currentUser.uid, userId].sort().join('_');
   const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
   
@@ -187,7 +188,7 @@ backBtn.addEventListener('click', () => {
   currentChat = null;
 });
 
-// ➤ Отправка сообщений
+// ➤ Отправка
 async function sendMessage(text, type = 'text') {
   if (!currentChat || !text) return;
   const room = [currentUser.uid, currentChat.id].sort().join('_');
@@ -258,7 +259,7 @@ function stopRecord() {
   }
 }
 
-// 🔄 Переключение вкладок
+// 🔄 Вкладки
 navBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     navBtns.forEach(b => b.classList.remove('active'));
