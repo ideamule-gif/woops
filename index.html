@@ -3,236 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Woops — быстрый мессенджер</title>
-  
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#6366f1">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+  <title>Woops Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <section id="auth-screen" class="screen active">
-    <div class="auth-container">
-      <div class="auth-box card">
-        <div class="auth-logo">💬</div>
-        <h1>Woops</h1>
-        <p class="auth-subtitle">Быстрый. Красивый. Твой.</p>
-        
-        <div id="register-fields" class="form-group-animate hidden">
-          <input type="text" id="auth-username" placeholder="Имя пользователя" autocomplete="username">
-        </div>
-        
-        <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
-        <input type="password" id="auth-pass" placeholder="Пароль (мин. 6)" autocomplete="current-password">
-        
-        <div class="auth-buttons">
-          <button id="login-btn" class="btn btn-primary btn-full">Войти</button>
-          <button id="register-btn" class="btn btn-outline btn-full">Создать аккаунт</button>
-        </div>
-        
-        <button id="toggle-auth-mode" class="btn btn-link hidden">Уже есть аккаунт? Войти</button>
-        
-        <p id="auth-error" class="error" role="alert"></p>
+  <div id="auth-screen" class="screen active">
+    <div class="auth-card">
+      <h2>Woops</h2>
+      <p>Вход в аккаунт</p>
+      <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="auth-pass" placeholder="Пароль">
+      <div id="auth-error" class="error-msg"></div>
+      <div class="auth-buttons">
+        <button id="login-btn" class="btn primary">Войти</button>
+        <button id="register-btn" class="btn secondary">Регистрация</button>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section id="main-screen" class="screen">
-    
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="logo">💬 <strong>Woops</strong></div>
-        <button id="menu-btn" class="icon-btn" aria-label="Меню">⋮</button>
-      </div>
-      
-      <div class="my-profile-card card">
-        <div class="avatar-wrapper">
-          <img id="my-avatar" class="avatar avatar-lg" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" alt="Аватар">
-          <span class="status-indicator" id="my-status-dot"></span>
-        </div>
-        <div class="my-profile-info">
-          <h4 id="my-name">Загрузка...</h4>
-          <small id="my-status-text" class="text-muted">Загрузка...</small>
-        </div>
-        <button id="edit-profile" class="btn btn-sm btn-ghost" aria-label="Редактировать профиль">✏️</button>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <button class="nav-btn active" data-tab="chats">
-          <span class="nav-icon">💬</span> Чаты
-        </button>
-        <button class="nav-btn" data-tab="status">
-          <span class="nav-icon">📊</span> Статус
-        </button>
-        <button class="nav-btn" data-tab="calls">
-          <span class="nav-icon">📞</span> Звонки
-        </button>
-        <button class="nav-btn" data-tab="profile">
-          <span class="nav-icon">⚙️</span> Настройки
-        </button>
-      </nav>
-      
-      <div class="sidebar-footer">
-        <button id="logout-btn" class="btn btn-danger btn-sm btn-full">🚪 Выйти</button>
-      </div>
-    </aside>
-
-    <main class="main-content">
-      <header class="top-bar">
-        <h2 id="tab-title">Чаты</h2>
-        <div class="top-actions">
-          <button class="icon-btn" id="search-btn" aria-label="Поиск контактов">🔍</button>
-          <button class="icon-btn" id="new-chat" aria-label="Новый чат">✏️</button>
-        </div>
-      </header>
-
-      <div class="tabs-content">
-        <div id="tab-chats" class="tab active">
-          <ul id="chat-list" class="list" role="list"></ul>
-          <p class="empty-state" id="chats-empty">Нет чатов — найдите друга через поиск! ✨</p>
-        </div>
-        
-        <div id="tab-status" class="tab">
-          <div class="empty card">
-            <p>📊 Статусы друзей появятся здесь</p>
-            <small class="text-muted">Делитесь настроением в реальном времени</small>
-          </div>
-        </div>
-        
-        <div id="tab-calls" class="tab">
-          <div class="empty card">
-            <p>📞 История звонков</p>
-            <small class="text-muted">Звоните прямо из чата (скоро)</small>
-          </div>
-        </div>
-        
-        <div id="tab-profile" class="tab">
-          <div class="profile-card card">
-            <div class="avatar-wrapper center">
-              <img id="my-avatar-mobile" class="avatar avatar-xl" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" alt="Аватар">
-              <span class="status-indicator"></span>
-            </div>
-            <h3 id="my-name-mobile">Загрузка...</h3>
-            <p id="my-status-mobile" class="text-muted">Загрузка...</p>
-            <button id="edit-profile-mobile" class="btn btn-outline btn-full">✏️ Редактировать профиль</button>
-          </div>
-        </div>
-      </div>
-    </main>
-  </section>
-
-  <section id="chat-screen" class="screen">
-    <header class="chat-top">
-      <button id="back-btn" class="icon-btn" aria-label="Назад">←</button>
-      <div class="contact-info">
-        <div class="avatar-wrapper">
-          <img id="chat-avatar" class="avatar" src="https://ui-avatars.com/api/?name=K&background=22c55e&color=fff" alt="Аватар">
-          <span class="status-indicator" id="chat-status-dot"></span>
-        </div>
-        <div>
-          <h4 id="chat-name">Контакт</h4>
-          <small id="chat-online" class="text-muted">не в сети</small>
-        </div>
-      </div>
-      <button class="icon-btn" id="chat-menu-btn" aria-label="Ещё">⋮</button>
+  <div id="main-screen" class="screen">
+    <header class="main-header">
+      <h1 id="tab-title">Чаты</h1>
+      <button id="logout-btn" class="icon-btn" aria-label="Выйти">🚪</button>
     </header>
-    
-    <div class="messages" id="msg-area" role="log" aria-live="polite"></div>
-    
-    <footer class="input-area">
-      <div class="input-wrapper">
-        <button id="emojiToggle" class="icon-btn emoji-btn" aria-label="Эмодзи" aria-expanded="false">😊</button>
-        
-        <div class="emoji-picker" id="emojiPicker" role="dialog" aria-label="Выбор эмодзи"></div>
-        
-        <input type="text" id="text-input" placeholder="Написать сообщение..." autocomplete="off" autocapitalize="sentences" aria-label="Текст сообщения">
-        <button id="send-btn" class="btn btn-primary btn-icon" aria-label="Отправить">➤</button>
-      </div>
-    </footer>
-  </section>
 
-  <dialog class="modal" id="searchModal" aria-labelledby="search-modal-title">
-    <div class="modal-content card">
-      <header class="modal-header">
-        <h3 id="search-modal-title">Поиск собеседников</h3>
-        <button class="icon-btn modal-close" id="closeSearch" aria-label="Закрыть">✕</button>
-      </header>
-      <div class="modal-body">
-        <div class="form-group search-input-wrapper">
-          <input type="search" id="user-search-input" placeholder="Введите email или имя для поиска...">
-        </div>
-        <ul id="search-results-list" class="list search-results"></ul>
-        <p id="search-empty-state" class="empty-state">Начните вводить текст для поиска пользователей 🔎</p>
-      </div>
-    </div>
-  </dialog>
-
-  <dialog class="modal" id="profileModal" aria-labelledby="modal-title">
-    <div class="modal-content card">
-      <header class="modal-header">
-        <h3 id="modal-title">Редактировать профиль</h3>
-        <button class="icon-btn modal-close" id="closeProfile" aria-label="Закрыть">✕</button>
-      </header>
+    <div class="tabs-container">
       
+      <section id="tab-chats" class="tab active">
+        <ul id="chat-list" class="chat-list"></ul>
+        <div id="chats-empty" class="empty-state" style="display: none;">
+          Никого нет. Вы первый пользователь? 🧐
+        </div>
+      </section>
+
+      <section id="tab-status" class="tab">
+        <div class="status-wrapper">
+          <div class="my-profile-card">
+            <div class="avatar-zone">
+              <img id="my-avatar" src="" alt="Мой аватар" class="avatar big">
+              <span id="my-status-dot" class="status-indicator"></span>
+            </div>
+            <div class="profile-info">
+              <h3 id="my-name">Загрузка...</h3>
+              <p id="my-status-text" class="text-muted">online</p>
+            </div>
+            <button id="edit-profile" class="btn secondary sm">Изменить</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-calls" class="tab">
+        <div class="empty-state">История звонков пуста 📞</div>
+      </section>
+
+      <section id="tab-profile" class="tab">
+        <div class="mobile-profile-wrapper">
+          <img id="my-avatar-mobile" src="" alt="Аватар" class="avatar huge">
+          <h2 id="my-name-mobile">Загрузка...</h2>
+          <p id="my-status-mobile" class="text-muted"></p>
+          <button id="edit-profile-mobile" class="btn primary">Редактировать профиль</button>
+        </div>
+      </section>
+
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="chats">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Чаты</span>
+      </button>
+      <button class="nav-btn" data-tab="status">
+        <span class="nav-icon">✨</span>
+        <span class="nav-label">Статус</span>
+      </button>
+      <button class="nav-btn" data-tab="calls">
+        <span class="nav-icon">📞</span>
+        <span class="nav-label">Звонки</span>
+      </button>
+      <button class="nav-btn mobile-only" data-tab="profile">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">Профиль</span>
+      </button>
+    </nav>
+  </div>
+
+  <div id="chat-screen" class="screen">
+    <header class="chat-header">
+      <button id="back-btn" class="icon-btn">⬅️</button>
+      <img id="chat-avatar" src="" alt="" class="avatar">
+      <div class="chat-meta">
+        <h3 id="chat-name">Собеседник</h3>
+      </div>
+    </header>
+
+    <div id="msg-area" class="msg-area"></div>
+
+    <footer class="chat-footer">
+      <div class="input-wrapper">
+        <button id="emojiToggle" class="icon-btn" aria-expanded="false">😊</button>
+        <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off">
+        
+        <div id="emojiPicker" class="emoji-picker"></div>
+      </div>
+      <button id="send-btn" class="icon-btn send">🚀</button>
+    </footer>
+  </div>
+
+  <dialog id="profileModal" class="modal">
+    <div class="modal-box">
+      <header class="modal-header">
+        <h3>Редактировать профиль</h3>
+        <button id="closeProfile" class="close-btn">✕</button>
+      </header>
       <div class="modal-body">
         <div class="avatar-upload">
-          <label for="avatarInput" class="avatar-upload-label">
-            <img id="avatarPreview" class="avatar avatar-xl" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" alt="Предпросмотр">
-            <div class="avatar-overlay-label">
-              <span>📷</span>
-            </div>
-          </label>
-          <input type="file" id="avatarInput" accept="image/*" hidden>
-          <small class="text-muted">PNG, JPG до 2MB</small>
+          <img id="avatarPreview" src="" alt="Превью">
+          <label for="avatarInput" class="upload-badge">📸</label>
+          <input type="file" id="avatarInput" accept="image/*" style="display:none">
         </div>
-        
         <div class="form-group">
-          <label for="displayName">Ваше имя</label>
-          <input type="text" id="displayName" placeholder="Как вас называть?" maxlength="30">
+          <label>Имя</label>
+          <input type="text" id="displayName" placeholder="Ваше имя">
         </div>
-        
         <div class="form-group">
-          <label for="userStatus">Статус доступности</label>
+          <label>Статус сети</label>
           <select id="userStatus">
-            <option value="online">🟢 Онлайн</option>
-            <option value="busy">🔴 Занят</option>
-            <option value="away">🟡 Отошёл</option>
-            <option value="offline">⚫ Не в сети</option>
+            <option value="online">В сети</option>
+            <option value="busy">Занят</option>
+            <option value="away">Отошел</option>
           </select>
         </div>
-        
         <div class="form-group">
-          <label for="statusText">О себе / Статус</label>
-          <input type="text" id="statusText" placeholder="Например: В универе 🎓" maxlength="60">
+          <label>Текст статуса</label>
+          <input type="text" id="statusText" placeholder="Чем занимаетесь?">
         </div>
       </div>
-      
       <footer class="modal-footer">
-        <button class="btn btn-outline" id="cancelProfile">Отмена</button>
-        <button class="btn btn-primary" id="saveProfile">💾 Сохранить</button>
+        <button id="cancelProfile" class="btn secondary">Отмена</button>
+        <button id="saveProfile" class="btn primary">Сохранить</button>
       </footer>
     </div>
   </dialog>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="toast" class="toast"></div>
 
   <script type="module" src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('SW registered:', reg.scope))
-          .catch(err => console.log('SW failed:', err));
-      });
-    }
-  </script>
 </body>
 </html>
