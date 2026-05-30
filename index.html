@@ -3,107 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Woops Messenger</title>
+  <title>Woops</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
   <meta name="theme-color" content="#4f46e5">
 </head>
 <body>
-  <!-- Экран авторизации -->
+  <!-- Экран входа -->
   <section id="auth-screen" class="screen active">
-    <div class="auth-card">
+    <div class="auth-box">
       <h1>Woops</h1>
-      <p>Быстрый и красивый мессенджер</p>
-      <input type="tel" id="phone-input" placeholder="Телефон: +7...">
-      <input type="email" id="email-input" placeholder="Email">
-      <input type="password" id="pass-input" placeholder="Пароль">
-      <button id="auth-btn">Войти / Регистрация</button>
+      <input type="tel" id="auth-phone" placeholder="+7 (999) 000-00-00">
+      <input type="email" id="auth-email" placeholder="Email (необязательно)">
+      <button id="login-btn">Войти</button>
     </div>
   </section>
 
-  <!-- Основной интерфейс -->
+  <!-- Главный экран -->
   <section id="main-screen" class="screen">
-    <!-- Верхняя панель -->
-    <header class="app-header">
-      <h2 id="header-title">Чаты</h2>
-      <div class="header-actions">
-        <button id="btn-search">🔍</button>
-        <button id="btn-menu">⋮</button>
-      </div>
+    <header class="top-bar">
+      <h2 id="tab-title">Чаты</h2>
+      <button id="menu-btn">⋮</button>
     </header>
 
-    <!-- Контент вкладок -->
-    <main class="tab-content">
-      <!-- Вкладка: Чаты -->
+    <main class="tabs-content">
       <div id="tab-chats" class="tab active">
-        <ul class="chat-list" id="chat-list"></ul>
-        <button class="fab" id="fab-new-chat">✏️</button>
+        <ul id="chat-list" class="list"></ul>
+        <button class="fab" id="new-chat">✏️</button>
       </div>
-
-      <!-- Вкладка: Статусы -->
-      <div id="tab-status" class="tab">
-        <div class="status-header">
-          <div class="avatar status-avatar" id="my-status-avatar">👤</div>
-          <span>Мой статус</span>
-          <button id="btn-add-status">➕</button>
-        </div>
-        <ul class="status-list" id="status-list"></ul>
-      </div>
-
-      <!-- Вкладка: Звонки -->
-      <div id="tab-calls" class="tab">
-        <ul class="call-list" id="call-list"></ul>
-      </div>
-
-      <!-- Вкладка: Профиль / Настройки -->
+      <div id="tab-status" class="tab"><p class="empty">Статусы пока пусты</p></div>
+      <div id="tab-calls" class="tab"><p class="empty">Нет звонков</p></div>
       <div id="tab-profile" class="tab">
         <div class="profile-card">
-          <div class="avatar large" id="profile-avatar">👤</div>
-          <input type="file" id="avatar-input" accept="image/*" hidden>
-          <h3 id="profile-name">Имя пользователя</h3>
-          <p id="profile-status">В сети</p>
-          <button id="btn-edit-profile">Редактировать</button>
-          <button id="btn-logout" class="danger">Выйти</button>
+          <div class="avatar" id="my-avatar">👤</div>
+          <h3 id="my-name">Гость</h3>
+          <p id="my-status">В сети</p>
+          <button id="edit-profile">Редактировать</button>
+          <button id="logout-btn" class="danger">Выйти</button>
         </div>
       </div>
     </main>
 
-    <!-- Нижнее меню вкладок -->
     <nav class="bottom-nav">
       <button class="nav-btn active" data-tab="chats">💬 Чаты</button>
       <button class="nav-btn" data-tab="status">🟢 Статус</button>
       <button class="nav-btn" data-tab="calls">📞 Звонки</button>
       <button class="nav-btn" data-tab="profile">👤 Профиль</button>
     </nav>
+  </section>
 
-    <!-- Экран чата -->
-    <section id="chat-screen" class="screen hidden">
-      <header class="chat-header">
-        <button id="btn-back">←</button>
-        <div class="chat-info">
-          <span class="avatar small" id="chat-avatar">👤</span>
-          <div>
-            <h4 id="chat-name">Контакт</h4>
-            <small id="chat-status">в сети</small>
-          </div>
+  <!-- Экран чата -->
+  <section id="chat-screen" class="screen">
+    <header class="chat-top">
+      <button id="back-btn">←</button>
+      <div class="contact-info">
+        <div class="avatar small" id="chat-avatar">👤</div>
+        <div>
+          <h4 id="chat-name">Контакт</h4>
+          <small id="chat-online">в сети</small>
         </div>
-      </header>
-      <div class="messages" id="messages-container"></div>
-      <footer class="chat-input">
-        <button id="btn-attach">📎</button>
-        <input type="file" id="media-input" accept="image/*,video/*,.pdf,.doc" hidden>
-        <button id="btn-voice">🎤</button>
-        <input type="text" id="msg-input" placeholder="Сообщение...">
-        <button id="btn-send">➤</button>
-      </footer>
-    </section>
+      </div>
+    </header>
+    <div class="messages" id="msg-area"></div>
+    <footer class="input-area">
+      <button id="attach-btn">📎</button>
+      <input type="file" id="file-input" hidden accept="image/*,.pdf,.doc,.docx">
+      <button id="voice-btn">🎤</button>
+      <input type="text" id="text-input" placeholder="Сообщение...">
+      <button id="send-btn">➤</button>
+    </footer>
   </section>
 
   <script src="app.js"></script>
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(console.error);
-    }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
   </script>
 </body>
 </html>
