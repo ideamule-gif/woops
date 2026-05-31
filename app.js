@@ -156,17 +156,19 @@ function setupAuth() {
   $('register-btn')?.addEventListener('click', () => processAuth(true));
 }
 
-function loginSuccess(user) {
-  state.currentUser = user;
-  $('auth-screen').classList.replace('active', 'hidden');
-  $('app-screen').classList.replace('hidden', 'active');
-  
-  updateProfileDOM();
-  showToast(`Успешный вход: ${user.name}`);
-  
-  renderChats();
-  renderContacts();
-  renderFeed();
+// Автоматический вход, если юзер выбрал "Запомнить меня"
+function checkSavedSession() {
+  const savedUser = localStorage.getItem(CONFIG.sessionKey);
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      // Имитируем наполнение базы данных для корректного поиска сохраненного юзера
+      state.users = [user];
+      loginSuccess(user);
+    } catch (e) {
+      localStorage.removeItem(CONFIG.sessionKey);
+    }
+  }
 }
 
 function updateProfileDOM() {
@@ -624,11 +626,17 @@ function setupProfile() {
     }
   });
 
-  $('delete-profile-btn')?.addEventListener('click', () => {
+$('delete-profile-btn')?.addEventListener('click', () => {
     localStorage.removeItem(CONFIG.sessionKey);
     state.currentUser = null;
-    $('app-screen').classList.replace('active', 'hidden');
-    $('auth-screen').classList.replace('hidden', 'active');
+    
+    // Переключение обратно на вход
+    $('app-screen').classList.add('hidden');
+    $('app-screen').classList.remove('active');
+    
+    $('auth-screen').classList.remove('hidden');
+    $('auth-screen').classList.add('active');
+    
     showToast('Сессия завершена');
   });
 }
