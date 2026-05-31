@@ -731,6 +731,14 @@ function cleanupListeners() {
 // Инициализация
 initEmojiPicker();
 
+// Добавляем обработчик клика для поля ввода (чтобы клавиатура открывалась ТОЛЬКО по клику)
+if (textInput) {
+    textInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Поле ввода получит фокус только при прямом клике
+    });
+}
+
 // Handle Enter key on Auth forms
 if (authForm) {
     authForm.onkeypress = (e) => {
@@ -738,6 +746,15 @@ if (authForm) {
             e.preventDefault();
             if (loginBtn) loginBtn.click();
         }
+    };
+}
+
+// Обработка при переключении между экранами (на мобильных)
+if (backBtn) {
+    const originalBackClick = backBtn.onclick;
+    backBtn.onclick = () => {
+        if (textInput) textInput.blur(); // Убираем фокус при возврате
+        if (originalBackClick) originalBackClick();
     };
 }
 
