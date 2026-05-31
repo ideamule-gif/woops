@@ -1,249 +1,169 @@
-/* ==================== ПЕРЕМЕННЫЕ И ТЕМЫ ==================== */
-:root {
-  --bg-base: #f8fafc;
-  --bg-card: #ffffff;
-  --bg-nav: rgba(255, 255, 255, 0.92);
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --danger: #ef4444;
-  --border: #e2e8f0;
-  --shadow: 0 2px 10px rgba(0,0,0,0.05);
-  --input-bg: #f1f5f9;
-  --star-bg: transparent;
-  --radius: 14px;
-}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  <title>Woops Messenger</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ЭКРАН АВТОРИЗАЦИИ -->
+  <div id="auth-screen" class="screen active">
+    <div class="auth-card">
+      <h1 class="logo">Woops</h1>
+      <p>Простой и современный мессенджер</p>
+      <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="auth-password" placeholder="Пароль" autocomplete="current-password">
+      <div id="auth-error" class="error-text"></div>
+      <button id="login-btn" class="btn primary full-width">Войти</button>
+      <button id="register-btn" class="btn secondary full-width mt-2">Создать аккаунт</button>
+    </div>
+  </div>
 
-[data-theme="dark"] {
-  --bg-base: #0b1120;
-  --bg-card: #111827;
-  --bg-nav: rgba(11, 17, 32, 0.95);
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --border: #1f2937;
-  --shadow: 0 2px 10px rgba(0,0,0,0.35);
-  --input-bg: #1e293b;
-  /* Лёгкий звёздный фон (не отвлекает) */
-  --star-bg: radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px),
-             radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px);
-}
+  <!-- ОСНОВНОЙ ЭКРАН -->
+  <div id="app-screen" class="screen">
+    <header class="app-header">
+      <h1 id="header-title">Чаты</h1>
+      <button id="search-btn" class="icon-btn" aria-label="Поиск">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </button>
+    </header>
 
-/* ==================== БАЗА И СБРОС ==================== */
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body {
-  height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg-base); color: var(--text-main);
-  transition: background 0.3s ease, color 0.3s ease; overflow: hidden;
-}
-body {
-  background-image: var(--star-bg);
-  background-size: 140px 140px, 220px 220px;
-  background-position: 15% 25%, 70% 60%;
-  background-repeat: repeat;
-}
+    <!-- Глобальный поиск -->
+    <div id="search-overlay" class="overlay hidden">
+      <div class="search-box">
+        <input type="text" id="global-search" placeholder="Поиск по имени или email...">
+        <button id="close-search" class="icon-btn">✕</button>
+      </div>
+      <ul id="search-results" class="search-list"></ul>
+    </div>
 
-/* МИНИМАЛИСТИЧНЫЕ ИКОНКИ */
-.icon-btn svg, .nav-icon svg {
-  width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none;
-  color: var(--text-muted); transition: color 0.2s;
-}
-.nav-icon { display: flex; align-items: center; justify-content: center; }
-.nav-btn.active .nav-icon svg { color: var(--primary); }
-.icon-btn:hover svg { color: var(--text-main); }
+    <!-- ВКЛАДКИ -->
+    <main class="tab-content">
+      <div id="tab-chats" class="tab active">
+        <ul id="chat-list" class="list"></ul>
+        <div id="chats-empty" class="empty-state">Нет активных чатов. Начните диалог из контактов.</div>
+      </div>
 
-/* ==================== ЭКРАНЫ И НАВИГАЦИЯ ==================== */
-.screen {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  display: none; flex-direction: column; z-index: 10;
-  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.screen.active { display: flex; }
+      <div id="tab-contacts" class="tab hidden">
+        <div class="section-header">
+          <input type="text" id="contact-search" placeholder="Фильтр контактов...">
+          <button id="add-contact-btn" class="btn primary">+ Добавить</button>
+        </div>
+        <ul id="contacts-list" class="list"></ul>
+        <div id="contacts-empty" class="empty-state">Список контактов пуст</div>
+      </div>
 
-.main-header {
-  padding: 14px 20px 10px; padding-top: max(14px, env(safe-area-inset-top));
-  background: var(--bg-nav); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;
-  flex-shrink: 0;
-}
-.main-header h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+      <div id="tab-feed" class="tab hidden">
+        <div class="section-header">
+          <h3>Лента</h3>
+          <button id="new-post-btn" class="btn primary">✍️ Опубликовать</button>
+        </div>
+        <div id="feed-list" class="feed-container"></div>
+      </div>
 
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; height: 62px;
-  background: var(--bg-nav); backdrop-filter: blur(12px);
-  border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center;
-  padding-bottom: env(safe-area-inset-bottom); z-index: 50; flex-shrink: 0;
-}
-.nav-btn {
-  flex: 1; background: none; border: none; color: var(--text-muted);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  font-size: 11px; gap: 4px; cursor: pointer; transition: 0.2s;
-}
-.nav-btn.active { color: var(--primary); }
+      <div id="tab-profile" class="tab hidden">
+        <div class="profile-header">
+          <img id="profile-avatar" class="avatar huge" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" alt="">
+          <h2 id="profile-name">Загрузка...</h2>
+          <p id="profile-status" class="text-muted">В сети</p>
+          <div class="profile-actions">
+            <button id="edit-profile-btn" class="btn secondary">Редактировать</button>
+            <button id="share-profile-btn" class="btn secondary">Поделиться</button>
+            <button id="delete-profile-btn" class="btn danger">Удалить</button>
+          </div>
+          <label class="theme-toggle">
+            <span>Тёмная тема</span>
+            <input type="checkbox" id="theme-switch">
+          </label>
+        </div>
+        <h3 class="section-title">Мои публикации</h3>
+        <div id="my-posts-feed" class="feed-container"></div>
+      </div>
+    </main>
 
-.tabs-container {
-  flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 80px;
-  -webkit-overflow-scrolling: touch;
-}
-.tab { display: none; animation: fadeIn 0.2s ease; }
-.tab.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+    <nav class="bottom-nav">
+      <button data-tab="chats" class="nav-btn active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Чаты</span>
+      </button>
+      <button data-tab="contacts" class="nav-btn">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Контакты</span>
+      </button>
+      <button data-tab="feed" class="nav-btn">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span>Лента</span>
+      </button>
+      <button data-tab="profile" class="nav-btn">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Профиль</span>
+      </button>
+    </nav>
+  </div>
 
-/* ==================== UI КОМПОНЕНТЫ ==================== */
-.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 12px; }
-.btn { padding: 10px 18px; border-radius: 10px; font-weight: 500; border: none; cursor: pointer; transition: 0.2s; font-size: 14px; }
-.btn.primary { background: var(--primary); color: white; }
-.btn.primary:hover { background: var(--primary-hover); }
-.btn.secondary { background: var(--bg-base); color: var(--text-main); border: 1px solid var(--border); }
-.btn.full-width { width: 100%; }
-.btn.danger-text { color: var(--danger); border-color: var(--border); }
+  <!-- ЭКРАН ЧАТА -->
+  <div id="chat-screen" class="screen hidden">
+    <div class="chat-header">
+      <button id="back-btn" class="icon-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="chat-header-info">
+        <img id="chat-avatar" class="avatar" src="" alt="">
+        <div>
+          <h3 id="chat-name">Имя</h3>
+          <span id="chat-status" class="text-muted">В сети</span>
+        </div>
+      </div>
+    </div>
+    <div id="msg-area" class="msg-area"></div>
+    <div class="chat-footer">
+      <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off">
+      <button id="send-btn" class="icon-btn send">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
 
-.icon-btn { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
-.icon-btn:hover { background: var(--border); }
+  <!-- МОДАЛКИ -->
+  <dialog id="modal-add-contact" class="modal">
+    <div class="modal-box">
+      <h3>Добавить контакт</h3>
+      <input type="text" id="search-contact-input" placeholder="Email или UID пользователя">
+      <div id="contact-search-results" class="search-list"></div>
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="closeModal('modal-add-contact')">Отмена</button>
+      </div>
+    </div>
+  </dialog>
 
-input, textarea, select {
-  width: 100%; padding: 12px 16px; border-radius: 10px;
-  background: var(--input-bg); border: 1px solid var(--border);
-  color: var(--text-main); font-size: 15px; outline: none; transition: 0.2s;
-}
-input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
-textarea { resize: none; }
+  <dialog id="modal-new-post" class="modal">
+    <div class="modal-box">
+      <h3>Новый пост</h3>
+      <textarea id="post-text" placeholder="О чём думаете?" rows="4"></textarea>
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="closeModal('modal-new-post')">Отмена</button>
+        <button id="publish-post-btn" class="btn primary">Опубликовать</button>
+      </div>
+    </div>
+  </dialog>
 
-.text-muted { color: var(--text-muted); }
-.text-xs { font-size: 12px; }
-.text-sm { font-size: 14px; }
-.empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
-.error-text { color: var(--danger); font-size: 13px; text-align: center; min-height: 20px; margin-bottom: 8px; }
+  <dialog id="modal-edit-profile" class="modal">
+    <div class="modal-box">
+      <h3>Редактировать профиль</h3>
+      <label>Имя</label><input type="text" id="edit-displayName">
+      <label>Статус текст</label><input type="text" id="edit-statusText">
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="closeModal('modal-edit-profile')">Отмена</button>
+        <button id="save-profile-btn" class="btn primary">Сохранить</button>
+      </div>
+    </div>
+  </dialog>
 
-/* ==================== ПРОФИЛЬ ==================== */
-.profile-preview { text-align: center; margin-bottom: 20px; }
-.avatar { border-radius: 50%; object-fit: cover; background: var(--border); flex-shrink: 0; }
-.avatar.huge { width: 84px; height: 84px; }
-.avatar.small { width: 38px; height: 38px; }
-
-.profile-actions { display: flex; justify-content: center; gap: 14px; margin: 14px 0 20px; }
-.action-btn {
-  width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--border);
-  background: var(--bg-card); font-size: 18px; cursor: pointer; transition: 0.2s;
-  display: flex; align-items: center; justify-content: center;
-}
-.action-btn:hover { background: var(--border); }
-.section { margin-top: 20px; }
-.section h4 { margin-bottom: 12px; color: var(--text-muted); font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; }
-.avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 200px; overflow-y: auto; padding: 6px; }
-.avatar-option { width: 48px; height: 48px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: 0.2s; object-fit: cover; }
-.avatar-option.selected { border-color: var(--primary); transform: scale(1.05); }
-
-/* ==================== ЛЕНТА И СПИСКИ ==================== */
-.feed-composer { display: flex; gap: 10px; margin-bottom: 18px; align-items: flex-end; }
-.feed-composer textarea { flex: 1; min-height: 42px; }
-.list-item {
-  display: flex; align-items: center; gap: 12px; padding: 14px 0;
-  border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.15s;
-}
-.list-item:last-child { border-bottom: none; }
-.list-item:hover { background: var(--input-bg); margin: 0 -16px; padding-left: 16px; padding-right: 16px; border-radius: 8px; }
-.search-add-row { display: flex; gap: 10px; margin-bottom: 16px; }
-
-/* ==================== ЧАТ ==================== */
-#chat-screen { background: var(--bg-base); transform: translateX(100%); z-index: 100; }
-#chat-screen.active { transform: translateX(0); }
-
-.chat-header {
-  position: sticky; top: 0; z-index: 20;
-  padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
-  background: var(--bg-nav); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-}
-.chat-header-info { flex: 1; }
-.chat-header-info h4 { font-size: 16px; font-weight: 600; }
-
-.msg-area {
-  flex: 1; padding: 16px; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 8px;
-  -webkit-overflow-scrolling: touch;
-}
-.msg { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; }
-.msg.in { background: var(--bg-card); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 4px; }
-.msg.out { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-.msg .time { display: block; font-size: 10px; opacity: 0.6; margin-top: 4px; text-align: right; }
-
-.chat-footer {
-  position: relative; z-index: 30; flex-shrink: 0;
-  background: var(--bg-nav); backdrop-filter: blur(12px);
-  border-top: 1px solid var(--border);
-  padding: 8px 12px; padding-bottom: max(8px, env(safe-area-inset-bottom));
-  display: flex; align-items: center; gap: 8px;
-}
-.input-wrapper {
-  flex: 1; background: var(--input-bg); border: 1px solid var(--border);
-  border-radius: 22px; padding: 4px 12px; display: flex; align-items: center; min-height: 40px;
-}
-.input-wrapper input {
-  background: transparent; border: none; outline: none;
-  padding: 6px 0; width: 100%; font-size: 15px; color: var(--text-main);
-}
-.send-btn { width: 40px; height: 40px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
-
-/* Эмодзи Шторка (не сдвигает макет) */
-.emoji-panel {
-  position: absolute; bottom: calc(100% + 8px); left: 10px; right: 10px;
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
-  box-shadow: var(--shadow); transform: translateY(10px); opacity: 0;
-  pointer-events: none; transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  z-index: 40; display: flex; flex-direction: column;
-}
-.emoji-panel.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
-.emoji-grid {
-  flex: 1; overflow-y: auto; padding: 10px;
-  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
-  max-height: 180px;
-}
-.emoji-grid button {
-  font-size: 24px; background: none; border: none; cursor: pointer;
-  border-radius: 8px; padding: 4px; transition: 0.1s;
-}
-.emoji-grid button:hover { background: var(--input-bg); }
-
-/* ==================== МОДАЛКИ И ПЕРЕКЛЮЧАТЕЛИ ==================== */
-.modal {
-  margin: auto; padding: 0; background: transparent; border: none;
-  width: 90%; max-width: 400px; opacity: 0; transition: opacity 0.2s;
-}
-.modal[open] { opacity: 1; }
-.modal::backdrop { background: rgba(0,0,0,0.45); backdrop-filter: blur(4px); }
-.modal-content {
-  background: var(--bg-card); padding: 22px; border-radius: 18px;
-  border: 1px solid var(--border); box-shadow: var(--shadow);
-  display: flex; flex-direction: column; gap: 14px;
-}
-.modal-content h3 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
-.btn-group { display: flex; gap: 10px; margin-top: 6px; }
-.btn-group .btn { flex: 1; }
-
-.setting-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
-
-.switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--border); transition: .3s; border-radius: 34px; }
-.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-input:checked + .slider { background: var(--primary); }
-input:checked + .slider:before { transform: translateX(20px); }
-
-.toast {
-  position: fixed; top: 22px; left: 50%; transform: translate(-50%, -30px);
-  background: var(--bg-card); color: var(--text-main); padding: 12px 20px;
-  border-radius: 100px; box-shadow: var(--shadow); border: 1px solid var(--border);
-  font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; pointer-events: none;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.toast.show { transform: translate(-50%, 0); opacity: 1; }
-
-/* ==================== АДАПТИВНОСТЬ ==================== */
-@media (min-width: 768px) {
-  #main-screen { max-width: 400px; margin: 0 auto; border-right: 1px solid var(--border); border-left: 1px solid var(--border); }
-  .bottom-nav, .main-header, .tabs-container { max-width: 400px; margin: 0 auto; }
-  #chat-screen { left: 400px; width: calc(100% - 400px); transform: none; opacity: 0; pointer-events: none; border-left: 1px solid var(--border); }
-  #chat-screen.active { opacity: 1; pointer-events: auto; }
-  #back-btn svg { display: none; }
-}
+  <div id="toast" class="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
