@@ -807,3 +807,108 @@ dialog.modal::backdrop {
     
     .back { display: none; }
 }
+
+/* ==================== ПРЕДОТВРАЩЕНИЕ АВТОФОКУСА ==================== */
+
+/* Убираем автоматический фокус с поля ввода */
+#text-input:focus {
+    outline: none;
+}
+
+/* Убираем подсветку автофокуса */
+#text-input:focus-visible {
+    outline: none;
+}
+
+/* Запрещаем авто-увеличение при фокусе на мобильных (если есть) */
+#text-input {
+    font-size: 16px; /* Предотвращает зум на iOS */
+}
+
+/* Медиа-запрос для мобильных устройств */
+@media (max-width: 768px) {
+    /* Предотвращаем автоматическое появление клавиатуры */
+    #chat-screen.active .chat-footer {
+        transition: none;
+    }
+    
+    /* Поле ввода не получает фокус автоматически */
+    #text-input:focus {
+        transform: none;
+    }
+    
+    /* Убираем любые анимации при фокусе */
+    .input-wrapper:focus-within {
+        transform: none;
+    }
+}
+
+/* Блокируем автофокус от браузера */
+*:focus {
+    outline: none;
+}
+
+/* Но оставляем доступность для клавиатуры (опционально) */
+*:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Для поля ввода сообщения - полный запрет автофокуса */
+#text-input:-webkit-autofill,
+#text-input:-webkit-autofill:hover,
+#text-input:-webkit-autofill:focus,
+#text-input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0px 1000px rgba(0, 0, 0, 0.3) inset !important;
+    -webkit-text-fill-color: #fff !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Скрываем иконку управления паролями (ключик и карта) */
+#text-input::-webkit-credentials-picker-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+}
+
+/* Дополнительно для Webkit браузеров */
+#text-input::-webkit-credit-card-auto-fill-button,
+#text-input::-webkit-credentials-picker-button,
+#text-input::-webkit-password-auto-fill-button {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Предотвращаем скролл при фокусе на мобильных */
+@media (max-width: 768px) {
+    html, body {
+        position: fixed;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    #chat-screen {
+        overflow: hidden;
+        position: fixed;
+    }
+    
+    .msg-area {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Убираем задержки при фокусе на iOS */
+input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* Блокируем авто-скролл к полю ввода */
+@supports (-webkit-touch-callout: none) {
+    #text-input:focus {
+        scroll-margin-bottom: 0;
+        transform: translateY(0);
+    }
+}
