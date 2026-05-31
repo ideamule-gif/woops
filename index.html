@@ -3,83 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Woops</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- АВТОРИЗАЦИЯ -->
+
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="auth-screen" class="screen">
         <div class="card auth-card">
-            <h2 style="color:var(--primary); margin-bottom:8px;">Woops</h2>
-            <p style="color:var(--text-muted); margin-bottom:24px;">Вход в аккаунт</p>
-            <input type="email" id="email" placeholder="Email" style="margin-bottom:12px;">
-            <input type="password" id="password" placeholder="Пароль" style="margin-bottom:20px;">
-            <p id="auth-error" style="color:var(--danger); font-size:13px; text-align:center; min-height:18px;"></p>
-            <div style="display:flex; gap:12px;">
-                <button id="login-btn" class="btn primary" style="flex:1;">Войти</button>
-                <button id="register-btn" class="btn secondary" style="flex:1;">Регистрация</button>
+            <h2 class="logo-text">Woops</h2>
+            <p class="text-muted">Вход в аккаунт</p>
+            <input type="email" id="email" placeholder="Email" autocomplete="email">
+            <input type="password" id="password" placeholder="Пароль" autocomplete="current-password">
+            <p id="auth-error" class="error-text"></p>
+            <div class="btn-group">
+                <button id="login-btn" class="btn primary">Войти</button>
+                <button id="register-btn" class="btn secondary">Регистрация</button>
             </div>
         </div>
     </div>
 
-    <!-- ГЛАВНЫЙ ЭКРАН -->
+    <!-- ОСНОВНОЙ ЭКРАН -->
     <div id="main-screen" class="screen">
         <header class="main-header">
-            <h2 id="tab-title">Woops</h2>
+            <h2 id="page-title">Чаты</h2>
             <button id="logout-btn" class="icon-btn" title="Выйти">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </button>
         </header>
 
         <div class="tabs-container">
-            <!-- 💬 ЧАТЫ -->
+            <!-- ЧАТЫ -->
             <div id="tab-chats" class="tab active">
                 <div id="chat-list"></div>
-                <div id="chats-empty" class="empty-state" style="display:none;">Нет чатов</div>
+                <div id="chats-empty" class="empty-state">Нет чатов. Добавьте контакт для общения!</div>
             </div>
 
-            <!-- 📱 ЛЕНТА (вместо заметок) -->
+            <!-- ЛЕНТА -->
             <div id="tab-feed" class="tab">
                 <div class="feed-composer">
                     <textarea id="post-text" rows="2" placeholder="Что нового?"></textarea>
-                    <button id="publish-post" class="btn primary" style="padding:8px 16px;">Опубликовать</button>
+                    <button id="publish-btn" class="btn primary">Опубликовать</button>
                 </div>
                 <div id="feed-list"></div>
-                <div id="feed-empty" class="empty-state" style="display:none;">Лента пуста</div>
+                <div id="feed-empty" class="empty-state">Лента пуста</div>
             </div>
 
-            <!-- 👥 КОНТАКТЫ -->
+            <!-- КОНТАКТЫ -->
             <div id="tab-contacts" class="tab">
-                <div style="display:flex; gap:10px; margin-bottom:16px;">
-                    <input type="text" id="contact-search" placeholder="Поиск..." style="flex:1;">
-                    <button id="add-contact-btn" class="btn primary" style="padding:0 14px;">+</button>
+                <div class="search-add-row">
+                    <input type="text" id="contact-search" placeholder="Поиск контактов...">
+                    <button id="add-contact-btn" class="btn primary">+</button>
                 </div>
                 <div id="contacts-list"></div>
                 <div id="contacts-empty" class="empty-state">Нет контактов</div>
             </div>
 
-            <!-- 👤 ПРОФИЛЬ -->
+            <!-- ПРОФИЛЬ -->
             <div id="tab-profile" class="tab">
                 <div class="profile-preview">
-                    <img id="profile-avatar" src="" class="avatar huge">
-                    <h3 id="profile-name" style="margin:8px 0 4px;">Имя</h3>
-                    <p id="profile-username" class="text-muted" style="font-size:14px;">@username</p>
-                    <p id="profile-status-text" style="margin-top:4px; font-size:14px;"></p>
+                    <img id="profile-avatar" src="" class="avatar huge" alt="Avatar">
+                    <h3 id="profile-name">Имя</h3>
+                    <p id="profile-username" class="text-muted">@username</p>
+                    <p id="profile-status-text" class="text-sm"></p>
                 </div>
-
+                
                 <div class="profile-actions">
-                    <button id="btn-change-avatar" class="profile-action-btn" title="Выбрать аватар">📷</button>
-                    <button id="btn-edit-profile" class="profile-action-btn" title="Редактировать">✏️</button>
-                    <button id="btn-settings" class="profile-action-btn" title="Настройки">🎛️</button>
+                    <button id="btn-change-avatar" class="action-btn" title="Выбрать аватар">📷</button>
+                    <button id="btn-edit-profile" class="action-btn" title="Редактировать">✏️</button>
+                    <button id="btn-settings" class="action-btn" title="Настройки">⚙️</button>
                 </div>
 
-                <div class="profile-posts-section">
-                    <h4 style="margin-bottom:12px; color:var(--text-muted); font-weight:500;">Публикации</h4>
+                <div class="section">
+                    <h4>Мои публикации</h4>
                     <div id="my-posts-list"></div>
-                    <p id="my-posts-empty" class="text-muted" style="font-size:13px;">Нет публикаций</p>
+                    <p id="my-posts-empty" class="text-muted">Нет публикаций</p>
                 </div>
 
-                <button id="btn-delete-profile" class="btn secondary full" style="margin-top:24px; color:var(--danger); border-color:var(--danger);">Удалить профиль</button>
+                <button id="btn-delete-profile" class="btn secondary full-width danger-text">Удалить профиль</button>
             </div>
         </div>
 
@@ -94,78 +99,80 @@
     <!-- ЭКРАН ЧАТА -->
     <div id="chat-screen" class="screen">
         <header class="chat-header">
-            <button id="back-btn" class="icon-btn">←</button>
-            <img id="chat-avatar" src="" class="avatar small">
-            <div style="flex:1;">
-                <h4 id="chat-name" style="font-size:16px; margin:0;">Имя</h4>
-                <span id="chat-status" class="text-muted" style="font-size:12px;">в сети</span>
+            <button id="back-btn" class="icon-btn" type="button">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <img id="chat-avatar" src="" class="avatar small" alt="">
+            <div class="chat-header-info">
+                <h4 id="chat-name">Имя</h4>
+                <span id="chat-status" class="text-muted text-xs">в сети</span>
             </div>
         </header>
 
         <div id="msg-area" class="msg-area"></div>
 
         <footer class="chat-footer">
-            <button id="emojiToggle" class="icon-btn">☺</button>
+            <button id="emoji-toggle" class="icon-btn" type="button">☺</button>
             <div id="emoji-panel" class="emoji-panel">
                 <div id="emoji-grid" class="emoji-grid"></div>
             </div>
             <div class="input-wrapper">
-                <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off" autocapitalize="off">
+                <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off" autocapitalize="none" spellcheck="false">
             </div>
-            <button id="send-btn" class="btn primary" style="border-radius:50%; width:42px; height:42px; padding:0; display:flex; align-items:center; justify-content:center;">➤</button>
+            <button id="send-btn" class="btn primary send-btn" type="button">➤</button>
         </footer>
     </div>
 
-    <!-- МОДАЛКИ -->
-    <dialog id="avatarModal" class="modal">
-        <div class="modal-box">
-            <h3 style="margin-bottom:16px;">Выберите аватар</h3>
-            <div class="avatar-grid" id="avatar-selection-grid"></div>
-            <button class="btn secondary full" onclick="this.closest('dialog').close()">Закрыть</button>
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+    <dialog id="avatar-modal" class="modal">
+        <div class="modal-content">
+            <h3>Выберите аватар</h3>
+            <div id="avatar-selection-grid" class="avatar-grid"></div>
+            <button class="btn secondary full-width" onclick="this.closest('dialog').close()">Закрыть</button>
         </div>
     </dialog>
 
-    <dialog id="editProfileModal" class="modal">
-        <div class="modal-box">
-            <h3 style="margin-bottom:16px;">Редактировать профиль</h3>
-            <input type="text" id="edit-name" placeholder="Имя" style="margin-bottom:10px;">
-            <input type="text" id="edit-username" placeholder="@username" style="margin-bottom:10px;">
-            <input type="text" id="edit-status" placeholder="О себе" style="margin-bottom:16px;">
-            <div style="display:flex; gap:10px; justify-content:flex-end;">
+    <dialog id="edit-profile-modal" class="modal">
+        <div class="modal-content">
+            <h3>Редактировать профиль</h3>
+            <input type="text" id="edit-name" placeholder="Отображаемое имя">
+            <input type="text" id="edit-username" placeholder="@username (для поиска)">
+            <input type="text" id="edit-status" placeholder="О себе">
+            <div class="btn-group">
                 <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
-                <button id="save-edit-profile" class="btn primary">Сохранить</button>
+                <button id="save-profile-btn" class="btn primary">Сохранить</button>
             </div>
         </div>
     </dialog>
 
-    <dialog id="settingsModal" class="modal">
-        <div class="modal-box">
-            <h3 style="margin-bottom:16px;">Настройки</h3>
+    <dialog id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h3>Настройки</h3>
             <div class="setting-row">
-                <span>Светлая тема</span>
+                <span>Темная тема</span>
                 <label class="switch">
                     <input type="checkbox" id="theme-switch">
                     <span class="slider"></span>
                 </label>
             </div>
-            <div style="text-align:right; margin-top:20px;">
-                <button class="btn secondary" onclick="this.closest('dialog').close()">Закрыть</button>
-            </div>
+            <button class="btn secondary full-width" onclick="this.closest('dialog').close()">Закрыть</button>
         </div>
     </dialog>
 
-    <dialog id="addContactModal" class="modal">
-        <div class="modal-box">
-            <h3 style="margin-bottom:16px;">Добавить контакт</h3>
-            <input type="email" id="new-contact-email" placeholder="Email пользователя" style="margin-bottom:16px;">
-            <div style="display:flex; gap:10px; justify-content:flex-end;">
+    <dialog id="add-contact-modal" class="modal">
+        <div class="modal-content">
+            <h3>Добавить контакт</h3>
+            <input type="email" id="new-contact-email" placeholder="Email пользователя">
+            <div class="btn-group">
                 <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
                 <button id="confirm-add-contact" class="btn primary">Добавить</button>
             </div>
         </div>
     </dialog>
 
+    <!-- Уведомления -->
     <div id="toast" class="toast"></div>
+
     <script type="module" src="app.js"></script>
 </body>
 </html>
