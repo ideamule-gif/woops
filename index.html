@@ -1,14 +1,149 @@
-<!DOCTYPE html>
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body {
+                  background-color: white; /* Ensure the iframe has a white background */
+                }
+
+                :root {
+    --bg: #0f172a;
+    --bg-gradient: linear-gradient(135deg, #0f172a, #1e1b4b);
+    --primary: #6366f1;
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --glass: rgba(15, 23, 42, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh; /* Динамическая высота для мобилок */
+    overflow: hidden;
+}
+
+.screen {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; flex-direction: column; z-index: 10; background: var(--bg);
+}
+.screen.active { display: flex; }
+
+/* --- Шапка чата (ФИКСИРОВАННАЯ) --- */
+.chat-header {
+    position: sticky; top: 0; z-index: 50;
+    flex-shrink: 0; /* Не сжимается */
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
+    background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.chat-header .back { padding: 4px; margin-right: 4px; }
+.avatar { border-radius: 50%; object-fit: cover; background: #333; flex-shrink: 0; }
+.avatar.small { width: 40px; height: 40px; }
+.avatar.huge { width: 100px; height: 100px; }
+
+/* --- Область сообщений --- */
+.msg-area {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    -webkit-overflow-scrolling: touch;
+}
+.msg { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; }
+.msg.in { background: #334155; align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg.out { background: var(--primary); align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg .time { display: block; font-size: 10px; opacity: 0.6; text-align: right; margin-top: 4px; }
+
+/* --- Футер ввода --- */
+.chat-footer {
+    position: relative; z-index: 40;
+    flex-shrink: 0; /* Не сжимается */
+    padding: 8px 12px; padding-bottom: max(8px, env(safe-area-inset-bottom));
+    background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--glass-border);
+    display: flex; align-items: center; gap: 10px;
+}
+.input-wrapper {
+    flex: 1; background: rgba(255,255,255,0.05); border-radius: 20px; padding: 4px 12px;
+    border: 1px solid var(--glass-border);
+}
+.input-wrapper input {
+    width: 100%; background: transparent; border: none; outline: none; color: #fff; padding: 8px 0; font-size: 16px;
+}
+
+/* --- ЭМДЗИ ПАНЕЛЬ (Telegram Style) --- */
+.emoji-panel {
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    height: 250px; background: #1e1b4b;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    z-index: 30; display: flex; flex-direction: column;
+    border-top: 1px solid var(--glass-border);
+}
+.emoji-panel.open { transform: translateY(0); }
+.emoji-header { padding: 10px 16px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--glass-border); }
+.emoji-grid { flex: 1; overflow-y: auto; padding: 10px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.emoji-grid button { font-size: 28px; background: none; border: none; cursor: pointer; }
+
+/* --- Навигация --- */
+.bottom-nav {
+    display: flex; height: 60px; background: rgba(15,23,42,0.9); border-top: 1px solid var(--glass-border);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-btn { flex: 1; background: none; border: none; color: #64748b; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+.nav-btn.active { color: var(--primary); }
+.tabs-container { flex: 1; overflow-y: auto; padding-bottom: 60px; }
+.tab { display: none; padding: 16px; }
+.tab.active { display: block; }
+
+/* --- Списки --- */
+.chat-list li {
+    display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px;
+    background: rgba(255,255,255,0.03); border-radius: 12px; cursor: pointer;
+}
+.chat-list li:active { background: rgba(255,255,255,0.08); }
+
+/* --- Элементы UI --- */
+.btn { padding: 10px 16px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; }
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.secondary { background: rgba(255,255,255,0.1); color: #fff; }
+.icon-btn { background: none; border: none; color: #fff; cursor: pointer; padding: 8px; border-radius: 50%; }
+.icon-btn:active { background: rgba(255,255,255,0.1); }
+.icon-btn.send { background: var(--primary); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+.modal { margin: auto; padding: 0; background: transparent; border: none; max-width: 400px; width: 90%; }
+.modal::backdrop { background: rgba(0,0,0,0.8); }
+.modal-box { background: #111827; border-radius: 20px; border: 1px solid var(--glass-border); padding: 20px; }
+.modal-header { display: flex; justify-content: space-between; margin-bottom: 16px; }
+.modal-body { display: flex; flex-direction: column; gap: 12px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+input, select { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 10px; color: #fff; outline: none; }
+.field-group { margin-bottom: 12px; }
+.field-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.text-muted { color: var(--text-muted); }
+
+/* Адаптив */
+@media (min-width: 768px) {
+    #chat-screen { left: 320px; width: calc(100% - 320px); border-left: 1px solid var(--glass-border); transform: none; }
+    .screen:not(#chat-screen):not(#auth-screen) { max-width: 320px; margin: 0 auto; border-right: 1px solid var(--glass-border); }
+    .bottom-nav, .main-header, .tabs-container { max-width: 320px; margin: 0 auto; }
+}
+
+
+              </style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Woops</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="https://image.qwenlm.ai/public_source/05c2a9cd-f215-45a4-ae2d-4fc10115155e/1f29e67b2-2e97-4791-908c-a0cc68149258.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,13 +152,12 @@
 <div id="auth-screen" class="screen">
     <div class="auth-card">
         <div class="auth-logo">
-            <img src="https://image.qwenlm.ai/public_source/05c2a9cd-f215-45a4-ae2d-4fc10115155e/1f29e67b2-2e97-4791-908c-a0cc68149258.png" alt="Woops">
             <h2>Woops</h2>
             <p>Вход в аккаунт</p>
         </div>
         <div class="auth-inputs">
-            <input type="email" id="email" placeholder="Email" autocomplete="email">
-            <input type="password" id="password" placeholder="Пароль" autocomplete="current-password">
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Пароль">
         </div>
         <p id="auth-error" class="auth-error"></p>
         <div class="auth-btns">
@@ -37,159 +171,100 @@
 <div id="main-screen" class="screen">
     <header class="main-header">
         <div class="header-left">
-            <img id="user-avatar-header" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" class="avatar" alt="Avatar">
+            <img id="user-avatar-header" src="" class="avatar" alt="">
             <div class="header-info">
                 <h3 id="tab-title">Woops</h3>
-                <span class="text-muted" id="header-subtitle">4 вкладки</span>
+                <span class="text-muted" id="header-subtitle"></span>
             </div>
         </div>
-        <div class="header-actions">
-            <button id="logout-btn" class="icon-btn" title="Выйти">
-                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </button>
-        </div>
+        <button id="logout-btn" class="icon-btn">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
     </header>
 
     <div class="tabs-container">
-
-        <!-- 💬 ВКЛАДКА: ЧАТЫ -->
+        <!-- 💬 ЧАТЫ -->
         <div id="tab-chats" class="tab active">
-            <div class="search-bar">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="chat-search" placeholder="Поиск по чатам...">
-            </div>
             <ul id="chat-list" class="chat-list"></ul>
-            <div id="chats-empty" class="empty-state" style="display:none;">
-                <div class="empty-icon">💬</div>
-                <p>Пока нет чатов</p>
-                <button id="add-chat-contact-btn" class="btn primary small">Добавить контакт</button>
-            </div>
-            <div id="chats-loading" class="loading-state" style="display:none;">
-                <div class="spinner"></div>
-                <p>Загрузка...</p>
-            </div>
+            <div id="chats-empty" class="empty-state" style="display:none;">Нет чатов</div>
         </div>
-
-        <!-- 👥 ВКЛАДКА: КОНТАКТЫ -->
+        <!-- 👥 КОНТАКТЫ -->
         <div id="tab-contacts" class="tab">
-            <div class="search-bar">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="contact-search" placeholder="Поиск контактов...">
-            </div>
-            <button id="add-contact-btn-main" class="btn primary full" style="margin:16px 8px;">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Добавить контакт
-            </button>
+            <button id="add-contact-btn-main" class="btn primary full" style="margin:16px;">Добавить контакт</button>
             <ul id="contacts-list" class="chat-list"></ul>
-            <div id="contacts-empty" class="empty-state">
-                <div class="empty-icon">👥</div>
-                <p>Контактов пока нет</p>
-            </div>
-            <div id="contacts-loading" class="loading-state" style="display:none;">
-                <div class="spinner"></div>
-                <p>Загрузка...</p>
-            </div>
+            <div id="contacts-empty" class="empty-state">Нет контактов</div>
         </div>
-
-        <!-- 📝 ВКЛАДКА: ЗАМЕТКИ -->
+        <!-- 📝 ЗАМЕТКИ -->
         <div id="tab-notes" class="tab">
-            <div class="notes-header">
-                <button id="add-note-btn" class="btn primary small">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Новая заметка
-                </button>
-            </div>
-            <div id="notes-list" class="notes-list"></div>
-            <div id="notes-empty" class="empty-state">
-                <div class="empty-icon">📝</div>
-                <p>Заметок пока нет</p>
-            </div>
-            <div id="notes-loading" class="loading-state" style="display:none;">
-                <div class="spinner"></div>
-                <p>Загрузка...</p>
-            </div>
+            <button id="add-note-btn" class="btn primary full" style="margin:16px;">Новая заметка</button>
+            <div id="notes-list"></div>
+            <div id="notes-empty" class="empty-state">Нет заметок</div>
         </div>
-
-        <!-- 👤 ВКЛАДКА: ПРОФИЛЬ -->
+        <!-- 👤 ПРОФИЛЬ -->
         <div id="tab-profile" class="tab">
             <div class="profile-card">
                 <div class="avatar-upload">
-                    <img id="profile-avatar-preview" src="" class="avatar huge" alt="Profile">
-                    <label for="profile-avatar-input" class="btn secondary small">Изменить фото</label>
+                    <img id="profile-avatar-preview" src="" class="avatar huge" alt="">
+                    <label for="profile-avatar-input" class="btn secondary small">Фото</label>
                     <input type="file" id="profile-avatar-input" accept="image/*" hidden>
                 </div>
-                <div class="profile-fields">
-                    <div class="field-group">
-                        <label>Имя</label>
-                        <input type="text" id="profile-name" placeholder="Ваше имя">
-                    </div>
-                    <div class="field-group">
-                        <label>Email</label>
-                        <input type="email" id="profile-email" placeholder="Email" disabled>
-                    </div>
-                    <div class="field-group">
-                        <label>Статус</label>
-                        <select id="profile-status">
-                            <option value="online">В сети</option>
-                            <option value="busy">Занят</option>
-                            <option value="away">Отошёл</option>
-                            <option value="offline">Не в сети</option>
-                        </select>
-                    </div>
-                    <div class="field-group">
-                        <label>Текст статуса</label>
-                        <input type="text" id="profile-status-text" placeholder="Чем занимаетесь?">
-                    </div>
+                <div class="field-group"><label>Имя</label><input type="text" id="profile-name"></div>
+                <div class="field-group"><label>Статус</label>
+                    <select id="profile-status">
+                        <option value="online">В сети</option>
+                        <option value="busy">Занят</option>
+                        <option value="away">Отошёл</option>
+                    </select>
                 </div>
-                <button id="save-profile-btn" class="btn primary full" style="margin-top:16px;">Сохранить профиль</button>
+                <div class="field-group"><label>О себе</label><input type="text" id="profile-status-text"></div>
+                <button id="save-profile-btn" class="btn primary full" style="margin-top:16px;">Сохранить</button>
             </div>
         </div>
-
     </div>
 
-    <!-- Нижняя навигация -->
     <nav class="bottom-nav">
-        <button class="nav-btn active" data-tab="chats">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
-            <span>Чаты</span>
-        </button>
-        <button class="nav-btn" data-tab="contacts">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-            <span>Контакты</span>
-        </button>
-        <button class="nav-btn" data-tab="notes">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <span>Заметки</span>
-        </button>
-        <button class="nav-btn" data-tab="profile">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span>Профиль</span>
-        </button>
+        <button class="nav-btn active" data-tab="chats"><span>💬 Чаты</span></button>
+        <button class="nav-btn" data-tab="contacts"><span>👥 Контакты</span></button>
+        <button class="nav-btn" data-tab="notes"><span>📝 Заметки</span></button>
+        <button class="nav-btn" data-tab="profile"><span>👤 Профиль</span></button>
     </nav>
 </div>
 
 <!-- ========== ЭКРАН ЧАТА ========== -->
 <div id="chat-screen" class="screen">
+    <!-- Шапка (ЗАФИКСИРОВАНА) -->
     <header class="chat-header">
-        <button id="back-btn" class="icon-btn back">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        <button id="back-btn" class="icon-btn back" type="button">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
-        <img id="chat-avatar" src="" class="avatar" alt="">
-        <div class="chat-name-block">
-            <h3 id="chat-name">Собеседник</h3>
-            <span id="chat-status" class="text-muted">в сети</span>
+        <div id="chat-header-clickable" class="chat-header-clickable" style="cursor:pointer; display:flex; align-items:center; flex:1;">
+            <img id="chat-avatar" src="" class="avatar small" alt="">
+            <div class="chat-info">
+                <h4 id="chat-name" style="margin:0;">...</h4>
+                <span id="chat-status" class="text-muted" style="font-size:12px;">...</span>
+            </div>
         </div>
     </header>
 
+    <!-- Область сообщений -->
     <div id="msg-area" class="msg-area"></div>
 
+    <!-- Эмодзи Панель (выезжает снизу как в TG) -->
+    <div id="emoji-panel" class="emoji-panel">
+        <div class="emoji-header">
+            <span>Эмодзи</span>
+            <button id="close-emoji-panel" class="icon-btn">&times;</button>
+        </div>
+        <div id="emoji-grid" class="emoji-grid"></div>
+    </div>
+
+    <!-- Футер ввода -->
     <footer class="chat-footer">
         <button id="emojiToggle" class="icon-btn">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
         </button>
-        <div class="emoji-picker" id="emojiPicker"></div>
         <div class="input-wrapper">
-            <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" data-form-type="other" data-lpignore="true">
+            <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off">
         </div>
         <button id="send-btn" class="icon-btn send">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -200,67 +275,274 @@
 <!-- ========== МОДАЛКА: ДОБАВИТЬ КОНТАКТ ========== -->
 <dialog id="addContactModal" class="modal">
     <div class="modal-box">
-        <div class="modal-header">
-            <h3>Добавить контакт</h3>
-            <button id="closeAddContact" class="close-btn">&times;</button>
-        </div>
+        <div class="modal-header"><h3>Добавить контакт</h3><button class="close-modal" onclick="this.closest('dialog').close()">&times;</button></div>
         <div class="modal-body">
-            <div class="field-group">
-                <label>Имя</label>
-                <input type="text" id="contact-name-input" placeholder="Имя контакта">
-            </div>
-            <div class="field-group">
-                <label>Email</label>
-                <input type="email" id="contact-email-input" placeholder="friend@email.com">
-            </div>
+            <input type="text" id="contact-name-input" placeholder="Имя">
+            <input type="email" id="contact-email-input" placeholder="Email">
         </div>
         <div class="modal-footer">
-            <button id="cancelAddContact" class="btn secondary">Отмена</button>
+            <button onclick="document.getElementById('addContactModal').close()" class="btn secondary">Отмена</button>
             <button id="sendInvite" class="btn primary">Добавить</button>
         </div>
     </div>
 </dialog>
 
-<!-- ========== МОДАЛКА: РЕДАКТИРОВАТЬ ЗАМЕТКУ ========== -->
-<dialog id="noteModal" class="modal">
+<!-- ========== МОДАЛКА: ПРОФИЛЬ КОНТАКТА (НОВАЯ) ========== -->
+<dialog id="contactProfileModal" class="modal">
     <div class="modal-box">
-        <div class="modal-header">
-            <h3 id="noteModalTitle">Новая заметка</h3>
-            <button id="closeNote" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="field-group">
-                <label>Заголовок</label>
-                <input type="text" id="note-title-input" placeholder="Заголовок заметки">
-            </div>
-            <div class="field-group">
-                <label>Текст</label>
-                <textarea id="note-text-input" rows="6" placeholder="Введите текст..."></textarea>
-            </div>
-            <div class="field-group">
-                <label>Цвет</label>
-                <div class="color-picker" id="noteColorPicker">
-                    <button class="color-swatch active" data-color="6366f1" style="background:#6366f1;"></button>
-                    <button class="color-swatch" data-color="22c55e" style="background:#22c55e;"></button>
-                    <button class="color-swatch" data-color="f59e0b" style="background:#f59e0b;"></button>
-                    <button class="color-swatch" data-color="ef4444" style="background:#ef4444;"></button>
-                    <button class="color-swatch" data-color="8b5cf6" style="background:#8b5cf6;"></button>
-                    <button class="color-swatch" data-color="ec4899" style="background:#ec4899;"></button>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button id="deleteNote" class="btn secondary" style="color:var(--danger); margin-right:auto;">Удалить</button>
-            <button id="cancelNote" class="btn secondary">Отмена</button>
-            <button id="saveNote" class="btn primary">Сохранить</button>
+        <div class="modal-header"><h3>Профиль</h3><button class="close-modal" onclick="this.closest('dialog').close()">&times;</button></div>
+        <div class="modal-body" style="text-align:center;">
+            <img id="cp-avatar" src="" class="avatar huge" style="margin:0 auto 16px;">
+            <h3 id="cp-name" style="margin-bottom:4px;"></h3>
+            <p id="cp-status" class="text-muted" style="margin-bottom:16px;"></p>
+            <p id="cp-last-seen" class="text-muted" style="font-size:13px;"></p>
         </div>
     </div>
 </dialog>
 
-<!-- Toast -->
 <div id="toast" class="toast"></div>
-
 <script type="module" src="app.js"></script>
 </body>
 </html>
 
+
+
+              <script>
+                              import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
+    authDomain: "woops-4ded6.firebaseapp.com",
+    projectId: "woops-4ded6",
+    storageBucket: "woops-4ded6.firebasestorage.app",
+    messagingSenderId: "371589558003",
+    appId: "1:371589558003:web:9e50637114a1526b9c5186"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// DOM Elements
+const screens = { auth: document.getElementById('auth-screen'), main: document.getElementById('main-screen'), chat: document.getElementById('chat-screen') };
+const msgArea = document.getElementById('msg-area');
+const textInput = document.getElementById('text-input');
+const emojiPanel = document.getElementById('emoji-panel');
+const emojiGrid = document.getElementById('emoji-grid');
+
+let currentUser = null;
+let currentChatUser = null; // Данные собеседника
+let unsubChat = null;
+let unsubUsers = null;
+
+// ================= АВТОРИЗАЦИЯ =================
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        screens.auth.classList.remove('active');
+        screens.main.classList.add('active');
+        loadUsers();
+        loadProfile(user.uid);
+    } else {
+        currentUser = null;
+        screens.auth.classList.add('active');
+        screens.main.classList.remove('active');
+        screens.chat.classList.remove('active');
+    }
+});
+
+// Кнопки входа/регистрации
+document.getElementById('login-btn').onclick = async () => {
+    try {
+        await signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value);
+    } catch(e) { document.getElementById('auth-error').textContent = e.message; }
+};
+document.getElementById('register-btn').onclick = async () => {
+    try {
+        const cred = await createUserWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value);
+        await setDoc(doc(db, 'users', cred.user.uid), { displayName: cred.user.email.split('@')[0], status: 'online', lastSeen: serverTimestamp() });
+    } catch(e) { document.getElementById('auth-error').textContent = e.message; }
+};
+document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+// ================= НАВИГАЦИЯ =================
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    };
+});
+
+// ================= ЧАТ =================
+function openChat(uid, user) {
+    currentChatUser = { id: uid, ...user };
+    
+    // UI Чата
+    document.getElementById('chat-name').textContent = user.displayName;
+    document.getElementById('chat-avatar').src = user.avatar || `https://ui-avatars.com/api/?name=${user.displayName}&background=random`;
+    
+    // Статус
+    updateChatStatus(user);
+
+    // Переключение экранов
+    screens.main.classList.remove('active');
+    screens.chat.classList.add('active');
+    
+    // Загрузка сообщений
+    loadMessages(uid);
+}
+
+function updateChatStatus(user) {
+    const statusEl = document.getElementById('chat-status');
+    if (user.status === 'online') {
+        statusEl.innerHTML = `<span style="color:var(--success)">●</span> в сети`;
+    } else {
+        statusEl.textContent = "был(а) недавно";
+    }
+}
+
+// Клик по шапке -> Открыть профиль
+document.getElementById('chat-header-clickable').onclick = () => {
+    if (!currentChatUser) return;
+    document.getElementById('cp-avatar').src = currentChatUser.avatar || `https://ui-avatars.com/api/?name=${currentChatUser.displayName}&background=random`;
+    document.getElementById('cp-name').textContent = currentChatUser.displayName;
+    document.getElementById('cp-status').textContent = currentChatUser.status === 'online' ? 'В сети' : 'Оффлайн';
+    document.getElementById('cp-last-seen').textContent = "Последний визит: недавно";
+    document.getElementById('contactProfileModal').showModal();
+};
+
+// Кнопка НАЗАД (Всегда возвращает в главное меню, не выходит из приложения)
+document.getElementById('back-btn').onclick = (e) => {
+    e.preventDefault();
+    screens.chat.classList.remove('active');
+    screens.main.classList.add('active');
+    if (unsubChat) unsubChat();
+    emojiPanel.classList.remove('open');
+};
+
+function loadMessages(chatId) {
+    msgArea.innerHTML = '<div class="text-muted" style="text-align:center; padding:20px;">Загрузка...</div>';
+    const room = [currentUser.uid, chatId].sort().join('_');
+    const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
+    
+    if (unsubChat) unsubChat();
+    unsubChat = onSnapshot(q, (snap) => {
+        msgArea.innerHTML = '';
+        snap.forEach(doc => {
+            const msg = doc.data();
+            const div = document.createElement('div');
+            div.className = `msg ${msg.senderId === currentUser.uid ? 'out' : 'in'}`;
+            div.innerHTML = `${msg.text} <span class="time">${formatTime(msg.createdAt)}</span>`;
+            msgArea.appendChild(div);
+        });
+        msgArea.scrollTop = msgArea.scrollHeight;
+    });
+}
+
+// Отправка
+document.getElementById('send-btn').onclick = async () => {
+    const text = textInput.value.trim();
+    if (!text || !currentChatUser) return;
+    const room = [currentUser.uid, currentChatUser.id].sort().join('_');
+    await addDoc(collection(db, 'messages'), { room, text, senderId: currentUser.uid, createdAt: serverTimestamp() });
+    textInput.value = '';
+};
+textInput.onkeypress = (e) => { if (e.key === 'Enter') document.getElementById('send-btn').click(); };
+
+// ================= ЭМДЗИ =================
+const EMOJIS = ['😀','😂','😍','😎','🤔','👍','❤️','🔥','🎉','👋','🥺','💀','💩','👻','🤡','💤','📷','📹','🎵','📱','✅','❌','⚡'];
+
+function initEmojis() {
+    emojiGrid.innerHTML = '';
+    EMOJIS.forEach(em => {
+        const b = document.createElement('button');
+        b.textContent = em;
+        b.onclick = () => {
+            textInput.value += em;
+            textInput.focus();
+        };
+        emojiGrid.appendChild(b);
+    });
+}
+initEmojis();
+
+document.getElementById('emojiToggle').onclick = () => {
+    emojiPanel.classList.toggle('open');
+};
+document.getElementById('close-emoji-panel').onclick = () => {
+    emojiPanel.classList.remove('open');
+};
+
+// ================= ПРОФИЛЬ И СПИСКИ =================
+function loadProfile(uid) {
+    onSnapshot(doc(db, 'users', uid), (docSnap) => {
+        const data = docSnap.data();
+        if (data) {
+            document.getElementById('profile-avatar-preview').src = data.avatar || '';
+            document.getElementById('profile-name').value = data.displayName || '';
+            document.getElementById('profile-status').value = data.status || 'online';
+            document.getElementById('profile-status-text').value = data.statusText || '';
+            document.getElementById('user-avatar-header').src = data.avatar || '';
+        }
+    });
+}
+
+document.getElementById('save-profile-btn').onclick = async () => {
+    await updateDoc(doc(db, 'users', currentUser.uid), {
+        displayName: document.getElementById('profile-name').value,
+        status: document.getElementById('profile-status').value,
+        statusText: document.getElementById('profile-status-text').value,
+        lastSeen: serverTimestamp()
+    });
+    showToast('Сохранено');
+};
+
+document.getElementById('profile-avatar-input').onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const refStorage = ref(storage, `avatars/${currentUser.uid}`);
+    await uploadBytes(refStorage, file);
+    const url = await getDownloadURL(refStorage);
+    await updateDoc(doc(db, 'users', currentUser.uid), { avatar: url });
+};
+
+function loadUsers() {
+    unsubUsers = onSnapshot(query(collection(db, 'users'), limit(50)), (snap) => {
+        const list = document.getElementById('chat-list');
+        const cList = document.getElementById('contacts-list');
+        list.innerHTML = ''; cList.innerHTML = '';
+        
+        snap.forEach(d => {
+            if (d.id === currentUser.uid) return;
+            const u = d.data();
+            const li = document.createElement('li');
+            li.innerHTML = `<img src="${u.avatar || ''}" class="avatar small"><div><h4>${u.displayName}</h4><span class="text-muted">${u.status === 'online' ? 'В сети' : 'Оффлайн'}</span></div>`;
+            li.onclick = () => openChat(d.id, u);
+            list.appendChild(li.cloneNode(true));
+            cList.appendChild(li);
+        });
+    });
+}
+
+// Добавить контакт
+document.getElementById('add-contact-btn-main').onclick = () => document.getElementById('addContactModal').showModal();
+document.getElementById('sendInvite').onclick = () => { /* Логика инвайта */ showToast('Приглашение отправлено'); document.getElementById('addContactModal').close(); };
+
+// Утилиты
+function formatTime(ts) { if(!ts) return ''; const d = ts.toDate(); return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0'); }
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show'); t.style.opacity = '1';
+    setTimeout(() => { t.style.opacity = '0'; }, 2000);
+}
+
+
+              </script>
+                        </body>
+                        </html>
