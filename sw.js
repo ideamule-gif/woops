@@ -1,63 +1,63 @@
-const CACHE_NAME = 'woops-v2'; // увеличиваем версию при обновлении
+// ==========================================================================
+// 🚀 SERVICE WORKER: УПРАВЛЕНИЕ КЭШОМ И ОФЛАЙН-РЕЖИМОМ (ВЕРСИЯ 3)
+// ==========================================================================
+const CACHE_NAME = 'woops-v3'; // Инкремент версии сбрасывает старый кэш у всех пользователей
 
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
   './app.js',
-  './manifest.json',
-  // Иконки (добавь свои)
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './manifest.json'
 ];
 
-// ==================== INSTALL ====================
+// ==================== ИНСТАЛЛЯЦИЯ (INSTALL) ====================
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Woops: Кэшируем статические файлы');
+        console.log('Woops SW: Кэширование обновленных адаптивных файлов');
         return cache.addAll(ASSETS_TO_CACHE);
       })
-      .then(() => self.skipWaiting())
+      .then(() => self.skipWaiting()) // Активируем SW сразу, не дожидаясь закрытия вкладок
   );
 });
 
-// ==================== ACTIVATE ====================
+// ==================== АКТИВАЦИЯ (ACTIVATE) ====================
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys => {
       return Promise.all(
         keys.map(key => {
           if (key !== CACHE_NAME) {
-            console.log('Woops: Удаляем старый кэш:', key);
+            console.log('Woops SW: Удаление устаревшего кэша:', key);
             return caches.delete(key);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => self.clients.claim()) // Перехватываем управление вкладками немедленно
   );
 });
 
-// ==================== FETCH ====================
+// ==================== ОБРАБОТКА ЗАПРОСОВ (FETCH) ====================
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Пропускаем Firebase и внешние запросы (они должны идти по сети)
+  // Важно: Пропускаем Firebase и внешние API, чтобы не ломать сетевые запросы
   if (url.hostname.includes('firebase') || 
       url.hostname.includes('googleapis') || 
-      url.hostname.includes('gstatic')) {
+      url.hostname.includes('gstatic') ||
+      url.hostname.includes('ui-avatars.com')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Стратегия Stale-While-Revalidate для статических файлов
+  // Стратегия Stale-While-Revalidate (возврат из кэша + обновление в фоне)
   event.respondWith(
     caches.match(event.request)
       .then(cachedResponse => {
-        // Возвращаем кэш сразу, а в фоне обновляем
         const fetchPromise = fetch(event.request)
           .then(networkResponse => {
-            // Кэшируем только успешные ответы
+            // Кэшируем только успешные статические ответы
             if (networkResponse && networkResponse.status === 200) {
               const responseToCache = networkResponse.clone();
               caches.open(CACHE_NAME)
@@ -67,14 +67,15 @@ self.addEventListener('fetch', (event) => {
           })
           .catch(() => null);
 
+        // Отдаем кэш для скорости, если он есть, иначе ждем сеть
         return cachedResponse || fetchPromise;
       })
   );
 });
 
-// Обновление при новом контенте
+// Срочное обновление при получении команды из основного скрипта
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (event.data === 'skipWaiting') {
     self.skipWaiting();
   }
 });
