@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser, updateProfile as updateAuthProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, arrayUnion, arrayRemove, limit, getDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 🔧 Конфиг Firebase
+// 🔧 Config
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
   authDomain: "woops-4ded6.firebaseapp.com",
@@ -11,435 +11,384 @@ const firebaseConfig = {
   messagingSenderId: "371589558003",
   appId: "1:371589558003:web:9e50637114a1526b9c5186"
 };
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔹 Элементы DOM (строго под ваш index.html)
-const els = {
-  authScreen: document.getElementById('auth-screen'),
-  mainScreen: document.getElementById('main-screen'),
-  chatScreen: document.getElementById('chat-screen'),
-  emailInput: document.getElementById('email'),
-  passInput: document.getElementById('password'),
-  authError: document.getElementById('auth-error'),
-  loginBtn: document.getElementById('login-btn'),
-  registerBtn: document.getElementById('register-btn'),
-  logoutBtn: document.getElementById('logout-btn'),
-  pageTitle: document.getElementById('page-title'),
-  
-  chatList: document.getElementById('chat-list'),
-  chatsEmpty: document.getElementById('chats-empty'),
-  feedList: document.getElementById('feed-list'),
-  feedEmpty: document.getElementById('feed-empty'),
-  postText: document.getElementById('post-text'),
-  publishBtn: document.getElementById('publish-btn'),
-  contactsList: document.getElementById('contacts-list'),
-  contactsEmpty: document.getElementById('contacts-empty'),
-  contactSearch: document.getElementById('contact-search'),
-  addContactBtn: document.getElementById('add-contact-btn'),
-  
-  profileAvatar: document.getElementById('profile-avatar'),
-  profileName: document.getElementById('profile-name'),
-  profileUsername: document.getElementById('profile-username'),
-  profileStatusText: document.getElementById('profile-status-text'),
-  myPostsList: document.getElementById('my-posts-list'),
-  myPostsEmpty: document.getElementById('my-posts-empty'),
-  btnChangeAvatar: document.getElementById('btn-change-avatar'),
-  btnEditProfile: document.getElementById('btn-edit-profile'),
-  btnSettings: document.getElementById('btn-settings'),
-  btnDeleteProfile: document.getElementById('btn-delete-profile'),
-  
-  chatAvatar: document.getElementById('chat-avatar'),
-  chatName: document.getElementById('chat-name'),
-  chatStatus: document.getElementById('chat-status'),
-  msgArea: document.getElementById('msg-area'),
-  textInput: document.getElementById('text-input'),
-  sendBtn: document.getElementById('send-btn'),
-  backBtn: document.getElementById('back-btn'),
-  emojiToggle: document.getElementById('emoji-toggle'),
-  emojiPanel: document.getElementById('emoji-panel'),
-  emojiGrid: document.getElementById('emoji-grid'),
-  
-  themeSwitch: document.getElementById('theme-switch'),
-  toast: document.getElementById('toast')
-};
+// 📦 DOM
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
 
-// 🔹 Глобальное состояние
+// State
 let currentUser = null;
 let currentChat = null;
-let unsubChat = null;
-let unsubProfile = null;
-let unsubFeed = null;
-let unsubUsers = null;
+let listeners = { chat: null, users: null, contacts: null, feed: null, profile: null };
+let feedData = [];
 
-// ============================================
-// 🔐 АВТОРИЗАЦИЯ
-// ============================================
-onAuthStateChanged(auth, async (user) => {
+// ================= AUTH =================
+onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
-    els.authScreen.classList.remove('active');
-    els.mainScreen.classList.add('active');
-    initApp(user.uid);
+    $('#auth-screen').classList.remove('active');
+    $('#auth-screen').classList.add('hidden');
+    $('#app-screen').classList.remove('hidden');
+    $('#app-screen').classList.add('active');
+    loadUserProfile(user.uid);
+    setupListeners();
+    initTheme();
   } else {
     currentUser = null;
-    els.authScreen.classList.add('active');
-    els.mainScreen.classList.remove('active');
-    els.chatScreen.classList.remove('active');
-    cleanup();
+    $('#auth-screen').classList.remove('hidden');
+    $('#auth-screen').classList.add('active');
+    $('#app-screen').classList.remove('active');
+    $('#app-screen').classList.add('hidden');
+    cleanupListeners();
+    $('#app-screen').classList.remove('active');
   }
 });
 
-els.loginBtn.onclick = async () => {
-  els.authError.textContent = '';
+$('#login-btn').onclick = async () => authAction('login');
+$('#register-btn').onclick = async () => authAction('register');
+async function authAction(type) {
+  const email = $('#auth-email').value.trim();
+  const pass = $('#auth-password').value;
+  $('#auth-error').textContent = '';
   try {
-    await signInWithEmailAndPassword(auth, els.emailInput.value.trim(), els.passInput.value);
-  } catch (e) {
-    els.authError.textContent = e.code === 'auth/invalid-credential' ? 'Неверный email или пароль' : 'Ошибка входа';
-  }
-};
-
-els.registerBtn.onclick = async () => {
-  els.authError.textContent = '';
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, els.emailInput.value.trim(), els.passInput.value);
-    const defAvatar = `https://ui-avatars.com/api/?name=${cred.user.email}&background=6366f1&color=fff&size=128`;
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      username: cred.user.email.split('@')[0],
-      displayName: cred.user.email.split('@')[0],
-      avatar: defAvatar,
-      statusText: '',
-      createdAt: serverTimestamp()
-    });
-  } catch (e) {
-    els.authError.textContent = e.message;
-  }
-};
-
-els.logoutBtn.onclick = () => signOut(auth);
-
-// ============================================
-// 🚀 ИНИЦИАЛИЗАЦИЯ
-// ============================================
-function initApp(uid) {
-  applyTheme(localStorage.getItem('theme') || 'light');
-  trackProfile(uid);
-  loadUsers();
-  loadFeed();
-  loadMyPosts(uid);
-  initEmojis();
-  setupNav();
-  setupModals();
-  setupSearch();
+    let cred;
+    if (type === 'login') cred = await signInWithEmailAndPassword(auth, email, pass);
+    else {
+      cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        displayName: email.split('@')[0], email, createdAt: serverTimestamp(), status: 'online', statusText: 'Привет, я использую Woops!'
+      });
+    }
+  } catch (e) { $('#auth-error').textContent = e.message; }
 }
 
-// Тема
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('theme', theme);
-  if (els.themeSwitch) els.themeSwitch.checked = theme === 'dark';
-}
-if (els.themeSwitch) {
-  els.themeSwitch.onchange = (e) => applyTheme(e.target.checked ? 'dark' : 'light');
-}
-
-// ============================================
-// 👤 ПРОФИЛЬ
-// ============================================
-function trackProfile(uid) {
-  unsubProfile = onSnapshot(doc(db, 'users', uid), (snap) => {
-    if (!snap.exists()) return;
-    const data = snap.data();
-    els.profileAvatar.src = data.avatar || '';
-    els.profileName.textContent = data.displayName || '';
-    els.profileUsername.textContent = `@${data.username || 'user'}`;
-    els.profileStatusText.textContent = data.statusText || '';
+// ================= PROFILE & THEME =================
+async function loadUserProfile(uid) {
+  const unsub = onSnapshot(doc(db, 'users', uid), (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      userProfile = { id: uid, ...data };
+      $('#profile-name').textContent = data.displayName || 'Пользователь';
+      $('#profile-status').textContent = data.statusText || '';
+      $('#profile-avatar').src = data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName || 'U')}&background=6366f1&color=fff`;
+      $('#edit-displayName').value = data.displayName || '';
+      $('#edit-statusText').value = data.statusText || '';
+      if (data.theme === 'dark') document.documentElement.classList.add('dark');
+    }
   });
+  listeners.profile = unsub;
 }
 
-// Модалка аватаров
-els.btnChangeAvatar.onclick = () => {
-  const grid = document.getElementById('avatar-selection-grid');
-  grid.innerHTML = '';
-  const chars = ['IronMan','Batman','Joker','Thor','Loki','Yoda','Gandalf','Harry','Hermione','Draco','Natasha','Steve','Hulk','Scarlett','ChrisE','RDJ'];
-  
-  chars.forEach(name => {
-    const img = document.createElement('img');
-    img.src = `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=128`;
-    img.className = 'avatar-option';
-    img.onclick = async () => {
-      await updateDoc(doc(db, 'users', currentUser.uid), { avatar: img.src });
-      showToast('Аватар обновлён');
-      document.getElementById('avatar-modal').close();
-    };
-    grid.appendChild(img);
-  });
-  document.getElementById('avatar-modal').showModal();
-};
-
-// Редактирование профиля
-els.btnEditProfile.onclick = () => {
-  document.getElementById('edit-name').value = els.profileName.textContent;
-  document.getElementById('edit-username').value = els.profileUsername.textContent.replace('@', '');
-  document.getElementById('edit-status').value = els.profileStatusText.textContent;
-  document.getElementById('edit-profile-modal').showModal();
-};
-
-document.getElementById('save-profile-btn').onclick = async () => {
+$('#edit-profile-btn').onclick = () => $('#modal-edit-profile').showModal();
+$('#save-profile-btn').onclick = async () => {
+  if (!currentUser) return;
   await updateDoc(doc(db, 'users', currentUser.uid), {
-    displayName: document.getElementById('edit-name').value.trim(),
-    username: document.getElementById('edit-username').value.trim().replace('@', ''),
-    statusText: document.getElementById('edit-status').value.trim()
+    displayName: $('#edit-displayName').value.trim() || userProfile.displayName,
+    statusText: $('#edit-statusText').value.trim()
   });
-  showToast('Сохранено');
-  document.getElementById('edit-profile-modal').close();
+  closeModal('modal-edit-profile');
+  showToast('Профиль обновлён');
 };
 
-// Настройки
-els.btnSettings.onclick = () => document.getElementById('settings-modal').showModal();
-
-// Удаление
-els.btnDeleteProfile.onclick = async () => {
-  if (!confirm('Удалить профиль безвозвратно?')) return;
-  await deleteDoc(doc(db, 'users', currentUser.uid));
-  signOut(auth);
-  showToast('Профиль удалён');
+$('#theme-switch').onchange = async (e) => {
+  const isDark = e.target.checked;
+  document.documentElement.classList.toggle('dark', isDark);
+  await updateDoc(doc(db, 'users', currentUser.uid), { theme: isDark ? 'dark' : 'light' });
 };
 
-// ============================================
-// 📱 ЛЕНТА
-// ============================================
-els.publishBtn.onclick = async () => {
-  const text = els.postText.value.trim();
-  if (!text) return;
-  await addDoc(collection(db, 'posts'), {
-    authorId: currentUser.uid,
-    authorName: els.profileName.textContent,
-    authorAvatar: els.profileAvatar.src,
-    text, createdAt: serverTimestamp()
-  });
-  els.postText.value = '';
-  showToast('Опубликовано');
+$('#share-profile-btn').onclick = () => {
+  navigator.clipboard.writeText(currentUser.uid);
+  showToast('UID скопирован в буфер обмена');
 };
 
-function loadFeed() {
-  const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
-  unsubFeed = onSnapshot(q, (snap) => {
-    els.feedList.innerHTML = '';
-    if (snap.empty) { els.feedEmpty.style.display = 'block'; return; }
-    els.feedEmpty.style.display = 'none';
-    
-    snap.forEach(d => {
-      const p = d.data();
-      els.feedList.innerHTML += `
-        <div class="card feed-card">
-          <img src="${p.authorAvatar}" class="avatar small">
-          <div style="flex:1">
-            <div class="feed-meta"><b>${p.authorName}</b> • ${timeAgo(p.createdAt)}</div>
-            <div class="feed-text">${escapeHtml(p.text)}</div>
-          </div>
-        </div>`;
-    });
-  });
-}
-
-function loadMyPosts(uid) {
-  const q = query(collection(db, 'posts'), where('authorId', '==', uid), orderBy('createdAt', 'desc'), limit(20));
-  onSnapshot(q, (snap) => {
-    els.myPostsList.innerHTML = '';
-    if (snap.empty) { els.myPostsEmpty.style.display = 'block'; return; }
-    els.myPostsEmpty.style.display = 'none';
-    snap.forEach(d => {
-      const p = d.data();
-      els.myPostsList.innerHTML += `
-        <div class="card" style="margin-bottom:8px; padding:12px;">
-          <p style="margin:0; font-size:14px;">${escapeHtml(p.text)}</p>
-          <div class="feed-meta" style="margin-top:6px;">${timeAgo(p.createdAt)}</div>
-        </div>`;
-    });
-  });
-}
-
-// ============================================
-// 👥 КОНТАКТЫ & ЧАТЫ
-// ============================================
-function loadUsers() {
-  const q = query(collection(db, 'users'), limit(50));
-  unsubUsers = onSnapshot(q, (snap) => {
-    els.contactsList.innerHTML = '';
-    els.chatList.innerHTML = '';
-    let found = false;
-    
-    snap.forEach(d => {
-      if (d.id === currentUser.uid) return;
-      found = true;
-      const u = d.data();
-      const html = `
-        <div class="list-item" data-id="${d.id}" data-name="${u.displayName}" data-avatar="${u.avatar}">
-          <img src="${u.avatar}" class="avatar small">
-          <div>
-            <h4 style="margin:0; font-size:15px;">${u.displayName}</h4>
-            <span class="text-muted text-xs">@${u.username || '...'}</span>
-          </div>
-        </div>`;
-      els.contactsList.innerHTML += html;
-      els.chatList.innerHTML += html;
-    });
-    
-    els.contactsEmpty.style.display = found ? 'none' : 'block';
-    els.chatsEmpty.style.display = found ? 'none' : 'block';
-    
-    // Привязка кликов
-    document.querySelectorAll('.list-item').forEach(el => {
-      el.onclick = () => openChat(el.dataset.id, el.dataset.name, el.dataset.avatar);
-    });
-  });
-}
-
-els.addContactBtn.onclick = () => document.getElementById('add-contact-modal').showModal();
-
-document.getElementById('confirm-add-contact').onclick = async () => {
-  const email = document.getElementById('new-contact-email').value.trim();
-  if (!email) return showToast('Введите email', 'error');
-  const snap = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
-  if (snap.empty) return showToast('Пользователь не найден', 'error');
-  showToast('Контакт найден');
-  document.getElementById('add-contact-modal').close();
+$('#delete-profile-btn').onclick = async () => {
+  if (confirm('Удалить профиль и все данные? Это действие нельзя отменить.')) {
+    try {
+      // Очистка Firestore (упрощённо)
+      await deleteDoc(doc(db, 'users', currentUser.uid));
+      await deleteUser(auth.currentUser);
+      showToast('Профиль удалён');
+    } catch (e) { showToast('Ошибка удаления: ' + e.message, 'error'); }
+  }
 };
 
-function setupSearch() {
-  els.contactSearch.oninput = (e) => {
-    const v = e.target.value.toLowerCase();
-    document.querySelectorAll('#contacts-list .list-item').forEach(el => {
-      const name = el.querySelector('h4').textContent.toLowerCase();
-      el.style.display = name.includes(v) ? 'flex' : 'none';
-    });
+// ================= TABS =================
+$$('.nav-btn').forEach(btn => {
+  btn.onclick = () => {
+    $$('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    $$('.tab').forEach(t => t.classList.remove('active'));
+    $(`#tab-${tab}`).classList.add('active');
+    $('#header-title').textContent = btn.querySelector('span').textContent;
+    $('#search-btn').style.display = tab === 'profile' ? 'none' : 'flex';
   };
-}
+});
 
-// ============================================
-// ✉️ ЧАТ
-// ============================================
-function openChat(uid, name, avatar) {
-  currentChat = { id: uid, name, avatar };
-  els.chatName.textContent = name;
-  els.chatAvatar.src = avatar || `https://ui-avatars.com/api/?name=${name}&background=random`;
-  els.chatStatus.textContent = 'в сети';
-  
-  els.mainScreen.classList.remove('active');
-  els.chatScreen.classList.add('active');
-  loadMessages(uid);
-}
-
-function loadMessages(chatId) {
-  const room = [currentUser.uid, chatId].sort().join('_');
-  const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
-  if (unsubChat) unsubChat();
-  
-  els.msgArea.innerHTML = '<div class="empty-state">Загрузка...</div>';
-  unsubChat = onSnapshot(q, (snap) => {
-    els.msgArea.innerHTML = '';
-    if (snap.empty) { els.msgArea.innerHTML = '<div class="empty-state">Нет сообщений. Напишите первым!</div>'; return; }
-    
-    snap.forEach(d => {
-      const m = d.data();
-      const div = document.createElement('div');
-      div.className = `msg ${m.senderId === currentUser.uid ? 'out' : 'in'}`;
-      div.innerHTML = `${escapeHtml(m.text)}<span class="time">${timeAgo(m.createdAt)}</span>`;
-      els.msgArea.appendChild(div);
+// ================= CHATS =================
+function setupListeners() {
+  if (!currentUser) return;
+  // Чаты
+  listeners.chat = onSnapshot(query(collection(db, 'chatRooms'), where('participants', 'array-contains', currentUser.uid), orderBy('lastTime', 'desc')), (snap) => {
+    const list = $('#chat-list');
+    list.innerHTML = '';
+    if (snap.empty) { $('#chats-empty').style.display = 'block'; return; }
+    $('#chats-empty').style.display = 'none';
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      const isLastSender = data.lastSenderId === currentUser.uid;
+      const li = document.createElement('li');
+      li.className = 'list-item';
+      li.innerHTML = `
+        <img class="avatar" src="${data.contactAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.contactName)}`}" alt="">
+        <div class="info"><h4>${escapeHtml(data.contactName)}</h4><p>${isLastSender ? 'Вы: ' : ''}${escapeHtml(data.lastMessage || 'Нет сообщений')}</p></div>
+      `;
+      li.onclick = () => openChat(docSnap.id, data.contactName, data.contactAvatar, data.contactId);
+      list.appendChild(li);
     });
-    els.msgArea.scrollTop = els.msgArea.scrollHeight;
   });
 }
 
-els.sendBtn.onclick = async () => {
-  const text = els.textInput.value.trim();
-  if (!text || !currentChat) return;
-  const room = [currentUser.uid, currentChat.id].sort().join('_');
-  try {
-    await addDoc(collection(db, 'messages'), { room, text, senderId: currentUser.uid, createdAt: serverTimestamp() });
-    els.textInput.value = '';
-  } catch (e) { showToast('Ошибка отправки', 'error'); }
-};
-els.textInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) els.sendBtn.click(); };
+async function openChat(roomId, name, avatar, contactId) {
+  currentChat = { id: contactId, roomId, name, avatar };
+  $('#app-screen').classList.add('hidden');
+  $('#chat-screen').classList.remove('hidden');
+  $('#chat-name').textContent = name;
+  $('#chat-avatar').src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
+  $('#msg-area').innerHTML = '<div class="empty-state">Загрузка...</div>';
+  if (listeners.chat) listeners.chat();
 
-els.backBtn.onclick = () => {
-  els.chatScreen.classList.remove('active');
-  els.mainScreen.classList.add('active');
-  if (unsubChat) unsubChat();
+  listeners.chat = onSnapshot(query(collection(db, 'messages'), where('room', '==', roomId), orderBy('createdAt', 'asc')), (snap) => {
+    const area = $('#msg-area');
+    area.innerHTML = '';
+    if (snap.empty) { area.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>'; return; }
+    snap.forEach(d => {
+      const msg = d.data();
+      const div = document.createElement('div');
+      div.className = `msg ${msg.senderId === currentUser.uid ? 'out' : 'in'}`;
+      div.innerHTML = `${escapeHtml(msg.text)}<span class="time">${formatTime(msg.createdAt)}</span>`;
+      area.appendChild(div);
+    });
+    area.scrollTop = area.scrollHeight;
+  });
+}
+
+$('#back-btn').onclick = () => {
+  $('#chat-screen').classList.add('hidden');
+  $('#app-screen').classList.remove('hidden');
   currentChat = null;
 };
 
-// ============================================
-// ☺ ЭМДЗИ & НАВИГАЦИЯ
-// ============================================
-const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪'];
+$('#send-btn').onclick = async () => {
+  const text = $('#text-input').value.trim();
+  if (!text || !currentChat) return;
+  $('#text-input').value = '';
+  const room = currentChat.roomId;
+  await addDoc(collection(db, 'messages'), { room, senderId: currentUser.uid, text, createdAt: serverTimestamp() });
+  await setDoc(doc(db, 'chatRooms', room), {
+    participants: [currentUser.uid, currentChat.id],
+    contactId: currentChat.id,
+    contactName: currentChat.name,
+    contactAvatar: currentChat.avatar,
+    lastMessage: text,
+    lastSenderId: currentUser.uid,
+    lastTime: serverTimestamp()
+  }, { merge: true });
+};
 
-function initEmojis() {
-  els.emojiGrid.innerHTML = '';
-  EMOJIS.forEach(em => {
-    const b = document.createElement('button');
-    b.textContent = em;
-    b.onclick = () => {
-      const s = els.textInput.selectionStart || els.textInput.value.length;
-      els.textInput.value = els.textInput.value.slice(0, s) + em + els.textInput.value.slice(s);
-      els.textInput.focus();
+$('#text-input').onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#send-btn').click(); } };
+
+// ================= CONTACTS =================
+$('#add-contact-btn').onclick = () => $('#modal-add-contact').showModal();
+$('#search-contact-input').oninput = async (e) => {
+  const q = e.target.value.trim();
+  if (q.length < 3) return;
+  const snap = await getDocs(query(collection(db, 'users'), where('displayName', '>=', q), where('displayName', '<=', q + '\uf8ff'), limit(5)));
+  const res = $('#contact-search-results');
+  res.innerHTML = '';
+  snap.forEach(d => {
+    const u = d.data();
+    if (u.id === currentUser.uid) return;
+    const li = document.createElement('li');
+    li.className = 'list-item';
+    li.innerHTML = `<div class="info"><h4>${escapeHtml(u.displayName)}</h4><p>${escapeHtml(u.email)}</p></div>`;
+    li.onclick = async () => {
+      await addDoc(collection(db, 'contacts'), { ownerId: currentUser.uid, contactId: d.id, displayName: u.displayName, avatar: u.avatar, addedAt: serverTimestamp() });
+      showToast('Контакт добавлен');
+      closeModal('modal-add-contact');
     };
-    els.emojiGrid.appendChild(b);
+    res.appendChild(li);
+  });
+};
+
+function loadContacts() {
+  listeners.contacts = onSnapshot(query(collection(db, 'contacts'), where('ownerId', '==', currentUser.uid)), (snap) => {
+    const list = $('#contacts-list');
+    list.innerHTML = '';
+    if (snap.empty) { $('#contacts-empty').style.display = 'block'; return; }
+    $('#contacts-empty').style.display = 'none';
+    snap.forEach(d => {
+      const c = d.data();
+      const li = document.createElement('li');
+      li.className = 'list-item';
+      li.dataset.name = (c.displayName || '').toLowerCase();
+      li.innerHTML = `
+        <img class="avatar" src="${c.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.displayName)}`}" alt="">
+        <div class="info"><h4>${escapeHtml(c.displayName)}</h4><p>Нажмите для чата</p></div>
+        <button class="btn danger remove-contact" data-id="${d.id}">✕</button>
+      `;
+      li.onclick = (e) => { if (!e.target.classList.contains('remove-contact')) {
+        // Открыть чат (создаём комнату если нет)
+        const room = [currentUser.uid, c.contactId].sort().join('_');
+        openChat(room, c.displayName, c.avatar, c.contactId);
+      }};
+      list.appendChild(li);
+    });
+    $$('.remove-contact').forEach(btn => {
+      btn.onclick = async (e) => { e.stopPropagation(); await deleteDoc(doc(db, 'contacts', btn.dataset.id)); showToast('Контакт удалён'); };
+    });
   });
 }
 
-els.emojiToggle.onclick = (e) => { e.stopPropagation(); els.emojiPanel.classList.toggle('open'); };
-document.addEventListener('click', (e) => { if (!els.emojiPanel.contains(e.target) && e.target !== els.emojiToggle) els.emojiPanel.classList.remove('open'); });
+$('#contact-search').oninput = (e) => {
+  const q = e.target.value.toLowerCase();
+  $$('#contacts-list .list-item').forEach(li => {
+    li.style.display = li.dataset.name.includes(q) ? 'flex' : 'none';
+  });
+};
 
-function setupNav() {
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-      
-      const titles = { chats: 'Чаты', feed: 'Лента', contacts: 'Контакты', profile: 'Профиль' };
-      els.pageTitle.textContent = titles[btn.dataset.tab] || 'Woops';
-    };
+// ================= FEED =================
+function loadFeed() {
+  listeners.feed = onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50)), (snap) => {
+    feedData = [];
+    const cont = $('#feed-list');
+    cont.innerHTML = '';
+    snap.forEach(d => {
+      const p = { id: d.id, ...d.data() };
+      feedData.push(p);
+      cont.appendChild(renderPost(p));
+    });
+    // Также загружаем мои посты для профиля
+    const myCont = $('#my-posts-feed');
+    myCont.innerHTML = '';
+    feedData.filter(p => p.authorId === currentUser.uid).forEach(p => myCont.appendChild(renderPost(p, true)));
   });
 }
 
-function setupModals() {
-  document.querySelectorAll('dialog.modal').forEach(d => {
-    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+$('#new-post-btn').onclick = () => $('#modal-new-post').showModal();
+$('#publish-post-btn').onclick = async () => {
+  const text = $('#post-text').value.trim();
+  if (!text) return;
+  await addDoc(collection(db, 'posts'), {
+    authorId: currentUser.uid,
+    authorName: userProfile.displayName || 'Пользователь',
+    authorAvatar: userProfile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.displayName)}`,
+    text,
+    createdAt: serverTimestamp(),
+    likes: [],
+    comments: []
   });
-}
+  $('#post-text').value = '';
+  closeModal('modal-new-post');
+  showToast('Пост опубликован');
+};
 
-// ============================================
-// 🛠 УТИЛИТЫ
-// ============================================
-function cleanup() {
-  if (unsubChat) unsubChat();
-  if (unsubProfile) unsubProfile();
-  if (unsubFeed) unsubFeed();
-  if (unsubUsers) unsubUsers();
-}
-
-function showToast(msg, type = 'success') {
-  els.toast.textContent = msg;
-  els.toast.className = `toast show ${type}`;
-  setTimeout(() => els.toast.classList.remove('show'), 2500);
-}
-
-function escapeHtml(text) {
+function renderPost(post, isProfile = false) {
   const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  div.className = 'feed-card';
+  const isLiked = post.likes?.includes(currentUser.uid);
+  div.innerHTML = `
+    <div class="feed-author">
+      <img class="avatar" src="${post.authorAvatar}" style="width:32px;height:32px">
+      <div><h4>${escapeHtml(post.authorName)}</h4><p class="text-muted">${formatTime(post.createdAt)}</p></div>
+    </div>
+    <div class="feed-text">${escapeHtml(post.text)}</div>
+    <div class="feed-actions">
+      <button data-action="like" class="${isLiked ? 'active' : ''}">♥ ${post.likes?.length || 0}</button>
+      <button data-action="comment">💬 ${post.comments?.length || 0}</button>
+      <button data-action="share">↗</button>
+    </div>
+    <div class="comments-section">
+      ${(post.comments || []).map(c => `<div class="comment"><strong>${escapeHtml(c.name)}</strong>: ${escapeHtml(c.text)}</div>`).join('')}
+      <div class="add-comment">
+        <input type="text" placeholder="Комментарий...">
+        <button class="btn primary">→</button>
+      </div>
+    </div>
+  `;
+
+  // Like
+  div.querySelector('[data-action="like"]').onclick = async () => {
+    const ref = doc(db, 'posts', post.id);
+    const liked = post.likes?.includes(currentUser.uid);
+    if (liked) await updateDoc(ref, { likes: arrayRemove(currentUser.uid) });
+    else await updateDoc(ref, { likes: arrayUnion(currentUser.uid) });
+    showToast(liked ? 'Лайк убран' : 'Пост понравился');
+  };
+
+  // Comments
+  div.querySelector('[data-action="comment"]').onclick = () => div.querySelector('.comments-section').classList.toggle('open');
+  div.querySelector('.add-comment button').onclick = async () => {
+    const inp = div.querySelector('.add-comment input');
+    const txt = inp.value.trim();
+    if (!txt) return;
+    await updateDoc(doc(db, 'posts', post.id), { comments: arrayUnion({ name: userProfile.displayName || 'Вы', authorId: currentUser.uid, text: txt, createdAt: new Date().toISOString() }) });
+    inp.value = '';
+  };
+
+  // Share
+  div.querySelector('[data-action="share"]').onclick = () => {
+    if (navigator.share) navigator.share({ title: 'Woops Post', text: post.text });
+    else { navigator.clipboard.writeText(post.text); showToast('Текст скопирован'); }
+  };
+
+  return div;
 }
 
-function timeAgo(ts) {
+// ================= GLOBAL SEARCH =================
+$('#search-btn').onclick = () => { $('#search-overlay').classList.remove('hidden'); $('#global-search').focus(); };
+$('#close-search').onclick = () => $('#search-overlay').classList.add('hidden');
+$('#global-search').oninput = async (e) => {
+  const q = e.target.value.trim();
+  if (q.length < 2) return;
+  const snap = await getDocs(query(collection(db, 'users'), where('displayName', '>=', q), where('displayName', '<=', q + '\uf8ff'), limit(8)));
+  const res = $('#search-results');
+  res.innerHTML = '';
+  snap.forEach(d => {
+    const u = d.data();
+    if (u.id === currentUser.uid) return;
+    const li = document.createElement('li');
+    li.className = 'list-item';
+    li.innerHTML = `<img class="avatar" src="${u.avatar}" style="width:40px;height:40px"><div class="info"><h4>${escapeHtml(u.displayName)}</h4></div>`;
+    li.onclick = () => { openChat([currentUser.uid, d.id].sort().join('_'), u.displayName, u.avatar, d.id); $('#search-overlay').classList.add('hidden'); };
+    res.appendChild(li);
+  });
+};
+
+// ================= HELPERS =================
+function closeModal(id) { $(`#${id}`).close(); }
+function showToast(msg, type = 'success') {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+function formatTime(ts) {
   if (!ts) return '';
-  const s = Math.floor((Date.now() - (ts.toDate ? ts.toDate().getTime() : ts)) / 1000);
-  return s < 60 ? 'только что' : s < 3600 ? `${Math.floor(s/60)} мин` : s < 86400 ? `${Math.floor(s/3600)} ч` : 'давно';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+function cleanupListeners() { Object.values(listeners).forEach(l => l && l()); }
+function initTheme() {
+  const saved = localStorage.getItem('woops-theme') || userProfile.theme;
+  if (saved === 'dark') { document.documentElement.classList.add('dark'); $('#theme-switch').checked = true; }
 }
 
-console.log('%c✅ Woops App Loaded', 'color: #6366f1; font-weight: bold');
+// Init
+loadContacts();
+loadFeed();
+console.log('Woops v2 loaded');
