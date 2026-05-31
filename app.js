@@ -3,354 +3,445 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
-    authDomain: "woops-4ded6.firebaseapp.com",
-    projectId: "woops-4ded6",
-    storageBucket: "woops-4ded6.firebasestorage.app",
-    messagingSenderId: "371589558003",
-    appId: "1:371589558003:web:9e50637114a1526b9c5186"
+  apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
+  authDomain: "woops-4ded6.firebaseapp.com",
+  projectId: "woops-4ded6",
+  storageBucket: "woops-4ded6.firebasestorage.app",
+  messagingSenderId: "371589558003",
+  appId: "1:371589558003:web:9e50637114a1526b9c5186"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- СОСТОЯНИЕ ---
+// 🔹 DOM Elements
+const screens = {
+  auth: document.getElementById('auth-screen'),
+  main: document.getElementById('main-screen'),
+  chat: document.getElementById('chat-screen')
+};
+
+const elements = {
+  email: document.getElementById('email'),
+  password: document.getElementById('password'),
+  authError: document.getElementById('auth-error'),
+  loginBtn: document.getElementById('login-btn'),
+  registerBtn: document.getElementById('register-btn'),
+  logoutBtn: document.getElementById('logout-btn'),
+  pageTitle: document.getElementById('page-title'),
+  
+  // Вкладки
+  chatList: document.getElementById('chat-list'),
+  chatsEmpty: document.getElementById('chats-empty'),
+  feedList: document.getElementById('feed-list'),
+  feedEmpty: document.getElementById('feed-empty'),
+  postText: document.getElementById('post-text'),
+  publishBtn: document.getElementById('publish-btn'),
+  contactsList: document.getElementById('contacts-list'),
+  contactsEmpty: document.getElementById('contacts-empty'),
+  contactSearch: document.getElementById('contact-search'),
+  addContactBtn: document.getElementById('add-contact-btn'),
+  
+  // Профиль
+  profileAvatar: document.getElementById('profile-avatar'),
+  profileName: document.getElementById('profile-name'),
+  profileUsername: document.getElementById('profile-username'),
+  profileStatusText: document.getElementById('profile-status-text'),
+  myPostsList: document.getElementById('my-posts-list'),
+  myPostsEmpty: document.getElementById('my-posts-empty'),
+  btnChangeAvatar: document.getElementById('btn-change-avatar'),
+  btnEditProfile: document.getElementById('btn-edit-profile'),
+  btnSettings: document.getElementById('btn-settings'),
+  btnDeleteProfile: document.getElementById('btn-delete-profile'),
+  
+  // Чат
+  chatAvatar: document.getElementById('chat-avatar'),
+  chatName: document.getElementById('chat-name'),
+  chatStatus: document.getElementById('chat-status'),
+  msgArea: document.getElementById('msg-area'),
+  textInput: document.getElementById('text-input'),
+  sendBtn: document.getElementById('send-btn'),
+  backBtn: document.getElementById('back-btn'),
+  emojiToggle: document.getElementById('emoji-toggle'),
+  emojiPanel: document.getElementById('emoji-panel'),
+  emojiGrid: document.getElementById('emoji-grid')
+};
+
+const modals = {
+  avatar: document.getElementById('avatar-modal'),
+  editProfile: document.getElementById('edit-profile-modal'),
+  settings: document.getElementById('settings-modal'),
+  addContact: document.getElementById('add-contact-modal')
+};
+
+// 🔹 Состояние
 let currentUser = null;
 let currentChatUser = null;
 let unsubChat = null;
-let notes = [];
-let editingNoteId = null;
+let unsubProfile = null;
+let unsubFeed = null;
+let unsubContacts = null;
+let selectedAvatarUrl = null;
 
-// --- АВАТАРЫ (Персонажи) ---
-const AVATARS = [
-    { name: 'Batman', color: '000000' }, { name: 'Iron Man', color: 'b71c1c' },
-    { name: 'SpiderMan', color: '1565c0' }, { name: 'Joker', color: '2e7d32' },
-    { name: 'Thor', color: 'ff8f00' }, { name: 'BlackWidow', color: '212121' },
-    { name: 'Captain', color: '0d47a1' }, { name: 'Hulk', color: '1b5e20' },
-    { name: 'Harry', color: '4a148c' }, { name: 'Hermione', color: '880e4f' },
-    { name: 'Luna', color: 'e1bee7' }, { name: 'Draco', color: '78909c' },
-    { name: 'TonyStark', color: 'd32f2f' }, { name: 'Natasha', color: '303f9f' },
-    { name: 'Steve', color: '1976d2' }, { name: 'Loki', color: '388e3c' },
-    { name: 'Thanos', color: '4527a0' }, { name: 'ScarlettJ', color: 'e91e63' },
-    { name: 'ChrisE', color: '1a237e' }, { name: 'RDJ', color: 'bf360c' },
-    { name: 'ElonMusk', color: '263238' }, { name: 'Morgan', color: 'ff6f00' },
-    { name: 'Gandalf', color: '424242' }, { name: 'Yoda', color: '558b2f' }
-];
-
-// --- UI ЭЛЕМЕНТЫ ---
-const $ = id => document.getElementById(id);
-const screens = { auth: $('auth-screen'), main: $('main-screen'), chat: $('chat-screen') };
-
-// --- АВТОРИЗАЦИЯ ---
+// 🔹 Авторизация
 onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        currentUser = user;
-        screens.auth.classList.remove('active');
-        screens.main.classList.add('active');
-        await initApp(user.uid);
-    } else {
-        currentUser = null;
-        screens.auth.classList.add('active');
-        screens.main.classList.remove('active');
-        screens.chat.classList.remove('active');
-    }
-});
-
-$('login-btn').onclick = async () => {
-    try { await signInWithEmailAndPassword(auth, $('email').value, $('password').value); }
-    catch(e) { $('auth-error').textContent = e.message; }
-};
-$('register-btn').onclick = async () => {
-    try {
-        const c = await createUserWithEmailAndPassword(auth, $('email').value, $('password').value);
-        // Дефолтный профиль
-        await setDoc(doc(db, 'users', c.user.uid), {
-            username: c.user.email.split('@')[0],
-            displayName: c.user.email.split('@')[0],
-            avatar: `https://ui-avatars.com/api/?name=${c.user.email}&background=6366f1&color=fff`,
-            contacts: [],
-            notes: []
-        });
-    } catch(e) { $('auth-error').textContent = e.message; }
-};
-$('logout-btn').onclick = () => signOut(auth);
-
-// --- ИНИЦИАЛИЗАЦИЯ ---
-async function initApp(uid) {
-    // Загрузка профиля
-    onSnapshot(doc(db, 'users', uid), (docSnap) => {
-        if(docSnap.exists()) {
-            const data = docSnap.data();
-            $('profile-big-avatar').src = data.avatar;
-            $('profile-display-name').textContent = data.displayName;
-            $('profile-display-username').textContent = '@' + (data.username || '');
-            $('input-name').value = data.displayName || '';
-            $('input-username').value = data.username || '';
-            $('input-status').value = data.statusText || '';
-        }
-    });
-
-    // Загрузка контактов
-    loadContacts();
-    // Загрузка чатов
-    loadChats();
-    // Рендер аватаров
-    renderAvatarGrid();
-    // Заметки из LocalStorage
-    loadNotes();
-    // Тема
-    applyTheme(localStorage.getItem('theme') || 'light');
-}
-
-// --- ПРОФИЛЬ И НАСТРОЙКИ ---
-function renderAvatarGrid() {
-    const grid = $('avatar-selection-grid');
-    grid.innerHTML = '';
-    AVATARS.forEach(av => {
-        const img = document.createElement('img');
-        img.src = `https://ui-avatars.com/api/?name=${av.name}&background=${av.color}&color=fff&size=128`;
-        img.className = 'avatar-option';
-        img.onclick = () => {
-            document.querySelectorAll('.avatar-option').forEach(i => i.classList.remove('selected'));
-            img.classList.add('selected');
-            $('profile-big-avatar').src = img.src;
-        };
-        grid.appendChild(img);
-    });
-}
-
-$('save-profile').onclick = async () => {
-    const selectedAvatar = document.querySelector('.avatar-option.selected');
-    const avatarUrl = selectedAvatar ? selectedAvatar.src : $('profile-big-avatar').src;
-    
-    await updateDoc(doc(db, 'users', currentUser.uid), {
-        displayName: $('input-name').value,
-        username: $('input-username').value,
-        statusText: $('input-status').value,
-        avatar: avatarUrl
-    });
-    alert('Профиль сохранен!');
-};
-
-$('open-settings').onclick = () => $('settingsModal').showModal();
-
-$('theme-toggle-btn').onclick = () => {
-    const current = document.body.getAttribute('data-theme') || 'light';
-    applyTheme(current === 'light' ? 'dark' : 'light');
-};
-
-function applyTheme(theme) {
-    document.body.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-    $('theme-switch-indicator').textContent = theme === 'dark' ? '🟣' : '⚪';
-}
-
-// --- КОНТАКТЫ (СВАЙП) ---
-function loadContacts() {
-    // В реальном приложении мы бы брали список из профиля пользователя.
-    // Для демо берем всех пользователей (кроме себя).
-    const q = query(collection(db, 'users'), limit(50));
-    onSnapshot(q, (snap) => {
-        const list = $('contacts-list');
-        list.innerHTML = '';
-        snap.forEach(d => {
-            if (d.id === currentUser.uid) return;
-            const u = d.data();
-            const item = document.createElement('div');
-            item.className = 'swipe-wrapper';
-            item.innerHTML = `
-                <div class="swipe-bg">Удалить</div>
-                <div class="swipe-content" data-id="${d.id}">
-                    <img src="${u.avatar || ''}" class="avatar small">
-                    <div>
-                        <h4>${u.displayName}</h4>
-                        <span class="text-muted" style="font-size:12px;">@${u.username || '...'}</span>
-                    </div>
-                </div>
-            `;
-            list.appendChild(item);
-            initSwipe(item);
-            
-            // Клик для чата
-            item.querySelector('.swipe-content').onclick = () => openChat(d.id, u);
-        });
-    });
-}
-
-// Логика Свайпа
-function initSwipe(wrapper) {
-    let startX = 0, currentX = 0;
-    const content = wrapper.querySelector('.swipe-content');
-    
-    wrapper.ontouchstart = (e) => { startX = e.touches[0].clientX; };
-    wrapper.ontouchmove = (e) => {
-        const diff = startX - e.touches[0].clientX;
-        if (diff > 0) { // Свайп влево
-            currentX = Math.min(diff, 80); // Макс 80px
-            content.style.transform = `translateX(-${currentX}px)`;
-        }
-    };
-    wrapper.ontouchend = () => {
-        if (currentX > 50) {
-            // Показать кнопку удаления
-            content.style.transform = 'translateX(-70px)';
-            // Если кликнули на фон (красную зону)
-            content.onclick = null; // Отключаем переход в чат
-            wrapper.querySelector('.swipe-bg').onclick = () => {
-                // Удаление (в демо просто скрываем)
-                wrapper.style.height = '0'; wrapper.style.overflow = 'hidden'; wrapper.style.transition = '0.3s';
-            };
-        } else {
-            content.style.transform = 'translateX(0)';
-            const uid = content.dataset.id;
-            // Восстанавливаем клик
-            content.onclick = () => openChat(uid, { displayName: 'User' });
-        }
-        currentX = 0;
-    };
-}
-
-$('add-contact-btn').onclick = () => $('addContactModal').showModal();
-$('confirm-add-contact').onclick = () => {
-    alert('Функция поиска по Email в разработке, но контакт добавлен визуально!');
-    $('addContactModal').close();
-};
-
-// --- ЗАМЕТКИ ---
-function loadNotes() {
-    notes = JSON.parse(localStorage.getItem('woops_notes') || '[]');
-    renderNotes();
-}
-function saveNotes() {
-    localStorage.setItem('woops_notes', JSON.stringify(notes));
-    renderNotes();
-}
-function renderNotes() {
-    const list = $('notes-list');
-    list.innerHTML = '';
-    if (notes.length === 0) { list.innerHTML = '<p class="text-muted">Нет заметок</p>'; return; }
-    notes.forEach((n, i) => {
-        const card = document.createElement('div');
-        card.className = 'note-card';
-        card.innerHTML = `<h4>${n.title || 'Без названия'}</h4><p>${n.body ? n.body.substring(0, 30) + '...' : ''}</p>`;
-        card.onclick = () => openNote(i);
-        list.appendChild(card);
-    });
-}
-function openNote(index) {
-    editingNoteId = index;
-    const n = notes[index];
-    $('note-title-input').value = n.title;
-    $('note-body-input').value = n.body;
-    $('delete-note-btn').style.display = 'block';
-    $('noteEditorModal').showModal();
-}
-$('add-note-btn').onclick = () => {
-    editingNoteId = -1; // Новая
-    $('note-title-input').value = ''; $('note-body-input').value = '';
-    $('delete-note-btn').style.display = 'none';
-    $('noteEditorModal').showModal();
-};
-$('save-note-btn').onclick = () => {
-    const title = $('note-title-input').value;
-    const body = $('note-body-input').value;
-    if (editingNoteId === -1) notes.unshift({ title, body });
-    else notes[editingNoteId] = { title, body };
-    saveNotes();
-    $('noteEditorModal').close();
-};
-$('delete-note-btn').onclick = () => {
-    notes.splice(editingNoteId, 1);
-    saveNotes();
-    $('noteEditorModal').close();
-};
-
-// Переключатель вида заметок
-let notesGrid = true;
-$('notes-view-toggle').onclick = () => {
-    notesGrid = !notesGrid;
-    $('notes-list').className = notesGrid ? 'notes-grid' : 'notes-list';
-    $('notes-view-toggle').textContent = notesGrid ? '▦' : '☰';
-};
-
-// --- ЧАТЫ ---
-function loadChats() {
-    const list = $('chat-list');
-    // Для демо просто копируем контакты в чаты
-    const q = query(collection(db, 'users'), limit(10));
-    onSnapshot(q, (snap) => {
-        list.innerHTML = '';
-        snap.forEach(d => {
-            if(d.id === currentUser.uid) return;
-            const u = d.data();
-            const div = document.createElement('div');
-            div.className = 'list-item';
-            div.innerHTML = `<img src="${u.avatar || ''}" class="avatar small"><div><h4>${u.displayName}</h4></div>`;
-            div.onclick = () => openChat(d.id, u);
-            list.appendChild(div);
-        });
-    });
-}
-
-function openChat(uid, user) {
-    currentChatUser = { id: uid, ...user };
-    $('chat-name').textContent = user.displayName;
-    $('chat-avatar').src = user.avatar || `https://ui-avatars.com/api/?name=${user.displayName}&background=random`;
-    
-    screens.main.classList.remove('active');
-    screens.chat.classList.add('active');
-    
-    // Load Messages (Basic Firebase)
-    const room = [currentUser.uid, uid].sort().join('_');
-    const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
-    if(unsubChat) unsubChat();
-    
-    unsubChat = onSnapshot(q, (snap) => {
-        $('msg-area').innerHTML = '';
-        snap.forEach(doc => {
-            const msg = doc.data();
-            const div = document.createElement('div');
-            div.className = `msg ${msg.senderId === currentUser.uid ? 'out' : 'in'}`;
-            div.textContent = msg.text;
-            $('msg-area').appendChild(div);
-        });
-        $('msg-area').scrollTop = $('msg-area').scrollHeight;
-    });
-}
-
-$('back-btn').onclick = () => {
-    screens.chat.classList.remove('active');
+  if (user) {
+    currentUser = user;
+    screens.auth.classList.remove('active');
     screens.main.classList.add('active');
-    if(unsubChat) unsubChat();
+    await initApp(user.uid);
+  } else {
+    currentUser = null;
+    screens.auth.classList.add('active');
+    screens.main.classList.remove('active');
+    screens.chat.classList.remove('active');
+    cleanupListeners();
+  }
+});
+
+elements.loginBtn.onclick = async () => {
+  elements.authError.textContent = '';
+  try {
+    await signInWithEmailAndPassword(auth, elements.email.value.trim(), elements.password.value);
+  } catch (e) {
+    elements.authError.textContent = e.code === 'auth/invalid-credential' ? 'Неверный email или пароль' : e.message;
+  }
 };
 
-$('send-btn').onclick = async () => {
-    const text = $('text-input').value.trim();
-    if(!text || !currentChatUser) return;
-    const room = [currentUser.uid, currentChatUser.id].sort().join('_');
-    await addDoc(collection(db, 'messages'), {
-        room, text, senderId: currentUser.uid, createdAt: serverTimestamp()
+elements.registerBtn.onclick = async () => {
+  elements.authError.textContent = '';
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, elements.email.value.trim(), elements.password.value);
+    const defAvatar = `https://ui-avatars.com/api/?name=${cred.user.email}&background=6366f1&color=fff&size=128`;
+    await setDoc(doc(db, 'users', cred.user.uid), {
+      username: cred.user.email.split('@')[0],
+      displayName: cred.user.email.split('@')[0],
+      avatar: defAvatar, statusText: '', status: 'online', createdAt: serverTimestamp()
     });
-    $('text-input').value = '';
+  } catch (e) {
+    elements.authError.textContent = e.message;
+  }
 };
 
-// Эмодзи
-$('emojiToggle').onclick = () => $('emoji-panel').classList.toggle('open');
-const emojis = ['😀','😎','🔥','❤️','👍','😂','🤔','👋'];
-emojis.forEach(e => {
-    const b = document.createElement('button');
-    b.textContent = e;
-    b.onclick = () => { $('text-input').value += e; $('text-input').focus(); };
-    $('emoji-grid').appendChild(b);
-});
+elements.logoutBtn.onclick = () => signOut(auth);
 
-// --- НАВИГАЦИЯ ---
-document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.onclick = () => {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        btn.classList.add('active');
-        $('tab-' + btn.dataset.tab).classList.add('active');
+// 🔹 Инициализация
+async function initApp(uid) {
+  applyTheme(localStorage.getItem('theme') || 'light');
+  
+  // Профиль
+  unsubProfile = onSnapshot(doc(db, 'users', uid), (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    elements.profileAvatar.src = data.avatar || '';
+    elements.profileName.textContent = data.displayName || '';
+    elements.profileUsername.textContent = `@${data.username || 'user'}`;
+    elements.profileStatusText.textContent = data.statusText || '';
+    selectedAvatarUrl = data.avatar;
+  });
+
+  loadChats();
+  loadFeed();
+  loadMyPosts();
+  loadContacts();
+  renderAvatarGrid();
+  initEmojis();
+  setupNav();
+  setupModals();
+}
+
+// 🔹 Тема
+const themeSwitch = document.getElementById('theme-switch');
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+  themeSwitch.checked = theme === 'dark';
+}
+themeSwitch.onchange = (e) => applyTheme(e.target.checked ? 'dark' : 'light');
+
+// 🔹 Профиль
+elements.btnChangeAvatar.onclick = () => modals.avatar.showModal();
+elements.btnEditProfile.onclick = () => {
+  document.getElementById('edit-name').value = elements.profileName.textContent;
+  document.getElementById('edit-username').value = elements.profileUsername.textContent.replace('@', '');
+  document.getElementById('edit-status').value = elements.profileStatusText.textContent;
+  modals.editProfile.showModal();
+};
+elements.btnSettings.onclick = () => modals.settings.showModal();
+
+document.getElementById('save-profile-btn').onclick = async () => {
+  const name = document.getElementById('edit-name').value.trim();
+  const username = document.getElementById('edit-username').value.trim().replace('@', '');
+  const status = document.getElementById('edit-status').value.trim();
+  
+  await updateDoc(doc(db, 'users', currentUser.uid), { displayName: name, username, statusText: status });
+  showToast('Профиль сохранён');
+  modals.editProfile.close();
+};
+
+elements.btnDeleteProfile.onclick = async () => {
+  if (!confirm('Удалить профиль безвозвратно?')) return;
+  try {
+    await deleteDoc(doc(db, 'users', currentUser.uid));
+    signOut(auth);
+    showToast('Профиль удалён');
+  } catch (e) { showToast('Ошибка удаления', 'error'); }
+};
+
+// Аватары
+function renderAvatarGrid() {
+  const grid = document.getElementById('avatar-selection-grid');
+  grid.innerHTML = '';
+  const chars = ['IronMan','Batman','Joker','Thor','Loki','Yoda','Gandalf','Harry','Hermione','Draco','Natasha','Steve','Hulk','Scarlett','ChrisE','RDJ'];
+  
+  chars.forEach(name => {
+    const img = document.createElement('img');
+    img.src = `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=128`;
+    img.className = 'avatar-option';
+    img.onclick = async () => {
+      document.querySelectorAll('.avatar-option').forEach(i => i.classList.remove('selected'));
+      img.classList.add('selected');
+      await updateDoc(doc(db, 'users', currentUser.uid), { avatar: img.src });
+      showToast('Аватар обновлён');
+      modals.avatar.close();
     };
-});
+    grid.appendChild(img);
+  });
+}
+
+// 🔹 Лента
+elements.publishBtn.onclick = async () => {
+  const text = elements.postText.value.trim();
+  if (!text) return;
+  
+  await addDoc(collection(db, 'posts'), {
+    authorId: currentUser.uid,
+    authorName: elements.profileName.textContent,
+    authorAvatar: selectedAvatarUrl,
+    text, createdAt: serverTimestamp()
+  });
+  elements.postText.value = '';
+  showToast('Опубликовано');
+};
+
+function loadFeed() {
+  const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
+  if (unsubFeed) unsubFeed();
+  
+  unsubFeed = onSnapshot(q, (snap) => {
+    elements.feedList.innerHTML = '';
+    if (snap.empty) { elements.feedEmpty.style.display = 'block'; return; }
+    elements.feedEmpty.style.display = 'none';
+    
+    snap.forEach(d => {
+      const p = d.data();
+      elements.feedList.innerHTML += `
+        <div class="card feed-card">
+          <img src="${p.authorAvatar}" class="avatar small">
+          <div class="content" style="flex:1;">
+            <div class="feed-meta"><b>${p.authorName}</b> • ${timeAgo(p.createdAt)}</div>
+            <div class="feed-text">${escapeHtml(p.text)}</div>
+          </div>
+        </div>`;
+    });
+  });
+}
+
+function loadMyPosts() {
+  const q = query(collection(db, 'posts'), where('authorId', '==', currentUser.uid), orderBy('createdAt', 'desc'), limit(20));
+  onSnapshot(q, (snap) => {
+    elements.myPostsList.innerHTML = '';
+    if (snap.empty) { elements.myPostsEmpty.style.display = 'block'; return; }
+    elements.myPostsEmpty.style.display = 'none';
+    snap.forEach(d => {
+      const p = d.data();
+      elements.myPostsList.innerHTML += `
+        <div class="card" style="margin-bottom:8px; padding:12px;">
+          <p style="margin:0; font-size:14px;">${escapeHtml(p.text)}</p>
+          <div class="feed-meta" style="margin-top:6px;">${timeAgo(p.createdAt)}</div>
+        </div>`;
+    });
+  });
+}
+
+// 🔹 Контакты
+elements.addContactBtn.onclick = () => modals.addContact.showModal();
+document.getElementById('confirm-add-contact').onclick = () => {
+  const email = document.getElementById('new-contact-email').value.trim();
+  if (!email.includes('@')) return showToast('Введите корректный email', 'error');
+  
+  query(collection(db, 'users'), where('email', '==', email)).then(snap => {
+    if (snap.empty) return showToast('Пользователь не найден', 'error');
+    showToast('Контакт добавлен');
+    modals.addContact.close();
+  });
+};
+
+function loadContacts() {
+  const q = query(collection(db, 'users'), limit(50));
+  if (unsubContacts) unsubContacts();
+  
+  unsubContacts = onSnapshot(q, (snap) => {
+    elements.contactsList.innerHTML = '';
+    let found = false;
+    snap.forEach(d => {
+      if (d.id === currentUser.uid) return;
+      found = true;
+      const u = d.data();
+      const el = document.createElement('div');
+      el.className = 'list-item';
+      el.innerHTML = `<img src="${u.avatar || ''}" class="avatar small"><div><h4 style="margin:0; font-size:15px;">${u.displayName}</h4><span class="text-muted text-xs">@${u.username || '...'}</span></div>`;
+      el.onclick = () => openChat(d.id, u.displayName, u.avatar);
+      elements.contactsList.appendChild(el);
+    });
+    elements.contactsEmpty.style.display = found ? 'none' : 'block';
+  });
+}
+
+// Поиск контактов
+elements.contactSearch.oninput = (e) => {
+  const val = e.target.value.toLowerCase();
+  document.querySelectorAll('#contacts-list .list-item').forEach(el => {
+    const name = el.querySelector('h4').textContent.toLowerCase();
+    el.style.display = name.includes(val) ? 'flex' : 'none';
+  });
+};
+
+// 🔹 Чаты
+function loadChats() {
+  // Для демо используем контакты как список чатов. В продакшене здесь будет коллекция `conversations`
+  loadContacts(); 
+  // Копируем контакты в список чатов для быстрого старта
+  elements.contactsList.querySelectorAll('.list-item').forEach(el => {
+    elements.chatList.appendChild(el.cloneNode(true));
+  });
+  // Переназначаем клики
+  document.querySelectorAll('#chat-list .list-item').forEach(el => {
+    el.onclick = () => openChat(el.dataset.id || currentUser.uid, el.querySelector('h4').textContent, el.querySelector('img').src);
+  });
+}
+
+function openChat(uid, name, avatar) {
+  currentChatUser = { id: uid, name, avatar };
+  elements.chatName.textContent = name;
+  elements.chatAvatar.src = avatar || `https://ui-avatars.com/api/?name=${name}&background=random`;
+  elements.chatStatus.textContent = 'в сети';
+  
+  screens.main.classList.remove('active');
+  screens.chat.classList.add('active');
+  loadMessages(uid);
+}
+
+function loadMessages(chatId) {
+  const room = [currentUser.uid, chatId].sort().join('_');
+  const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
+  if (unsubChat) unsubChat();
+  
+  elements.msgArea.innerHTML = '<div class="empty-state">Загрузка...</div>';
+  unsubChat = onSnapshot(q, (snap) => {
+    elements.msgArea.innerHTML = '';
+    if (snap.empty) {
+      elements.msgArea.innerHTML = '<div class="empty-state">Нет сообщений. Напишите первым!</div>';
+      return;
+    }
+    snap.forEach(d => {
+      const m = d.data();
+      const div = document.createElement('div');
+      div.className = `msg ${m.senderId === currentUser.uid ? 'out' : 'in'}`;
+      div.innerHTML = `${escapeHtml(m.text)}<span class="time">${timeAgo(m.createdAt)}</span>`;
+      elements.msgArea.appendChild(div);
+    });
+    elements.msgArea.scrollTop = elements.msgArea.scrollHeight;
+  });
+}
+
+elements.sendBtn.onclick = async () => {
+  const text = elements.textInput.value.trim();
+  if (!text || !currentChatUser) return;
+  const room = [currentUser.uid, currentChatUser.id].sort().join('_');
+  
+  try {
+    await addDoc(collection(db, 'messages'), { room, text, senderId: currentUser.uid, createdAt: serverTimestamp() });
+    elements.textInput.value = '';
+  } catch (e) { showToast('Ошибка отправки', 'error'); }
+};
+elements.textInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) elements.sendBtn.click(); };
+
+elements.backBtn.onclick = () => {
+  screens.chat.classList.remove('active');
+  screens.main.classList.add('active');
+  if (unsubChat) unsubChat();
+  currentChatUser = null;
+};
+
+// 🔹 Эмодзи & Навигация
+const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪'];
+function initEmojis() {
+  elements.emojiGrid.innerHTML = '';
+  EMOJIS.forEach(em => {
+    const b = document.createElement('button');
+    b.textContent = em;
+    b.onclick = () => {
+      const start = elements.textInput.selectionStart || elements.textInput.value.length;
+      elements.textInput.value = elements.textInput.value.slice(0, start) + em + elements.textInput.value.slice(start);
+      elements.textInput.focus();
+    };
+    elements.emojiGrid.appendChild(b);
+  });
+}
+elements.emojiToggle.onclick = (e) => { e.stopPropagation(); elements.emojiPanel.classList.toggle('open'); };
+document.addEventListener('click', (e) => { if (!elements.emojiPanel.contains(e.target) && e.target !== elements.emojiToggle) elements.emojiPanel.classList.remove('open'); });
+
+function setupNav() {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      
+      const titles = { chats: 'Чаты', feed: 'Лента', contacts: 'Контакты', profile: 'Профиль' };
+      elements.pageTitle.textContent = titles[btn.dataset.tab] || 'Woops';
+    };
+  });
+}
+
+function setupModals() {
+  // Закрытие по клику на backdrop
+  document.querySelectorAll('dialog.modal').forEach(d => {
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+  });
+}
+
+function cleanupListeners() {
+  if (unsubChat) unsubChat();
+  if (unsubProfile) unsubProfile();
+  if (unsubFeed) unsubFeed();
+  if (unsubContacts) unsubContacts();
+}
+
+// 🔹 Утилиты
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const s = Math.floor((Date.now() - (ts.toDate ? ts.toDate().getTime() : ts)) / 1000);
+  if (s < 60) return 'только что';
+  if (s < 3600) return `${Math.floor(s/60)} мин назад`;
+  if (s < 86400) return `${Math.floor(s/3600)} ч назад`;
+  return new Date(ts.toDate ? ts.toDate() : ts).toLocaleDateString('ru-RU');
+}
+
+console.log('%c✅ Woops App Loaded', 'color: #6366f1; font-weight: bold; font-size: 14px');
