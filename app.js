@@ -527,7 +527,8 @@ if (sendBtn) {
                 createdAt: serverTimestamp()
             });
             textInput.value = '';
-            textInput.focus();
+            // УБИРАЕМ фокус после отправки
+            textInput.blur();
             if (msgArea) msgArea.scrollTop = msgArea.scrollHeight;
         } catch (e) {
             console.error("Send error:", e);
@@ -541,6 +542,8 @@ if (textInput) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             if (sendBtn) sendBtn.click();
+            // Убираем фокус после отправки через Enter
+            textInput.blur();
         }
     };
 }
