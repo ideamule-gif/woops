@@ -550,4 +550,14 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2
   .modal-box { border-radius: var(--radius-lg); animation: fadeIn 0.15s ease; }
 }
 
+/* Жесткое скрытие экранов, которое перебьет любые Grid и Flexbox */
+.hidden { 
+  display: none !important; 
+}
+.active { 
+  display: flex !important; 
+}
+
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+
