@@ -374,35 +374,42 @@ async function openChat(userId, name, avatar) {
     
     if (unsubChat) unsubChat();
     
-    unsubChat = onSnapshot(q, (snap) => {
-        if (msgArea.querySelector('.loading-state')) {
-             msgArea.innerHTML = '';
-        }
-        
-        if (snap.empty) {
-            msgArea.innerHTML = '<div class="empty-state"><div class="empty-icon">👋</div><p>Напишите первое сообщение!</p></div>';
-        } else {
-            const fragment = document.createDocumentFragment();
-            snap.forEach(docSnap => {
-                const msg = docSnap.data();
-                fragment.appendChild(renderMessage(msg));
-            });
-            
-            // Чтобы избежать мигания, проверяем, изменилось ли что-то реально
-            // Но для простоты просто заменяем контент, если он пуст или мы первый раз загрузили
-            if (msgArea.children.length === 0 || msgArea.querySelector('.empty-state')) {
-                msgArea.innerHTML = '';
-                msgArea.appendChild(fragment);
-            } else {
-                // Append only new? Hard with Firestore. 
-                // Simple replacement is safest for this scale
-                 msgArea.innerHTML = '';
-                 msgArea.appendChild(fragment);
-            }
-        }
-        msgArea.scrollTop = msgArea.scrollHeight;
+unsubChat = onSnapshot(q, 
+  // ✅ Успешная загрузка
+  (snap) => {
+    msgArea.innerHTML = '';
+    
+    if (snap.empty) {
+      msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
+      return;
+    }
+    
+    snap.forEach(docSnap => {
+      msgArea.appendChild(renderMessage(docSnap.data()));
     });
-}
+    
+    msgArea.scrollTop = msgArea.scrollHeight;
+  },
+  
+  // ❌ ОБРАБОТКА ОШИБОК (это исправляет бесконечную загрузку!)
+  (error) => {
+    console.error("❌ Firestore error:", error.code, error.message);
+    
+    if (error.code === 'failed-precondition') {
+      msgArea.innerHTML = `<div class="empty-state" style="color:var(--danger)">
+        ⚠️ Требуется индекс Firestore.<br>
+        <small>Открой консоль (F12) — там будет ссылка "Create Index"</small>
+      </div>`;
+      showToast('Нужно создать индекс в Firebase', 'error');
+    } else if (error.code === 'permission-denied') {
+      msgArea.innerHTML = '<div class="empty-state">❌ Нет доступа к чату</div>';
+      showToast('Ошибка прав доступа', 'error');
+    } else {
+      msgArea.innerHTML = `<div class="empty-state">Ошибка: ${error.message}</div>`;
+      showToast('Не удалось загрузить чат', 'error');
+    }
+  }
+);
 
 function renderMessage(msg) {
     const div = document.createElement('div');
