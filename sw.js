@@ -1,7 +1,7 @@
 // ==========================================================================
-// 🚀 SERVICE WORKER: УПРАВЛЕНИЕ КЭШОМ И ОФЛАЙН-РЕЖИМОМ (ВЕРСИЯ 3)
+// 🚀 SERVICE WORKER: УПРАВЛЕНИЕ КЭШОМ И ОФЛАЙН-РЕЖИМОМ (ВЕРСИЯ 4)
 // ==========================================================================
-const CACHE_NAME = 'woops-v3'; // Инкремент версии сбрасывает старый кэш у всех пользователей
+const CACHE_NAME = 'woops-v4'; // Инкремент версии сбрасывает память браузера под чистый минимализм
 
 const ASSETS_TO_CACHE = [
   './index.html',
@@ -15,10 +15,10 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Woops SW: Кэширование обновленных адаптивных файлов');
+        console.log('Woops SW: Кэширование монохромной двухколоночной сборки');
         return cache.addAll(ASSETS_TO_CACHE);
       })
-      .then(() => self.skipWaiting()) // Активируем SW сразу, не дожидаясь закрытия вкладок
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -29,12 +29,12 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map(key => {
           if (key !== CACHE_NAME) {
-            console.log('Woops SW: Удаление устаревшего кэша:', key);
+            console.log('Woops SW: Удаление устаревшего кэша версии:', key);
             return caches.delete(key);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Перехватываем управление вкладками немедленно
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -42,7 +42,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Важно: Пропускаем Firebase и внешние API, чтобы не ломать сетевые запросы
+  // Пропускаем внешние API и Firebase, чтобы не ломать сетевые запросы авторизации
   if (url.hostname.includes('firebase') || 
       url.hostname.includes('googleapis') || 
       url.hostname.includes('gstatic') ||
@@ -51,13 +51,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Стратегия Stale-While-Revalidate (возврат из кэша + обновление в фоне)
+  // Стратегия Stale-While-Revalidate (возврат из кэша мгновенно + обновление в фоне)
   event.respondWith(
     caches.match(event.request)
       .then(cachedResponse => {
         const fetchPromise = fetch(event.request)
           .then(networkResponse => {
-            // Кэшируем только успешные статические ответы
             if (networkResponse && networkResponse.status === 200) {
               const responseToCache = networkResponse.clone();
               caches.open(CACHE_NAME)
@@ -67,13 +66,12 @@ self.addEventListener('fetch', (event) => {
           })
           .catch(() => null);
 
-        // Отдаем кэш для скорости, если он есть, иначе ждем сеть
         return cachedResponse || fetchPromise;
       })
   );
 });
 
-// Срочное обновление при получении команды из основного скрипта
+// Получение системных сигналов
 self.addEventListener('message', (event) => {
   if (event.data === 'skipWaiting') {
     self.skipWaiting();
