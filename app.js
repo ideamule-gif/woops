@@ -650,4 +650,13 @@ authForm.onkeypress = (e) => {
     }
 }
 
-console.log('%cWoops Chat Initialized', 'color: #6366f1; font-weight: bold; font-size: 14px');
+console.log('%cWoops Chat Initialized', 'color: #6366f1; font-weight: bold; font-size: 14px
+            
+            // 🔧 Регистрация Service Worker для PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('✅ SW registered:', reg.scope))
+      .catch(err => console.log('❌ SW failed:', err));
+  });
+}
