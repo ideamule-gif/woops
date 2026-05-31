@@ -23,7 +23,7 @@
   </div>
 
   <!-- ОСНОВНОЙ ЭКРАН -->
-  <div id="app-screen" class="screen">
+  <div id="app-screen" class="screen hidden">
     <header class="app-header">
       <h1 id="header-title">Чаты</h1>
       <button id="search-btn" class="icon-btn" aria-label="Поиск">
@@ -132,10 +132,10 @@
   <dialog id="modal-add-contact" class="modal">
     <div class="modal-box">
       <h3>Добавить контакт</h3>
-      <input type="text" id="search-contact-input" placeholder="Email или UID пользователя">
+      <input type="text" id="search-contact-input" placeholder="Поиск по имени...">
       <div id="contact-search-results" class="search-list"></div>
       <div class="modal-actions">
-        <button class="btn secondary" onclick="closeModal('modal-add-contact')">Отмена</button>
+        <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
       </div>
     </div>
   </dialog>
@@ -145,7 +145,7 @@
       <h3>Новый пост</h3>
       <textarea id="post-text" placeholder="О чём думаете?" rows="4"></textarea>
       <div class="modal-actions">
-        <button class="btn secondary" onclick="closeModal('modal-new-post')">Отмена</button>
+        <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
         <button id="publish-post-btn" class="btn primary">Опубликовать</button>
       </div>
     </div>
@@ -157,7 +157,7 @@
       <label>Имя</label><input type="text" id="edit-displayName">
       <label>Статус текст</label><input type="text" id="edit-statusText">
       <div class="modal-actions">
-        <button class="btn secondary" onclick="closeModal('modal-edit-profile')">Отмена</button>
+        <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
         <button id="save-profile-btn" class="btn primary">Сохранить</button>
       </div>
     </div>
@@ -167,3 +167,4 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
+
