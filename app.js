@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// 🔧 Конфиг Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
   authDomain: "woops-4ded6.firebaseapp.com",
@@ -15,23 +16,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔹 DOM Elements
-const screens = {
-  auth: document.getElementById('auth-screen'),
-  main: document.getElementById('main-screen'),
-  chat: document.getElementById('chat-screen')
-};
-
-const elements = {
-  email: document.getElementById('email'),
-  password: document.getElementById('password'),
+// 🔹 Элементы DOM (строго под ваш index.html)
+const els = {
+  authScreen: document.getElementById('auth-screen'),
+  mainScreen: document.getElementById('main-screen'),
+  chatScreen: document.getElementById('chat-screen'),
+  emailInput: document.getElementById('email'),
+  passInput: document.getElementById('password'),
   authError: document.getElementById('auth-error'),
   loginBtn: document.getElementById('login-btn'),
   registerBtn: document.getElementById('register-btn'),
   logoutBtn: document.getElementById('logout-btn'),
   pageTitle: document.getElementById('page-title'),
   
-  // Вкладки
   chatList: document.getElementById('chat-list'),
   chatsEmpty: document.getElementById('chats-empty'),
   feedList: document.getElementById('feed-list'),
@@ -43,7 +40,6 @@ const elements = {
   contactSearch: document.getElementById('contact-search'),
   addContactBtn: document.getElementById('add-contact-btn'),
   
-  // Профиль
   profileAvatar: document.getElementById('profile-avatar'),
   profileName: document.getElementById('profile-name'),
   profileUsername: document.getElementById('profile-username'),
@@ -55,7 +51,6 @@ const elements = {
   btnSettings: document.getElementById('btn-settings'),
   btnDeleteProfile: document.getElementById('btn-delete-profile'),
   
-  // Чат
   chatAvatar: document.getElementById('chat-avatar'),
   chatName: document.getElementById('chat-name'),
   chatStatus: document.getElementById('chat-status'),
@@ -65,132 +60,107 @@ const elements = {
   backBtn: document.getElementById('back-btn'),
   emojiToggle: document.getElementById('emoji-toggle'),
   emojiPanel: document.getElementById('emoji-panel'),
-  emojiGrid: document.getElementById('emoji-grid')
+  emojiGrid: document.getElementById('emoji-grid'),
+  
+  themeSwitch: document.getElementById('theme-switch'),
+  toast: document.getElementById('toast')
 };
 
-const modals = {
-  avatar: document.getElementById('avatar-modal'),
-  editProfile: document.getElementById('edit-profile-modal'),
-  settings: document.getElementById('settings-modal'),
-  addContact: document.getElementById('add-contact-modal')
-};
-
-// 🔹 Состояние
+// 🔹 Глобальное состояние
 let currentUser = null;
-let currentChatUser = null;
+let currentChat = null;
 let unsubChat = null;
 let unsubProfile = null;
 let unsubFeed = null;
-let unsubContacts = null;
-let selectedAvatarUrl = null;
+let unsubUsers = null;
 
-// 🔹 Авторизация
+// ============================================
+// 🔐 АВТОРИЗАЦИЯ
+// ============================================
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
-    screens.auth.classList.remove('active');
-    screens.main.classList.add('active');
-    await initApp(user.uid);
+    els.authScreen.classList.remove('active');
+    els.mainScreen.classList.add('active');
+    initApp(user.uid);
   } else {
     currentUser = null;
-    screens.auth.classList.add('active');
-    screens.main.classList.remove('active');
-    screens.chat.classList.remove('active');
-    cleanupListeners();
+    els.authScreen.classList.add('active');
+    els.mainScreen.classList.remove('active');
+    els.chatScreen.classList.remove('active');
+    cleanup();
   }
 });
 
-elements.loginBtn.onclick = async () => {
-  elements.authError.textContent = '';
+els.loginBtn.onclick = async () => {
+  els.authError.textContent = '';
   try {
-    await signInWithEmailAndPassword(auth, elements.email.value.trim(), elements.password.value);
+    await signInWithEmailAndPassword(auth, els.emailInput.value.trim(), els.passInput.value);
   } catch (e) {
-    elements.authError.textContent = e.code === 'auth/invalid-credential' ? 'Неверный email или пароль' : e.message;
+    els.authError.textContent = e.code === 'auth/invalid-credential' ? 'Неверный email или пароль' : 'Ошибка входа';
   }
 };
 
-elements.registerBtn.onclick = async () => {
-  elements.authError.textContent = '';
+els.registerBtn.onclick = async () => {
+  els.authError.textContent = '';
   try {
-    const cred = await createUserWithEmailAndPassword(auth, elements.email.value.trim(), elements.password.value);
+    const cred = await createUserWithEmailAndPassword(auth, els.emailInput.value.trim(), els.passInput.value);
     const defAvatar = `https://ui-avatars.com/api/?name=${cred.user.email}&background=6366f1&color=fff&size=128`;
     await setDoc(doc(db, 'users', cred.user.uid), {
       username: cred.user.email.split('@')[0],
       displayName: cred.user.email.split('@')[0],
-      avatar: defAvatar, statusText: '', status: 'online', createdAt: serverTimestamp()
+      avatar: defAvatar,
+      statusText: '',
+      createdAt: serverTimestamp()
     });
   } catch (e) {
-    elements.authError.textContent = e.message;
+    els.authError.textContent = e.message;
   }
 };
 
-elements.logoutBtn.onclick = () => signOut(auth);
+els.logoutBtn.onclick = () => signOut(auth);
 
-// 🔹 Инициализация
-async function initApp(uid) {
+// ============================================
+// 🚀 ИНИЦИАЛИЗАЦИЯ
+// ============================================
+function initApp(uid) {
   applyTheme(localStorage.getItem('theme') || 'light');
-  
-  // Профиль
-  unsubProfile = onSnapshot(doc(db, 'users', uid), (snap) => {
-    if (!snap.exists()) return;
-    const data = snap.data();
-    elements.profileAvatar.src = data.avatar || '';
-    elements.profileName.textContent = data.displayName || '';
-    elements.profileUsername.textContent = `@${data.username || 'user'}`;
-    elements.profileStatusText.textContent = data.statusText || '';
-    selectedAvatarUrl = data.avatar;
-  });
-
-  loadChats();
+  trackProfile(uid);
+  loadUsers();
   loadFeed();
-  loadMyPosts();
-  loadContacts();
-  renderAvatarGrid();
+  loadMyPosts(uid);
   initEmojis();
   setupNav();
   setupModals();
+  setupSearch();
 }
 
-// 🔹 Тема
-const themeSwitch = document.getElementById('theme-switch');
+// Тема
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('theme', theme);
-  themeSwitch.checked = theme === 'dark';
+  if (els.themeSwitch) els.themeSwitch.checked = theme === 'dark';
 }
-themeSwitch.onchange = (e) => applyTheme(e.target.checked ? 'dark' : 'light');
+if (els.themeSwitch) {
+  els.themeSwitch.onchange = (e) => applyTheme(e.target.checked ? 'dark' : 'light');
+}
 
-// 🔹 Профиль
-elements.btnChangeAvatar.onclick = () => modals.avatar.showModal();
-elements.btnEditProfile.onclick = () => {
-  document.getElementById('edit-name').value = elements.profileName.textContent;
-  document.getElementById('edit-username').value = elements.profileUsername.textContent.replace('@', '');
-  document.getElementById('edit-status').value = elements.profileStatusText.textContent;
-  modals.editProfile.showModal();
-};
-elements.btnSettings.onclick = () => modals.settings.showModal();
+// ============================================
+// 👤 ПРОФИЛЬ
+// ============================================
+function trackProfile(uid) {
+  unsubProfile = onSnapshot(doc(db, 'users', uid), (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    els.profileAvatar.src = data.avatar || '';
+    els.profileName.textContent = data.displayName || '';
+    els.profileUsername.textContent = `@${data.username || 'user'}`;
+    els.profileStatusText.textContent = data.statusText || '';
+  });
+}
 
-document.getElementById('save-profile-btn').onclick = async () => {
-  const name = document.getElementById('edit-name').value.trim();
-  const username = document.getElementById('edit-username').value.trim().replace('@', '');
-  const status = document.getElementById('edit-status').value.trim();
-  
-  await updateDoc(doc(db, 'users', currentUser.uid), { displayName: name, username, statusText: status });
-  showToast('Профиль сохранён');
-  modals.editProfile.close();
-};
-
-elements.btnDeleteProfile.onclick = async () => {
-  if (!confirm('Удалить профиль безвозвратно?')) return;
-  try {
-    await deleteDoc(doc(db, 'users', currentUser.uid));
-    signOut(auth);
-    showToast('Профиль удалён');
-  } catch (e) { showToast('Ошибка удаления', 'error'); }
-};
-
-// Аватары
-function renderAvatarGrid() {
+// Модалка аватаров
+els.btnChangeAvatar.onclick = () => {
   const grid = document.getElementById('avatar-selection-grid');
   grid.innerHTML = '';
   const chars = ['IronMan','Batman','Joker','Thor','Loki','Yoda','Gandalf','Harry','Hermione','Draco','Natasha','Steve','Hulk','Scarlett','ChrisE','RDJ'];
@@ -200,46 +170,73 @@ function renderAvatarGrid() {
     img.src = `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=128`;
     img.className = 'avatar-option';
     img.onclick = async () => {
-      document.querySelectorAll('.avatar-option').forEach(i => i.classList.remove('selected'));
-      img.classList.add('selected');
       await updateDoc(doc(db, 'users', currentUser.uid), { avatar: img.src });
       showToast('Аватар обновлён');
-      modals.avatar.close();
+      document.getElementById('avatar-modal').close();
     };
     grid.appendChild(img);
   });
-}
+  document.getElementById('avatar-modal').showModal();
+};
 
-// 🔹 Лента
-elements.publishBtn.onclick = async () => {
-  const text = elements.postText.value.trim();
+// Редактирование профиля
+els.btnEditProfile.onclick = () => {
+  document.getElementById('edit-name').value = els.profileName.textContent;
+  document.getElementById('edit-username').value = els.profileUsername.textContent.replace('@', '');
+  document.getElementById('edit-status').value = els.profileStatusText.textContent;
+  document.getElementById('edit-profile-modal').showModal();
+};
+
+document.getElementById('save-profile-btn').onclick = async () => {
+  await updateDoc(doc(db, 'users', currentUser.uid), {
+    displayName: document.getElementById('edit-name').value.trim(),
+    username: document.getElementById('edit-username').value.trim().replace('@', ''),
+    statusText: document.getElementById('edit-status').value.trim()
+  });
+  showToast('Сохранено');
+  document.getElementById('edit-profile-modal').close();
+};
+
+// Настройки
+els.btnSettings.onclick = () => document.getElementById('settings-modal').showModal();
+
+// Удаление
+els.btnDeleteProfile.onclick = async () => {
+  if (!confirm('Удалить профиль безвозвратно?')) return;
+  await deleteDoc(doc(db, 'users', currentUser.uid));
+  signOut(auth);
+  showToast('Профиль удалён');
+};
+
+// ============================================
+// 📱 ЛЕНТА
+// ============================================
+els.publishBtn.onclick = async () => {
+  const text = els.postText.value.trim();
   if (!text) return;
-  
   await addDoc(collection(db, 'posts'), {
     authorId: currentUser.uid,
-    authorName: elements.profileName.textContent,
-    authorAvatar: selectedAvatarUrl,
+    authorName: els.profileName.textContent,
+    authorAvatar: els.profileAvatar.src,
     text, createdAt: serverTimestamp()
   });
-  elements.postText.value = '';
+  els.postText.value = '';
   showToast('Опубликовано');
 };
 
 function loadFeed() {
   const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
-  if (unsubFeed) unsubFeed();
-  
   unsubFeed = onSnapshot(q, (snap) => {
-    elements.feedList.innerHTML = '';
-    if (snap.empty) { elements.feedEmpty.style.display = 'block'; return; }
-    elements.feedEmpty.style.display = 'none';
+    els.feedList.innerHTML = '';
+    if (snap.empty) { els.feedEmpty.style.display = 'block'; return; }
+    els.feedEmpty.style.display = 'none';
     
     snap.forEach(d => {
       const p = d.data();
-      elements.feedList.innerHTML += `
+      els.feedList.innerHTML += `
         <div class="card feed-card">
           <img src="${p.authorAvatar}" class="avatar small">
-          <div class="content" style="flex:1;">
+          <div style="flex:1">
             <div class="feed-meta"><b>${p.authorName}</b> • ${timeAgo(p.createdAt)}</div>
             <div class="feed-text">${escapeHtml(p.text)}</div>
           </div>
@@ -248,15 +245,15 @@ function loadFeed() {
   });
 }
 
-function loadMyPosts() {
-  const q = query(collection(db, 'posts'), where('authorId', '==', currentUser.uid), orderBy('createdAt', 'desc'), limit(20));
+function loadMyPosts(uid) {
+  const q = query(collection(db, 'posts'), where('authorId', '==', uid), orderBy('createdAt', 'desc'), limit(20));
   onSnapshot(q, (snap) => {
-    elements.myPostsList.innerHTML = '';
-    if (snap.empty) { elements.myPostsEmpty.style.display = 'block'; return; }
-    elements.myPostsEmpty.style.display = 'none';
+    els.myPostsList.innerHTML = '';
+    if (snap.empty) { els.myPostsEmpty.style.display = 'block'; return; }
+    els.myPostsEmpty.style.display = 'none';
     snap.forEach(d => {
       const p = d.data();
-      elements.myPostsList.innerHTML += `
+      els.myPostsList.innerHTML += `
         <div class="card" style="margin-bottom:8px; padding:12px;">
           <p style="margin:0; font-size:14px;">${escapeHtml(p.text)}</p>
           <div class="feed-meta" style="margin-top:6px;">${timeAgo(p.createdAt)}</div>
@@ -265,71 +262,74 @@ function loadMyPosts() {
   });
 }
 
-// 🔹 Контакты
-elements.addContactBtn.onclick = () => modals.addContact.showModal();
-document.getElementById('confirm-add-contact').onclick = () => {
-  const email = document.getElementById('new-contact-email').value.trim();
-  if (!email.includes('@')) return showToast('Введите корректный email', 'error');
-  
-  query(collection(db, 'users'), where('email', '==', email)).then(snap => {
-    if (snap.empty) return showToast('Пользователь не найден', 'error');
-    showToast('Контакт добавлен');
-    modals.addContact.close();
-  });
-};
-
-function loadContacts() {
+// ============================================
+// 👥 КОНТАКТЫ & ЧАТЫ
+// ============================================
+function loadUsers() {
   const q = query(collection(db, 'users'), limit(50));
-  if (unsubContacts) unsubContacts();
-  
-  unsubContacts = onSnapshot(q, (snap) => {
-    elements.contactsList.innerHTML = '';
+  unsubUsers = onSnapshot(q, (snap) => {
+    els.contactsList.innerHTML = '';
+    els.chatList.innerHTML = '';
     let found = false;
+    
     snap.forEach(d => {
       if (d.id === currentUser.uid) return;
       found = true;
       const u = d.data();
-      const el = document.createElement('div');
-      el.className = 'list-item';
-      el.innerHTML = `<img src="${u.avatar || ''}" class="avatar small"><div><h4 style="margin:0; font-size:15px;">${u.displayName}</h4><span class="text-muted text-xs">@${u.username || '...'}</span></div>`;
-      el.onclick = () => openChat(d.id, u.displayName, u.avatar);
-      elements.contactsList.appendChild(el);
+      const html = `
+        <div class="list-item" data-id="${d.id}" data-name="${u.displayName}" data-avatar="${u.avatar}">
+          <img src="${u.avatar}" class="avatar small">
+          <div>
+            <h4 style="margin:0; font-size:15px;">${u.displayName}</h4>
+            <span class="text-muted text-xs">@${u.username || '...'}</span>
+          </div>
+        </div>`;
+      els.contactsList.innerHTML += html;
+      els.chatList.innerHTML += html;
     });
-    elements.contactsEmpty.style.display = found ? 'none' : 'block';
+    
+    els.contactsEmpty.style.display = found ? 'none' : 'block';
+    els.chatsEmpty.style.display = found ? 'none' : 'block';
+    
+    // Привязка кликов
+    document.querySelectorAll('.list-item').forEach(el => {
+      el.onclick = () => openChat(el.dataset.id, el.dataset.name, el.dataset.avatar);
+    });
   });
 }
 
-// Поиск контактов
-elements.contactSearch.oninput = (e) => {
-  const val = e.target.value.toLowerCase();
-  document.querySelectorAll('#contacts-list .list-item').forEach(el => {
-    const name = el.querySelector('h4').textContent.toLowerCase();
-    el.style.display = name.includes(val) ? 'flex' : 'none';
-  });
+els.addContactBtn.onclick = () => document.getElementById('add-contact-modal').showModal();
+
+document.getElementById('confirm-add-contact').onclick = async () => {
+  const email = document.getElementById('new-contact-email').value.trim();
+  if (!email) return showToast('Введите email', 'error');
+  const snap = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
+  if (snap.empty) return showToast('Пользователь не найден', 'error');
+  showToast('Контакт найден');
+  document.getElementById('add-contact-modal').close();
 };
 
-// 🔹 Чаты
-function loadChats() {
-  // Для демо используем контакты как список чатов. В продакшене здесь будет коллекция `conversations`
-  loadContacts(); 
-  // Копируем контакты в список чатов для быстрого старта
-  elements.contactsList.querySelectorAll('.list-item').forEach(el => {
-    elements.chatList.appendChild(el.cloneNode(true));
-  });
-  // Переназначаем клики
-  document.querySelectorAll('#chat-list .list-item').forEach(el => {
-    el.onclick = () => openChat(el.dataset.id || currentUser.uid, el.querySelector('h4').textContent, el.querySelector('img').src);
-  });
+function setupSearch() {
+  els.contactSearch.oninput = (e) => {
+    const v = e.target.value.toLowerCase();
+    document.querySelectorAll('#contacts-list .list-item').forEach(el => {
+      const name = el.querySelector('h4').textContent.toLowerCase();
+      el.style.display = name.includes(v) ? 'flex' : 'none';
+    });
+  };
 }
 
+// ============================================
+// ✉️ ЧАТ
+// ============================================
 function openChat(uid, name, avatar) {
-  currentChatUser = { id: uid, name, avatar };
-  elements.chatName.textContent = name;
-  elements.chatAvatar.src = avatar || `https://ui-avatars.com/api/?name=${name}&background=random`;
-  elements.chatStatus.textContent = 'в сети';
+  currentChat = { id: uid, name, avatar };
+  els.chatName.textContent = name;
+  els.chatAvatar.src = avatar || `https://ui-avatars.com/api/?name=${name}&background=random`;
+  els.chatStatus.textContent = 'в сети';
   
-  screens.main.classList.remove('active');
-  screens.chat.classList.add('active');
+  els.mainScreen.classList.remove('active');
+  els.chatScreen.classList.add('active');
   loadMessages(uid);
 }
 
@@ -338,60 +338,61 @@ function loadMessages(chatId) {
   const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
   if (unsubChat) unsubChat();
   
-  elements.msgArea.innerHTML = '<div class="empty-state">Загрузка...</div>';
+  els.msgArea.innerHTML = '<div class="empty-state">Загрузка...</div>';
   unsubChat = onSnapshot(q, (snap) => {
-    elements.msgArea.innerHTML = '';
-    if (snap.empty) {
-      elements.msgArea.innerHTML = '<div class="empty-state">Нет сообщений. Напишите первым!</div>';
-      return;
-    }
+    els.msgArea.innerHTML = '';
+    if (snap.empty) { els.msgArea.innerHTML = '<div class="empty-state">Нет сообщений. Напишите первым!</div>'; return; }
+    
     snap.forEach(d => {
       const m = d.data();
       const div = document.createElement('div');
       div.className = `msg ${m.senderId === currentUser.uid ? 'out' : 'in'}`;
       div.innerHTML = `${escapeHtml(m.text)}<span class="time">${timeAgo(m.createdAt)}</span>`;
-      elements.msgArea.appendChild(div);
+      els.msgArea.appendChild(div);
     });
-    elements.msgArea.scrollTop = elements.msgArea.scrollHeight;
+    els.msgArea.scrollTop = els.msgArea.scrollHeight;
   });
 }
 
-elements.sendBtn.onclick = async () => {
-  const text = elements.textInput.value.trim();
-  if (!text || !currentChatUser) return;
-  const room = [currentUser.uid, currentChatUser.id].sort().join('_');
-  
+els.sendBtn.onclick = async () => {
+  const text = els.textInput.value.trim();
+  if (!text || !currentChat) return;
+  const room = [currentUser.uid, currentChat.id].sort().join('_');
   try {
     await addDoc(collection(db, 'messages'), { room, text, senderId: currentUser.uid, createdAt: serverTimestamp() });
-    elements.textInput.value = '';
+    els.textInput.value = '';
   } catch (e) { showToast('Ошибка отправки', 'error'); }
 };
-elements.textInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) elements.sendBtn.click(); };
+els.textInput.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) els.sendBtn.click(); };
 
-elements.backBtn.onclick = () => {
-  screens.chat.classList.remove('active');
-  screens.main.classList.add('active');
+els.backBtn.onclick = () => {
+  els.chatScreen.classList.remove('active');
+  els.mainScreen.classList.add('active');
   if (unsubChat) unsubChat();
-  currentChatUser = null;
+  currentChat = null;
 };
 
-// 🔹 Эмодзи & Навигация
+// ============================================
+// ☺ ЭМДЗИ & НАВИГАЦИЯ
+// ============================================
 const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪'];
+
 function initEmojis() {
-  elements.emojiGrid.innerHTML = '';
+  els.emojiGrid.innerHTML = '';
   EMOJIS.forEach(em => {
     const b = document.createElement('button');
     b.textContent = em;
     b.onclick = () => {
-      const start = elements.textInput.selectionStart || elements.textInput.value.length;
-      elements.textInput.value = elements.textInput.value.slice(0, start) + em + elements.textInput.value.slice(start);
-      elements.textInput.focus();
+      const s = els.textInput.selectionStart || els.textInput.value.length;
+      els.textInput.value = els.textInput.value.slice(0, s) + em + els.textInput.value.slice(s);
+      els.textInput.focus();
     };
-    elements.emojiGrid.appendChild(b);
+    els.emojiGrid.appendChild(b);
   });
 }
-elements.emojiToggle.onclick = (e) => { e.stopPropagation(); elements.emojiPanel.classList.toggle('open'); };
-document.addEventListener('click', (e) => { if (!elements.emojiPanel.contains(e.target) && e.target !== elements.emojiToggle) elements.emojiPanel.classList.remove('open'); });
+
+els.emojiToggle.onclick = (e) => { e.stopPropagation(); els.emojiPanel.classList.toggle('open'); };
+document.addEventListener('click', (e) => { if (!els.emojiPanel.contains(e.target) && e.target !== els.emojiToggle) els.emojiPanel.classList.remove('open'); });
 
 function setupNav() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -402,31 +403,31 @@ function setupNav() {
       document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
       
       const titles = { chats: 'Чаты', feed: 'Лента', contacts: 'Контакты', profile: 'Профиль' };
-      elements.pageTitle.textContent = titles[btn.dataset.tab] || 'Woops';
+      els.pageTitle.textContent = titles[btn.dataset.tab] || 'Woops';
     };
   });
 }
 
 function setupModals() {
-  // Закрытие по клику на backdrop
   document.querySelectorAll('dialog.modal').forEach(d => {
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
   });
 }
 
-function cleanupListeners() {
+// ============================================
+// 🛠 УТИЛИТЫ
+// ============================================
+function cleanup() {
   if (unsubChat) unsubChat();
   if (unsubProfile) unsubProfile();
   if (unsubFeed) unsubFeed();
-  if (unsubContacts) unsubContacts();
+  if (unsubUsers) unsubUsers();
 }
 
-// 🔹 Утилиты
 function showToast(msg, type = 'success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast show ${type}`;
-  setTimeout(() => t.classList.remove('show'), 2500);
+  els.toast.textContent = msg;
+  els.toast.className = `toast show ${type}`;
+  setTimeout(() => els.toast.classList.remove('show'), 2500);
 }
 
 function escapeHtml(text) {
@@ -438,10 +439,7 @@ function escapeHtml(text) {
 function timeAgo(ts) {
   if (!ts) return '';
   const s = Math.floor((Date.now() - (ts.toDate ? ts.toDate().getTime() : ts)) / 1000);
-  if (s < 60) return 'только что';
-  if (s < 3600) return `${Math.floor(s/60)} мин назад`;
-  if (s < 86400) return `${Math.floor(s/3600)} ч назад`;
-  return new Date(ts.toDate ? ts.toDate() : ts).toLocaleDateString('ru-RU');
+  return s < 60 ? 'только что' : s < 3600 ? `${Math.floor(s/60)} мин` : s < 86400 ? `${Math.floor(s/3600)} ч` : 'давно';
 }
 
-console.log('%c✅ Woops App Loaded', 'color: #6366f1; font-weight: bold; font-size: 14px');
+console.log('%c✅ Woops App Loaded', 'color: #6366f1; font-weight: bold');
