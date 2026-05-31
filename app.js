@@ -421,17 +421,27 @@ async function openChat(userId, name, avatar) {
     // UI Updates
     if (chatNameDisplay) chatNameDisplay.textContent = name;
     if (chatAvatarDisplay) chatAvatarDisplay.src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`;
-    if (chatStatusDisplay) chatStatusDisplay.textContent = 'в сети'; // По умолчанию
+    if (chatStatusDisplay) chatStatusDisplay.textContent = 'в сети';
     if (msgArea) msgArea.innerHTML = '<div class="loading-state" style="flex:1; display:flex; justify-content:center; align-items:center;"><div class="spinner"></div></div>';
-    if (textInput) textInput.value = '';
-    if (textInput) textInput.focus();
+    
+    // УБИРАЕМ автозаполнение и НЕ фокусируемся автоматически
+    if (textInput) {
+        textInput.value = '';
+        textInput.blur(); // Убираем фокус, чтобы клавиатура не открывалась
+        textInput.setAttribute('autocomplete', 'off');
+        textInput.setAttribute('autocapitalize', 'none');
+        textInput.setAttribute('autocorrect', 'off');
+        textInput.setAttribute('spellcheck', 'false');
+        textInput.setAttribute('type', 'text');
+        textInput.setAttribute('inputmode', 'text');
+        textInput.setAttribute('name', 'chat_message_' + Date.now());
+    }
 
     // На мобильных переходим на экран чата
     if (window.innerWidth < 768) {
         mainScreen.classList.remove('active');
         chatScreen.classList.add('active');
     } else {
-        // На десктопе активируем панель чата
         chatScreen.classList.add('active');
     }
 
