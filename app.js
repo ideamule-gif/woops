@@ -1,21 +1,4 @@
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body {
-                  background-color: white; /* Ensure the iframe has a white background */
-                }
-
-                
-              </style>
-                        </head>
-                        <body>
-                            
-
-              <script>
-                              import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, setDoc, serverTimestamp, updateDoc, arrayUnion, arrayRemove, deleteDoc, getDocs, limit, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -88,6 +71,16 @@ async function handleAuth(type) {
   const email = $('#auth-email').value.trim();
   const pass = $('#auth-password').value;
   $('#auth-error').textContent = '';
+  
+  if (!email || !pass) { 
+    $('#auth-error').textContent = 'Введите Email и пароль'; 
+    return; 
+  }
+  if (type === 'register' && pass.length < 6) { 
+    $('#auth-error').textContent = 'Пароль должен быть минимум 6 символов'; 
+    return; 
+  }
+
   try {
     if (type === 'login') {
       await signInWithEmailAndPassword(auth, email, pass);
@@ -97,7 +90,7 @@ async function handleAuth(type) {
         displayName: email.split('@')[0],
         email: cred.user.email,
         status: 'online',
-        statusText: 'Новый пользователь',
+        statusText: 'Привет, я в Woops!',
         createdAt: serverTimestamp(),
         theme: 'light'
       });
@@ -106,43 +99,6 @@ async function handleAuth(type) {
     $('#auth-error').textContent = err.message;
   }
 }
-
-// ============================================
-// 🔐 ОБРАБОТЧИКИ ВХОДА И РЕГИСТРАЦИИ
-// ============================================
-loginBtn?.addEventListener('click', async () => {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass = document.getElementById('auth-password').value.trim();
-  authError.textContent = '';
-  if (!email || !pass) { authError.textContent = 'Введите Email и пароль'; return; }
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch (e) {
-    authError.textContent = e.message;
-  }
-});
-
-registerBtn?.addEventListener('click', async () => {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass = document.getElementById('auth-password').value.trim();
-  authError.textContent = '';
-  if (!email || !pass) { authError.textContent = 'Введите Email и пароль'; return; }
-  if (pass.length < 6) { authError.textContent = 'Пароль минимум 6 символов'; return; }
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    // Создаём профиль пользователя в Firestore
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      displayName: email.split('@')[0],
-      email: cred.user.email,
-      status: 'online',
-      statusText: 'Привет, я в Woops!',
-      createdAt: serverTimestamp(),
-      lastSeen: serverTimestamp()
-    });
-  } catch (e) {
-    authError.textContent = e.message;
-  }
-});
 
 // ============================================
 // 👤 ПРОФИЛЬ & ТЕМА
@@ -427,6 +383,7 @@ function renderFeedList(posts, container) {
   posts.forEach(post => container.appendChild(createPostCard(post)));
 }
 
+// Изменено для безопасности и во избежание дублирования id
 function createPostCard(post) {
   const div = document.createElement('div');
   div.className = 'feed-card';
@@ -561,8 +518,3 @@ function cleanupListeners() {
 function initTheme() { /* тема подгружается в loadUserProfile */ }
 
 console.log('%c Woops Messenger v2 готов', 'color: #6366f1; font-weight: bold');
-
-
-              </script>
-                        </body>
-                        </html>
