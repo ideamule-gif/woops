@@ -707,6 +707,20 @@ authForm.onkeypress = (e) => {
     }
 }
 
+    // 🔤 ДОБАВЬ ЭТУ ФУНКЦИЮ (её не хватало!)
+function getAuthErrorMessage(code) {
+  const errors = {
+    'auth/invalid-email': 'Неверный формат email',
+    'auth/user-not-found': 'Пользователь не найден',
+    'auth/wrong-password': 'Неверный пароль',
+    'auth/email-already-in-use': 'Email уже занят',
+    'auth/weak-password': 'Пароль слишком короткий (мин. 6 символов)',
+    'auth/network-request-failed': 'Нет соединения с интернетом',
+    'auth/too-many-requests': 'Слишком много попыток, попробуйте позже'
+  };
+  return errors[code] || 'Ошибка авторизации: ' + code;
+}
+    
 console.log('%cWoops Chat Initialized', 'color: #6366f1; font-weight: bold; font-size: 14px
             
             // 🔧 Регистрация Service Worker для PWA
