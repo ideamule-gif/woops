@@ -1,169 +1,177 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#6366f1">
-  <title>Woops Messenger</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <!-- ЭКРАН АВТОРИЗАЦИИ -->
-  <div id="auth-screen" class="screen active">
-    <div class="auth-card">
-      <h1 class="logo">Woops</h1>
-      <p>Простой и современный мессенджер</p>
-      <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
-      <input type="password" id="auth-password" placeholder="Пароль" autocomplete="current-password">
-      <div id="auth-error" class="error-text"></div>
-      <button id="login-btn" class="btn primary full-width">Войти</button>
-      <button id="register-btn" class="btn secondary full-width mt-2">Создать аккаунт</button>
-    </div>
-  </div>
+:root {
+  --bg: #ffffff;
+  --bg-gradient: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  --surface: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --accent: #6366f1;
+  --accent-grad: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --accent-hover: #4f46e5;
+  --danger: #ef4444;
+  --success: #10b981;
+  --msg-in: #f1f5f9;
+  --msg-out: var(--accent-grad);
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --radius: 16px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
 
-  <!-- ОСНОВНОЙ ЭКРАН -->
-  <div id="app-screen" class="screen">
-    <header class="app-header">
-      <h1 id="header-title">Чаты</h1>
-      <button id="search-btn" class="icon-btn" aria-label="Поиск">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      </button>
-    </header>
+html.dark {
+  --bg: #0b1120;
+  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --msg-in: #1e293b;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.4);
+}
 
-    <!-- Глобальный поиск -->
-    <div id="search-overlay" class="overlay hidden">
-      <div class="search-box">
-        <input type="text" id="global-search" placeholder="Поиск по имени или email...">
-        <button id="close-search" class="icon-btn">✕</button>
-      </div>
-      <ul id="search-results" class="search-list"></ul>
-    </div>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-gradient);
+  color: var(--text);
+  min-height: 100dvh;
+  overflow: hidden;
+  transition: background 0.3s, color 0.3s;
+}
 
-    <!-- ВКЛАДКИ -->
-    <main class="tab-content">
-      <div id="tab-chats" class="tab active">
-        <ul id="chat-list" class="list"></ul>
-        <div id="chats-empty" class="empty-state">Нет активных чатов. Начните диалог из контактов.</div>
-      </div>
+.screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  transition: transform 0.3s ease, opacity 0.3s;
+  z-index: 10;
+}
+.screen.hidden { transform: translateY(100%); opacity: 0; pointer-events: none; }
+.screen.active { transform: translateY(0); opacity: 1; pointer-events: auto; }
 
-      <div id="tab-contacts" class="tab hidden">
-        <div class="section-header">
-          <input type="text" id="contact-search" placeholder="Фильтр контактов...">
-          <button id="add-contact-btn" class="btn primary">+ Добавить</button>
-        </div>
-        <ul id="contacts-list" class="list"></ul>
-        <div id="contacts-empty" class="empty-state">Список контактов пуст</div>
-      </div>
+/* Auth */
+#auth-screen { justify-content: center; align-items: center; background: var(--bg-gradient); }
+.auth-card {
+  background: var(--surface); padding: 32px 24px; border-radius: 24px;
+  width: 90%; max-width: 360px; text-align: center; box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.logo { font-size: 28px; background: var(--accent-grad); -webkit-background-clip: text; color: transparent; margin-bottom: 8px; }
+.auth-card input {
+  width: 100%; padding: 14px; margin: 8px 0; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--bg); color: var(--text); font-size: 15px;
+}
+.error-text { color: var(--danger); font-size: 13px; min-height: 18px; margin: 8px 0; }
 
-      <div id="tab-feed" class="tab hidden">
-        <div class="section-header">
-          <h3>Лента</h3>
-          <button id="new-post-btn" class="btn primary">✍️ Опубликовать</button>
-        </div>
-        <div id="feed-list" class="feed-container"></div>
-      </div>
+/* Header & Nav */
+.app-header {
+  padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg); border-bottom: 1px solid var(--border); z-index: 20;
+}
+.app-header h1 { font-size: 20px; font-weight: 600; }
+.icon-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; display: flex; align-items: center; }
+.icon-btn:active { transform: scale(0.95); }
 
-      <div id="tab-profile" class="tab hidden">
-        <div class="profile-header">
-          <img id="profile-avatar" class="avatar huge" src="https://ui-avatars.com/api/?name=U&background=6366f1&color=fff" alt="">
-          <h2 id="profile-name">Загрузка...</h2>
-          <p id="profile-status" class="text-muted">В сети</p>
-          <div class="profile-actions">
-            <button id="edit-profile-btn" class="btn secondary">Редактировать</button>
-            <button id="share-profile-btn" class="btn secondary">Поделиться</button>
-            <button id="delete-profile-btn" class="btn danger">Удалить</button>
-          </div>
-          <label class="theme-toggle">
-            <span>Тёмная тема</span>
-            <input type="checkbox" id="theme-switch">
-          </label>
-        </div>
-        <h3 class="section-title">Мои публикации</h3>
-        <div id="my-posts-feed" class="feed-container"></div>
-      </div>
-    </main>
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
+  background: var(--bg); border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around; align-items: center;
+  padding-bottom: var(--safe-bottom); z-index: 100;
+}
+.nav-btn {
+  background: none; border: none; color: var(--text-muted);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  flex: 1; height: 100%; font-size: 11px; font-weight: 500; transition: 0.2s;
+}
+.nav-btn.active { color: var(--accent); }
+.nav-icon { width: 24px; height: 24px; stroke-width: 1.8; }
 
-    <!-- НИЖНЯЯ НАВИГАЦИЯ -->
-    <nav class="bottom-nav">
-      <button data-tab="chats" class="nav-btn active">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Чаты</span>
-      </button>
-      <button data-tab="contacts" class="nav-btn">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Контакты</span>
-      </button>
-      <button data-tab="feed" class="nav-btn">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        <span>Лента</span>
-      </button>
-      <button data-tab="profile" class="nav-btn">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span>Профиль</span>
-      </button>
-    </nav>
-  </div>
+/* Tabs & Lists */
+.tab-content { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+.tab { display: none; padding: 12px; }
+.tab.active { display: block; animation: fade 0.3s; }
+@keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-  <!-- ЭКРАН ЧАТА -->
-  <div id="chat-screen" class="screen hidden">
-    <div class="chat-header">
-      <button id="back-btn" class="icon-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-      </button>
-      <div class="chat-header-info">
-        <img id="chat-avatar" class="avatar" src="" alt="">
-        <div>
-          <h3 id="chat-name">Имя</h3>
-          <span id="chat-status" class="text-muted">В сети</span>
-        </div>
-      </div>
-    </div>
-    <div id="msg-area" class="msg-area"></div>
-    <div class="chat-footer">
-      <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off">
-      <button id="send-btn" class="icon-btn send">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
-    </div>
-  </div>
+.list { list-style: none; }
+.list-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px;
+  background: var(--surface); border-radius: 14px; margin-bottom: 8px;
+  cursor: pointer; transition: 0.2s; border: 1px solid transparent;
+}
+.list-item:active { transform: scale(0.98); }
+.list-item:hover { border-color: var(--accent); }
+.avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #cbd5e1; flex-shrink: 0; }
+.avatar.huge { width: 80px; height: 80px; }
+.info { flex: 1; min-width: 0; }
+.info h4 { font-size: 15px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.info p { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  <!-- МОДАЛКИ -->
-  <dialog id="modal-add-contact" class="modal">
-    <div class="modal-box">
-      <h3>Добавить контакт</h3>
-      <input type="text" id="search-contact-input" placeholder="Email или UID пользователя">
-      <div id="contact-search-results" class="search-list"></div>
-      <div class="modal-actions">
-        <button class="btn secondary" onclick="closeModal('modal-add-contact')">Отмена</button>
-      </div>
-    </div>
-  </dialog>
+/* Chat Screen */
+#chat-screen { background: var(--bg); z-index: 200; }
+.chat-header {
+  padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.chat-header-info { display: flex; align-items: center; gap: 10px; }
+.chat-header h3 { font-size: 16px; margin: 0; }
+.msg-area { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14.5px; line-height: 1.4; position: relative; }
+.msg.in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg.out { background: var(--msg-out); align-self: flex-end; color: white; border-bottom-right-radius: 4px; }
+.msg .time { font-size: 10px; opacity: 0.7; margin-top: 4px; text-align: right; display: block; }
+.chat-footer { padding: 12px 12px calc(12px + var(--safe-bottom)); background: var(--bg); border-top: 1px solid var(--border); display: flex; gap: 10px; }
+.chat-footer input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 12px 16px; font-size: 15px; outline: none; }
+.icon-btn.send { background: var(--accent-grad); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 
-  <dialog id="modal-new-post" class="modal">
-    <div class="modal-box">
-      <h3>Новый пост</h3>
-      <textarea id="post-text" placeholder="О чём думаете?" rows="4"></textarea>
-      <div class="modal-actions">
-        <button class="btn secondary" onclick="closeModal('modal-new-post')">Отмена</button>
-        <button id="publish-post-btn" class="btn primary">Опубликовать</button>
-      </div>
-    </div>
-  </dialog>
+/* Feed */
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; }
+.feed-card { background: var(--surface); border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.feed-author { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.feed-text { font-size: 15px; line-height: 1.5; margin-bottom: 12px; white-space: pre-wrap; }
+.feed-actions { display: flex; gap: 12px; color: var(--text-muted); font-size: 13px; }
+.feed-actions button { background: none; border: none; color: inherit; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 13px; }
+.feed-actions button.active { color: var(--accent); font-weight: 600; }
+.comments-section { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); display: none; }
+.comments-section.open { display: block; }
+.comment { padding: 6px 0; font-size: 13px; border-bottom: 1px dashed var(--border); }
+.add-comment { display: flex; gap: 8px; margin-top: 8px; }
+.add-comment input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
 
-  <dialog id="modal-edit-profile" class="modal">
-    <div class="modal-box">
-      <h3>Редактировать профиль</h3>
-      <label>Имя</label><input type="text" id="edit-displayName">
-      <label>Статус текст</label><input type="text" id="edit-statusText">
-      <div class="modal-actions">
-        <button class="btn secondary" onclick="closeModal('modal-edit-profile')">Отмена</button>
-        <button id="save-profile-btn" class="btn primary">Сохранить</button>
-      </div>
-    </div>
-  </dialog>
+/* Profile */
+.profile-header { text-align: center; padding: 24px 16px 12px; }
+.profile-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+.theme-toggle { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; font-size: 13px; color: var(--text-muted); }
+.section-title { margin: 20px 12px 10px; font-size: 16px; font-weight: 600; }
 
-  <div id="toast" class="toast"></div>
-  <script type="module" src="app.js"></script>
-</body>
-</html>
+/* Modals & Overlays */
+.overlay { position: fixed; inset: 0; background: var(--bg); z-index: 300; padding-top: 12px; display: flex; flex-direction: column; }
+.search-box { display: flex; gap: 8px; padding: 0 16px 12px; }
+.search-box input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.search-list { list-style: none; flex: 1; overflow-y: auto; padding: 0 16px; }
+.modal[open] { display: flex; align-items: center; justify-content: center; }
+.modal::backdrop { background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); }
+.modal-box { background: var(--bg); border: 1px solid var(--border); width: 90%; max-width: 400px; border-radius: 20px; padding: 20px; box-shadow: var(--shadow); }
+.modal h3 { margin-bottom: 12px; }
+.modal input, .modal textarea { width: 100%; padding: 12px; margin: 8px 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font-family: inherit; resize: none; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+/* Buttons & Utilities */
+.btn { padding: 10px 16px; border-radius: 10px; border: none; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 14px; }
+.btn.primary { background: var(--accent-grad); color: white; }
+.btn.primary:hover { opacity: 0.9; }
+.btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn.danger { background: #fee2e2; color: var(--danger); }
+.full-width { width: 100%; }
+.mt-2 { margin-top: 8px; }
+.hidden { display: none !important; }
+.text-muted { color: var(--text-muted); font-size: 13px; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translate(-50%, -100px);
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  padding: 12px 24px; border-radius: 99px; font-size: 14px; z-index: 9999;
+  opacity: 0; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
+}
+.toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+@media (max-width: 480px) {
+  .auth-card { padding: 24px 16px; }
+}
