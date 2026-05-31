@@ -107,6 +107,45 @@ async function handleAuth(type) {
   }
 }
 
+// 🔐 ОБРАБОТЧИКИ ВХОДА И РЕГИСТРАЦИИ
+const authEmail = document.getElementById('auth-email');
+const authPass = document.getElementById('auth-password');
+
+loginBtn?.addEventListener('click', async () => {
+  const email = authEmail?.value.trim();
+  const pass = authPass?.value.trim();
+  authError.textContent = '';
+  if (!email || !pass) { authError.textContent = 'Заполните Email и пароль'; return; }
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    authError.textContent = e.message;
+  }
+});
+
+registerBtn?.addEventListener('click', async () => {
+  const email = authEmail?.value.trim();
+  const pass = authPass?.value.trim();
+  authError.textContent = '';
+  if (!email || !pass) { authError.textContent = 'Заполните Email и пароль'; return; }
+  if (pass.length < 6) { authError.textContent = 'Пароль должен быть минимум 6 символов'; return; }
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    // Создаём профиль в Firestore при регистрации
+    await setDoc(doc(db, 'users', cred.user.uid), {
+      displayName: email.split('@')[0],
+      email: cred.user.email,
+      status: 'online',
+      statusText: 'Привет, я в Woops!',
+      avatar: '',
+      createdAt: serverTimestamp(),
+      lastSeen: serverTimestamp()
+    });
+  } catch (e) {
+    authError.textContent = e.message;
+  }
+});
+
 // ============================================
 // 👤 ПРОФИЛЬ & ТЕМА
 // ============================================
