@@ -7,145 +7,165 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<!-- АВТОРИЗАЦИЯ -->
-<div id="auth-screen" class="screen">
-    <div class="card" style="max-width:320px; margin:auto;">
-        <h2 style="text-align:center; margin-bottom:20px; color:var(--primary);">Woops</h2>
-        <input type="email" id="email" placeholder="Email" style="margin-bottom:10px;">
-        <input type="password" id="password" placeholder="Пароль" style="margin-bottom:20px;">
-        <p id="auth-error" style="color:var(--danger); text-align:center; font-size:13px; margin-bottom:10px; min-height:18px;"></p>
-        <div style="display:flex; gap:10px;">
-            <button id="login-btn" class="btn primary" style="flex:1;">Войти</button>
-            <button id="register-btn" class="btn secondary" style="flex:1;">Рег.</button>
+    <!-- АВТОРИЗАЦИЯ -->
+    <div id="auth-screen" class="screen">
+        <div class="card auth-card">
+            <h2 style="color:var(--primary); margin-bottom:8px;">Woops</h2>
+            <p style="color:var(--text-muted); margin-bottom:24px;">Вход в аккаунт</p>
+            <input type="email" id="email" placeholder="Email" style="margin-bottom:12px;">
+            <input type="password" id="password" placeholder="Пароль" style="margin-bottom:20px;">
+            <p id="auth-error" style="color:var(--danger); font-size:13px; text-align:center; min-height:18px;"></p>
+            <div style="display:flex; gap:12px;">
+                <button id="login-btn" class="btn primary" style="flex:1;">Войти</button>
+                <button id="register-btn" class="btn secondary" style="flex:1;">Регистрация</button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- ГЛАВНОЕ МЕНЮ -->
-<div id="main-screen" class="screen">
-    <header class="main-header">
-        <div class="header-left"><h2>Woops</h2></div>
-        <button id="logout-btn" class="icon-btn">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </button>
-    </header>
+    <!-- ГЛАВНЫЙ ЭКРАН -->
+    <div id="main-screen" class="screen">
+        <header class="main-header">
+            <h2 id="tab-title">Woops</h2>
+            <button id="logout-btn" class="icon-btn" title="Выйти">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+        </header>
 
-    <div class="tabs-container">
-        <!-- ЧАТЫ -->
-        <div id="tab-chats" class="tab active">
-            <input type="text" id="chat-search" placeholder="Поиск чатов..." style="margin-bottom:12px;">
-            <div id="chat-list"></div>
-        </div>
-
-        <!-- КОНТАКТЫ -->
-        <div id="tab-contacts" class="tab">
-            <div style="display:flex; gap:10px; margin-bottom:12px;">
-                <input type="text" id="contact-search" placeholder="Поиск..." style="flex:1;">
-                <button id="add-contact-btn" class="btn primary" style="padding:0 12px;">+</button>
+        <div class="tabs-container">
+            <!-- 💬 ЧАТЫ -->
+            <div id="tab-chats" class="tab active">
+                <div id="chat-list"></div>
+                <div id="chats-empty" class="empty-state" style="display:none;">Нет чатов</div>
             </div>
-            <div id="contacts-list"></div>
-        </div>
 
-        <!-- ЗАМЕТКИ -->
-        <div id="tab-notes" class="tab">
-            <div class="notes-header">
-                <button id="add-note-btn" class="btn primary small">+ Заметка</button>
-                <button id="notes-view-toggle" class="note-view-toggle">▦</button>
-            </div>
-            <div id="notes-list" class="notes-grid"></div>
-        </div>
-
-        <!-- ПРОФИЛЬ -->
-        <div id="tab-profile" class="tab">
-            <div class="profile-header">
-                <button id="open-settings" class="icon-btn settings-btn">⚙️</button>
-                <img id="profile-big-avatar" src="" class="avatar" style="width:80px; height:80px; margin-bottom:10px;">
-                <h3 id="profile-display-name">Имя</h3>
-                <p id="profile-display-username" class="text-muted" style="font-size:13px;">@username</p>
-            </div>
-            
-            <div style="background:var(--bg-card); padding:16px; border-radius:16px; border:1px solid var(--border);">
-                <h4 style="margin-bottom:12px;">Выберите аватар</h4>
-                <div class="avatar-grid" id="avatar-selection-grid">
-                    <!-- Генерируется JS -->
+            <!-- 📱 ЛЕНТА (вместо заметок) -->
+            <div id="tab-feed" class="tab">
+                <div class="feed-composer">
+                    <textarea id="post-text" rows="2" placeholder="Что нового?"></textarea>
+                    <button id="publish-post" class="btn primary" style="padding:8px 16px;">Опубликовать</button>
                 </div>
-                <label>Отображаемое имя</label>
-                <input type="text" id="input-name" style="margin-bottom:10px;">
-                <label>Имя пользователя (для поиска)</label>
-                <input type="text" id="input-username" placeholder="@username" style="margin-bottom:10px;">
-                <label>О себе</label>
-                <input type="text" id="input-status" placeholder="Статус..." style="margin-bottom:16px;">
-                <button id="save-profile" class="btn primary full">Сохранить</button>
+                <div id="feed-list"></div>
+                <div id="feed-empty" class="empty-state" style="display:none;">Лента пуста</div>
+            </div>
+
+            <!-- 👥 КОНТАКТЫ -->
+            <div id="tab-contacts" class="tab">
+                <div style="display:flex; gap:10px; margin-bottom:16px;">
+                    <input type="text" id="contact-search" placeholder="Поиск..." style="flex:1;">
+                    <button id="add-contact-btn" class="btn primary" style="padding:0 14px;">+</button>
+                </div>
+                <div id="contacts-list"></div>
+                <div id="contacts-empty" class="empty-state">Нет контактов</div>
+            </div>
+
+            <!-- 👤 ПРОФИЛЬ -->
+            <div id="tab-profile" class="tab">
+                <div class="profile-preview">
+                    <img id="profile-avatar" src="" class="avatar huge">
+                    <h3 id="profile-name" style="margin:8px 0 4px;">Имя</h3>
+                    <p id="profile-username" class="text-muted" style="font-size:14px;">@username</p>
+                    <p id="profile-status-text" style="margin-top:4px; font-size:14px;"></p>
+                </div>
+
+                <div class="profile-actions">
+                    <button id="btn-change-avatar" class="profile-action-btn" title="Выбрать аватар">📷</button>
+                    <button id="btn-edit-profile" class="profile-action-btn" title="Редактировать">✏️</button>
+                    <button id="btn-settings" class="profile-action-btn" title="Настройки">🎛️</button>
+                </div>
+
+                <div class="profile-posts-section">
+                    <h4 style="margin-bottom:12px; color:var(--text-muted); font-weight:500;">Публикации</h4>
+                    <div id="my-posts-list"></div>
+                    <p id="my-posts-empty" class="text-muted" style="font-size:13px;">Нет публикаций</p>
+                </div>
+
+                <button id="btn-delete-profile" class="btn secondary full" style="margin-top:24px; color:var(--danger); border-color:var(--danger);">Удалить профиль</button>
             </div>
         </div>
+
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-tab="chats"><span class="nav-icon">💬</span><span>Чаты</span></button>
+            <button class="nav-btn" data-tab="feed"><span class="nav-icon">📱</span><span>Лента</span></button>
+            <button class="nav-btn" data-tab="contacts"><span class="nav-icon">👥</span><span>Контакты</span></button>
+            <button class="nav-btn" data-tab="profile"><span class="nav-icon">👤</span><span>Профиль</span></button>
+        </nav>
     </div>
 
-    <nav class="bottom-nav">
-        <button class="nav-btn active" data-tab="chats"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></span><span>Чаты</span></button>
-        <button class="nav-btn" data-tab="contacts"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span><span>Контакты</span></button>
-        <button class="nav-btn" data-tab="notes"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span><span>Заметки</span></button>
-        <button class="nav-btn" data-tab="profile"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Профиль</span></button>
-    </nav>
-</div>
+    <!-- ЭКРАН ЧАТА -->
+    <div id="chat-screen" class="screen">
+        <header class="chat-header">
+            <button id="back-btn" class="icon-btn">←</button>
+            <img id="chat-avatar" src="" class="avatar small">
+            <div style="flex:1;">
+                <h4 id="chat-name" style="font-size:16px; margin:0;">Имя</h4>
+                <span id="chat-status" class="text-muted" style="font-size:12px;">в сети</span>
+            </div>
+        </header>
 
-<!-- ЭКРАН ЧАТА -->
-<div id="chat-screen" class="screen">
-    <header class="chat-header">
-        <button id="back-btn" class="icon-btn">←</button>
-        <img id="chat-avatar" src="" class="avatar small">
-        <div><h4 id="chat-name" style="font-size:16px;">Имя</h4><span id="chat-status" style="font-size:12px; color:var(--text-muted);">...</span></div>
-    </header>
-    <div id="msg-area" class="msg-area"></div>
-    <footer class="chat-footer">
-        <button id="emojiToggle" class="icon-btn">☺</button>
-        <div id="emoji-panel" class="emoji-panel">
-            <div id="emoji-grid" class="emoji-grid"></div>
-        </div>
-        <div class="input-wrapper" style="flex:1; background:var(--bg-card); border:1px solid var(--border); border-radius:20px; padding:6px 12px;">
-            <input type="text" id="text-input" placeholder="Сообщение..." style="border:none; padding:4px; background:transparent;">
-        </div>
-        <button id="send-btn" class="btn primary" style="border-radius:50%; width:40px; height:40px; padding:0;">→</button>
-    </footer>
-</div>
+        <div id="msg-area" class="msg-area"></div>
 
-<!-- МОДАЛКИ -->
-<dialog id="addContactModal" class="modal">
-    <div class="modal-box">
-        <h3 style="margin-bottom:16px;">Добавить контакт</h3>
-        <input type="email" id="new-contact-email" placeholder="Email друга" style="margin-bottom:16px;">
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-            <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
-            <button id="confirm-add-contact" class="btn primary">Добавить</button>
-        </div>
+        <footer class="chat-footer">
+            <button id="emojiToggle" class="icon-btn">☺</button>
+            <div id="emoji-panel" class="emoji-panel">
+                <div id="emoji-grid" class="emoji-grid"></div>
+            </div>
+            <div class="input-wrapper">
+                <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off" autocapitalize="off">
+            </div>
+            <button id="send-btn" class="btn primary" style="border-radius:50%; width:42px; height:42px; padding:0; display:flex; align-items:center; justify-content:center;">➤</button>
+        </footer>
     </div>
-</dialog>
 
-<dialog id="noteEditorModal" class="modal">
-    <div class="modal-box">
-        <input type="text" id="note-title-input" placeholder="Заголовок" style="margin-bottom:12px; font-weight:bold;">
-        <textarea id="note-body-input" rows="6" placeholder="Текст заметки..." style="margin-bottom:16px; resize:none;"></textarea>
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-            <button id="delete-note-btn" class="btn danger" style="margin-right:auto; display:none;">Удалить</button>
-            <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
-            <button id="save-note-btn" class="btn primary">Сохранить</button>
+    <!-- МОДАЛКИ -->
+    <dialog id="avatarModal" class="modal">
+        <div class="modal-box">
+            <h3 style="margin-bottom:16px;">Выберите аватар</h3>
+            <div class="avatar-grid" id="avatar-selection-grid"></div>
+            <button class="btn secondary full" onclick="this.closest('dialog').close()">Закрыть</button>
         </div>
-    </div>
-</dialog>
+    </dialog>
 
-<dialog id="settingsModal" class="modal">
-    <div class="modal-box">
-        <h3 style="margin-bottom:20px;">Настройки</h3>
-        <div class="list-item" id="theme-toggle-btn">
-            <span style="flex:1;">Ночной режим (Звездный)</span>
-            <span id="theme-switch-indicator" style="font-size:20px;">⚪</span>
+    <dialog id="editProfileModal" class="modal">
+        <div class="modal-box">
+            <h3 style="margin-bottom:16px;">Редактировать профиль</h3>
+            <input type="text" id="edit-name" placeholder="Имя" style="margin-bottom:10px;">
+            <input type="text" id="edit-username" placeholder="@username" style="margin-bottom:10px;">
+            <input type="text" id="edit-status" placeholder="О себе" style="margin-bottom:16px;">
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
+                <button id="save-edit-profile" class="btn primary">Сохранить</button>
+            </div>
         </div>
-        <div style="text-align:right; margin-top:16px;">
-            <button class="btn secondary" onclick="this.closest('dialog').close()">Закрыть</button>
-        </div>
-    </div>
-</dialog>
+    </dialog>
 
-<script type="module" src="app.js"></script>
+    <dialog id="settingsModal" class="modal">
+        <div class="modal-box">
+            <h3 style="margin-bottom:16px;">Настройки</h3>
+            <div class="setting-row">
+                <span>Светлая тема</span>
+                <label class="switch">
+                    <input type="checkbox" id="theme-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="text-align:right; margin-top:20px;">
+                <button class="btn secondary" onclick="this.closest('dialog').close()">Закрыть</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="addContactModal" class="modal">
+        <div class="modal-box">
+            <h3 style="margin-bottom:16px;">Добавить контакт</h3>
+            <input type="email" id="new-contact-email" placeholder="Email пользователя" style="margin-bottom:16px;">
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn secondary" onclick="this.closest('dialog').close()">Отмена</button>
+                <button id="confirm-add-contact" class="btn primary">Добавить</button>
+            </div>
+        </div>
+    </dialog>
+
+    <div id="toast" class="toast"></div>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
