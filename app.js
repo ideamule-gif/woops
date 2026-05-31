@@ -99,66 +99,123 @@ const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉'
 // ============================================
 // 🔐 АВТОРИЗАЦИЯ
 // ============================================
-onAuthStateChanged(auth, async (user) => {
+
+onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
-        showScreen('main-screen');
+        // Показываем главный экран
+        authScreen.classList.remove('active');
+        mainScreen.classList.add('active');
+        // Отслеживаем профиль
         trackOwnProfile(user.uid);
-        await loadUsersList();
-        updateLastSeenLoop();
+        // Загружаем список пользователей
+        loadUsersList();
+        // Обновляем lastSeen
+        updateLastSeen();
     } else {
         currentUser = null;
         userProfile = {};
-        allUsers = [];
-        showScreen('auth-screen');
+        // Показываем экран входа
+        authScreen.classList.add('active');
+        mainScreen.classList.remove('active');
+        chatScreen.classList.remove('active');
+        // Чистим слушатели
         cleanupListeners();
     }
 });
 
-function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(screenId).classList.add('active');
+// 🔘 Обработчик входа
+if (loginBtn) {
+    loginBtn.onclick = async () => {
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        
+        if (!emailInput || !passwordInput) {
+            showToast('Ошибка: поля не найдены', 'error');
+            return;
+        }
+        
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+        
+        if (!email || !password) {
+            showToast('Введите email и пароль', 'error');
+            return;
+        }
+        
+        authError.textContent = 'Вход...';
+        
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            authError.textContent = '';
+            showToast('Добро пожаловать! ✨');
+        } catch (e) {
+            console.error('Login error:', e);
+            authError.textContent = getAuthErrorMessage(e.code);
+            showToast('Ошибка входа', 'error');
+        }
+    };
 }
 
-// Auth Handlers
-loginBtn.onclick = async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    authError.textContent = '';
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-    } catch (e) {
-        authError.textContent = getAuthErrorMessage(e.code);
-    }
-};
+// 🔘 Обработчик регистрации
+if (registerBtn) {
+    registerBtn.onclick = async () => {
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        
+        if (!emailInput || !passwordInput) {
+            showToast('Ошибка: поля не найдены', 'error');
+            return;
+        }
+        
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+        
+        if (!email || !password) {
+            showToast('Введите email и пароль', 'error');
+            return;
+        }
+        
+        if (password.length < 6) {
+            showToast('Пароль минимум 6 символов', 'error');
+            return;
+        }
+        
+        authError.textContent = 'Регистрация...';
+        
+        try {
+            const cred = await createUserWithEmailAndPassword(auth, email, password);
+            
+            // Создаём профиль в Firestore
+            await setDoc(doc(db, 'users', cred.user.uid), {
+                displayName: email.split('@')[0],
+                email: email,
+                status: 'online',
+                statusText: 'Привет! Я использую Woops 👋',
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=6366f1&color=fff`,
+                lastSeen: serverTimestamp()
+            });
+            
+            authError.textContent = '';
+            showToast('Аккаунт создан! 🎉');
+        } catch (e) {
+            console.error('Register error:', e);
+            authError.textContent = getAuthErrorMessage(e.code);
+            showToast('Ошибка регистрации', 'error');
+        }
+    };
+}
 
-registerBtn.onclick = async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    authError.textContent = '';
-    try {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        // Создаем запись профиля пользователя
-        await setDoc(doc(db, 'users', cred.user.uid), {
-            displayName: email.split('@')[0],
-            email: email,
-            status: 'online',
-            statusText: 'Привет! Я использую Woops.',
-            avatar: `https://ui-avatars.com/api/?name=${email.split('@')[0]}&background=random`,
-            lastSeen: serverTimestamp()
-        });
-    } catch (e) {
-        authError.textContent = getAuthErrorMessage(e.code);
-    }
-};
-
+// 🔤 Форматирование ошибок Firebase
 function getAuthErrorMessage(code) {
     const errors = {
         'auth/invalid-email': 'Неверный формат email',
         'auth/user-not-found': 'Пользователь не найден',
         'auth/wrong-password': 'Неверный пароль',
         'auth/email-already-in-use': 'Email уже занят',
-        'auth/weak-password': 'Пароль слишком короткий (мин. 6 символов)'
+        'auth/weak-password': 'Пароль слишком короткий (мин. 6 символов)',
+        'auth/network-request-failed': 'Нет соединения с интернетом',
+        'auth/too-many-requests': 'Слишком много попыток'
     };
     return errors[code] || 'Ошибка авторизации';
 }
