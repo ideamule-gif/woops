@@ -1,9 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
     authDomain: "woops-4ded6.firebaseapp.com",
@@ -16,549 +14,343 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-// DOM Elements
-const authScreen = document.getElementById('auth-screen');
-const mainScreen = document.getElementById('main-screen');
-const chatScreen = document.getElementById('chat-screen');
-const loginBtn = document.getElementById('login-btn');
-const registerBtn = document.getElementById('register-btn');
-const authForm = document.getElementById('auth-form');
-const authError = document.getElementById('auth-error');
-const chatList = document.getElementById('chat-list');
-const chatsEmpty = document.getElementById('chats-empty');
-const loadingChats = document.getElementById('loading-chats');
-const chatSearchInput = document.getElementById('chat-search');
-const addContactBtn = document.getElementById('add-contact-btn');
-const addContactEmptyBtn = document.getElementById('add-contact-empty-btn');
-const logoutBtn = document.getElementById('logout-btn');
-const navBtns = document.querySelectorAll('.nav-btn');
-const tabs = document.querySelectorAll('.tab');
-const tabTitle = document.getElementById('tab-title');
-const backBtn = document.getElementById('back-btn');
-const msgArea = document.getElementById('msg-area');
-const textInput = document.getElementById('text-input');
-const sendBtn = document.getElementById('send-btn');
-const chatNameDisplay = document.getElementById('chat-name');
-const chatAvatarDisplay = document.getElementById('chat-avatar');
-const chatStatusDisplay = document.getElementById('chat-status');
-const editProfileBtns = document.querySelectorAll('#edit-profile, #edit-profile-mobile');
-const profileModal = document.getElementById('profileModal');
-const closeProfileBtn = document.getElementById('closeProfile');
-const cancelProfileBtn = document.getElementById('cancelProfile');
-const saveProfileBtn = document.getElementById('saveProfile');
-const avatarInput = document.getElementById('avatarInput');
-const avatarPreview = document.getElementById('avatarPreview');
-const displayNameInput = document.getElementById('displayName');
-const userStatusSelect = document.getElementById('userStatus');
-const statusTextInput = document.getElementById('statusText');
-const addContactModal = document.getElementById('addContactModal');
-const closeAddContactBtn = document.getElementById('closeAddContact');
-const cancelAddContactBtn = document.getElementById('cancelAddContact');
-const sendInviteBtn = document.getElementById('sendInvite');
-const contactNameInput = document.getElementById('contactName');
-const contactEmailInput = document.getElementById('contactEmail');
-const emojiToggle = document.getElementById('emojiToggle');
-const emojiPicker = document.getElementById('emojiPicker');
-const toastEl = document.getElementById('toast');
-const headerAvatar = document.getElementById('user-avatar-header');
-const profilePreviewMain = document.getElementById('profile-preview-main');
-const profileNameMain = document.getElementById('profile-name-main');
-const profileStatusTextMain = document.getElementById('profile-status-text-main');
-
-// State
+// --- СОСТОЯНИЕ ---
 let currentUser = null;
-let currentChat = null;
+let currentChatUser = null;
 let unsubChat = null;
-let unsubUsers = null;
-let unsubOwnProfile = null;
-let userProfile = {};
-let allUsers = [];
-let lastSeenInterval = null;
+let notes = [];
+let editingNoteId = null;
 
-const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪','🎯','🌟','💬','🚀','✅','❌','⚡','🎮','🎵','🍕'];
+// --- АВАТАРЫ (Персонажи) ---
+const AVATARS = [
+    { name: 'Batman', color: '000000' }, { name: 'Iron Man', color: 'b71c1c' },
+    { name: 'SpiderMan', color: '1565c0' }, { name: 'Joker', color: '2e7d32' },
+    { name: 'Thor', color: 'ff8f00' }, { name: 'BlackWidow', color: '212121' },
+    { name: 'Captain', color: '0d47a1' }, { name: 'Hulk', color: '1b5e20' },
+    { name: 'Harry', color: '4a148c' }, { name: 'Hermione', color: '880e4f' },
+    { name: 'Luna', color: 'e1bee7' }, { name: 'Draco', color: '78909c' },
+    { name: 'TonyStark', color: 'd32f2f' }, { name: 'Natasha', color: '303f9f' },
+    { name: 'Steve', color: '1976d2' }, { name: 'Loki', color: '388e3c' },
+    { name: 'Thanos', color: '4527a0' }, { name: 'ScarlettJ', color: 'e91e63' },
+    { name: 'ChrisE', color: '1a237e' }, { name: 'RDJ', color: 'bf360c' },
+    { name: 'ElonMusk', color: '263238' }, { name: 'Morgan', color: 'ff6f00' },
+    { name: 'Gandalf', color: '424242' }, { name: 'Yoda', color: '558b2f' }
+];
 
-// Helper functions
-function showToast(message, type = 'success') {
-    if (!toastEl) return;
-    toastEl.textContent = message;
-    toastEl.className = `toast show ${type}`;
-    setTimeout(() => toastEl.classList.remove('show'), 3000);
-}
+// --- UI ЭЛЕМЕНТЫ ---
+const $ = id => document.getElementById(id);
+const screens = { auth: $('auth-screen'), main: $('main-screen'), chat: $('chat-screen') };
 
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function formatTime(timestamp) {
-    if (!timestamp) return '--:--';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-}
-
-function getAuthErrorMessage(code) {
-    const errors = {
-        'auth/invalid-email': 'Неверный формат email',
-        'auth/user-not-found': 'Пользователь не найден',
-        'auth/wrong-password': 'Неверный пароль',
-        'auth/email-already-in-use': 'Email уже занят',
-        'auth/weak-password': 'Пароль слишком короткий (мин. 6 символов)',
-        'auth/network-request-failed': 'Нет соединения с интернетом',
-        'auth/too-many-requests': 'Слишком много попыток, попробуйте позже'
-    };
-    return errors[code] || 'Ошибка авторизации';
-}
-
-function updateLastSeenLoop() {
-    if (!currentUser || lastSeenInterval) return;
-    updateDoc(doc(db, 'users', currentUser.uid), {
-        status: 'online',
-        lastSeen: serverTimestamp()
-    }).catch(() => {});
-    lastSeenInterval = setInterval(() => {
-        if (currentUser) {
-            updateDoc(doc(db, 'users', currentUser.uid), {
-                status: 'online',
-                lastSeen: serverTimestamp()
-            }).catch(() => {});
-        }
-    }, 45000);
-}
-
-function cleanupListeners() {
-    if (unsubChat) unsubChat();
-    if (unsubUsers) unsubUsers();
-    if (unsubOwnProfile) unsubOwnProfile();
-    if (lastSeenInterval) clearInterval(lastSeenInterval);
-    lastSeenInterval = null;
-}
-
-function updateProfileUI(profile) {
-    if (!profile) return;
-    const name = profile.displayName || 'Пользователь';
-    const avatar = profile.avatar || `https://ui-avatars.com/api/?name=${name}&background=6366f1&color=fff`;
-    const statusText = profile.statusText || 'В сети';
-    if (headerAvatar) headerAvatar.src = avatar;
-    if (profilePreviewMain) profilePreviewMain.src = avatar;
-    if (profileNameMain) profileNameMain.textContent = name;
-    if (profileStatusTextMain) profileStatusTextMain.textContent = statusText;
-}
-
-function trackOwnProfile(uid) {
-    if (unsubOwnProfile) unsubOwnProfile();
-    unsubOwnProfile = onSnapshot(doc(db, 'users', uid), (docSnap) => {
-        if (docSnap.exists()) {
-            userProfile = { id: uid, ...docSnap.data() };
-            updateProfileUI(userProfile);
-        }
-    });
-}
-
-function renderMessage(msg) {
-    const div = document.createElement('div');
-    const isOwn = msg.senderId === currentUser?.uid;
-    div.className = `msg ${isOwn ? 'out' : 'in'}`;
-    const time = formatTime(msg.createdAt);
-    div.innerHTML = `<div class="msg-text">${escapeHtml(msg.text)}</div><span class="time">${time}</span>`;
-    return div;
-}
-
-function createUserListItem(user) {
-    const li = document.createElement('li');
-    li.className = 'chat-item';
-    const name = escapeHtml(user.displayName || 'Пользователь');
-    const statusText = escapeHtml(user.statusText || 'Онлайн');
-    const avatar = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=6366f1&color=fff`;
-    const statusClass = user.status === 'online' ? 'status-online' : 'status-offline';
-    li.innerHTML = `
-        <div class="avatar-wrapper">
-            <img class="avatar" src="${avatar}" alt="${name}" loading="lazy">
-            <span class="status-indicator ${statusClass}"></span>
-        </div>
-        <div class="chat-info">
-            <h4>${name}</h4>
-            <p class="text-muted">${statusText}</p>
-        </div>
-    `;
-    li.onclick = () => openChat(user.id, user.displayName, user.avatar);
-    return li;
-}
-
-function renderChatList(filterText = '') {
-    if (!chatList) return;
-    chatList.innerHTML = '';
-    const filtered = allUsers.filter(u => 
-        u.displayName?.toLowerCase().includes(filterText.toLowerCase()) ||
-        u.statusText?.toLowerCase().includes(filterText.toLowerCase())
-    );
-    if (filtered.length === 0 && allUsers.length > 0) {
-        chatList.innerHTML = '<li class="chat-item" style="justify-content:center; color:var(--text-muted)">Никого не найдено</li>';
-    }
-    filtered.forEach(user => {
-        if (chatList) chatList.appendChild(createUserListItem(user));
-    });
-}
-
-async function openChat(userId, name, avatar) {
-    currentChat = { id: userId, name, avatar };
-    if (chatNameDisplay) chatNameDisplay.textContent = name;
-    if (chatAvatarDisplay) chatAvatarDisplay.src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`;
-    if (chatStatusDisplay) chatStatusDisplay.textContent = 'в сети';
-    if (msgArea) msgArea.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
-    if (textInput) {
-        textInput.value = '';
-        textInput.blur();
-    }
-    if (window.innerWidth < 768) {
-        if (mainScreen) mainScreen.classList.remove('active');
-        if (chatScreen) chatScreen.classList.add('active');
-    } else {
-        if (chatScreen) chatScreen.classList.add('active');
-    }
-    const room = [currentUser.uid, userId].sort().join('_');
-    const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
-    if (unsubChat) unsubChat();
-    unsubChat = onSnapshot(q, 
-        (snap) => {
-            if (!msgArea) return;
-            msgArea.innerHTML = '';
-            if (snap.empty) {
-                msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
-                return;
-            }
-            snap.forEach(docSnap => {
-                msgArea.appendChild(renderMessage(docSnap.data()));
-            });
-            msgArea.scrollTop = msgArea.scrollHeight;
-        },
-        (error) => {
-            console.error(error);
-            if (msgArea) msgArea.innerHTML = '<div class="empty-state">Ошибка загрузки чата</div>';
-        }
-    );
-}
-
-function loadUsersList() {
-    if (unsubUsers) unsubUsers();
-    if (loadingChats) loadingChats.style.display = 'block';
-    if (chatList) chatList.innerHTML = '';
-    const q = query(collection(db, 'users'), limit(50));
-    unsubUsers = onSnapshot(q, (snap) => {
-        if (loadingChats) loadingChats.style.display = 'none';
-        if (chatList) chatList.innerHTML = '';
-        allUsers = [];
-        let hasUsers = false;
-        snap.forEach(docSnap => {
-            if (docSnap.id === currentUser.uid) return;
-            const user = { id: docSnap.id, ...docSnap.data() };
-            allUsers.push(user);
-            if (chatList) chatList.appendChild(createUserListItem(user));
-            hasUsers = true;
-        });
-        if (chatsEmpty) chatsEmpty.style.display = hasUsers ? 'none' : 'block';
-        renderChatList();
-    });
-}
-
-// Auth handlers
-if (loginBtn) {
-    loginBtn.onclick = async () => {
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        if (!emailInput || !passwordInput) return;
-        const email = emailInput.value.trim();
-        const password = passwordInput.value.trim();
-        if (!email || !password) {
-            showToast('Введите email и пароль', 'error');
-            return;
-        }
-        if (authError) authError.textContent = 'Вход...';
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            if (authError) authError.textContent = '';
-            showToast('Добро пожаловать! ✨');
-        } catch (e) {
-            console.error(e);
-            if (authError) authError.textContent = getAuthErrorMessage(e.code);
-            showToast('Ошибка входа', 'error');
-        }
-    };
-}
-
-if (registerBtn) {
-    registerBtn.onclick = async () => {
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        if (!emailInput || !passwordInput) return;
-        const email = emailInput.value.trim();
-        const password = passwordInput.value.trim();
-        if (!email || !password) {
-            showToast('Введите email и пароль', 'error');
-            return;
-        }
-        if (password.length < 6) {
-            showToast('Пароль минимум 6 символов', 'error');
-            return;
-        }
-        if (authError) authError.textContent = 'Регистрация...';
-        try {
-            const cred = await createUserWithEmailAndPassword(auth, email, password);
-            await setDoc(doc(db, 'users', cred.user.uid), {
-                displayName: email.split('@')[0],
-                email: email,
-                status: 'online',
-                statusText: 'Привет! Я использую Woops 👋',
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=6366f1&color=fff`,
-                lastSeen: serverTimestamp()
-            });
-            if (authError) authError.textContent = '';
-            showToast('Аккаунт создан! 🎉');
-        } catch (e) {
-            console.error(e);
-            if (authError) authError.textContent = getAuthErrorMessage(e.code);
-            showToast('Ошибка регистрации', 'error');
-        }
-    };
-}
-
-// Send message
-if (sendBtn) {
-    sendBtn.onclick = async () => {
-        const text = textInput?.value.trim();
-        if (!text || !currentChat || !currentUser) return;
-        const room = [currentUser.uid, currentChat.id].sort().join('_');
-        sendBtn.disabled = true;
-        setTimeout(() => sendBtn.disabled = false, 500);
-        try {
-            await addDoc(collection(db, 'messages'), {
-                room,
-                senderId: currentUser.uid,
-                text,
-                createdAt: serverTimestamp()
-            });
-            if (textInput) textInput.value = '';
-            if (msgArea) msgArea.scrollTop = msgArea.scrollHeight;
-        } catch (e) {
-            console.error(e);
-            showToast('Не удалось отправить', 'error');
-        }
-    };
-}
-
-if (textInput) {
-    textInput.onkeypress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (sendBtn) sendBtn.click();
-        }
-    };
-}
-
-if (backBtn) {
-    backBtn.onclick = () => {
-        if (window.innerWidth < 768) {
-            if (chatScreen) chatScreen.classList.remove('active');
-            if (mainScreen) mainScreen.classList.add('active');
-        } else {
-            if (chatScreen) chatScreen.classList.remove('active');
-        }
-        if (unsubChat) unsubChat();
-        currentChat = null;
-    };
-}
-
-if (logoutBtn) {
-    logoutBtn.onclick = async () => {
-        if (!currentUser) return;
-        try {
-            await updateDoc(doc(db, 'users', currentUser.uid), { status: 'offline', lastSeen: serverTimestamp() });
-            await signOut(auth);
-        } catch (e) { console.error(e); }
-    };
-}
-
-if (chatSearchInput) {
-    chatSearchInput.addEventListener('input', (e) => renderChatList(e.target.value));
-}
-
-// Navigation
-navBtns.forEach(btn => {
-    btn.onclick = () => {
-        navBtns.forEach(b => b.classList.remove('active'));
-        tabs.forEach(t => t.classList.remove('active'));
-        btn.classList.add('active');
-        const tabId = `tab-${btn.dataset.tab}`;
-        const tabEl = document.getElementById(tabId);
-        if (tabEl) tabEl.classList.add('active');
-        const titles = { chats: 'Чаты', status: 'Статус', calls: 'Звонки', profile: 'Профиль' };
-        if (tabTitle) tabTitle.textContent = titles[btn.dataset.tab] || 'Woops';
-    };
-});
-
-// Profile modal
-if (editProfileBtns.length) {
-    editProfileBtns.forEach(btn => {
-        btn.onclick = () => {
-            if (!currentUser || !profileModal) return;
-            if (displayNameInput) displayNameInput.value = userProfile.displayName || '';
-            if (userStatusSelect) userStatusSelect.value = userProfile.status || 'online';
-            if (statusTextInput) statusTextInput.value = userProfile.statusText || '';
-            if (avatarPreview) avatarPreview.src = userProfile.avatar || '';
-            if (avatarInput) avatarInput.value = '';
-            profileModal.showModal();
-        };
-    });
-}
-
-if (closeProfileBtn) closeProfileBtn.onclick = () => profileModal?.close();
-if (cancelProfileBtn) cancelProfileBtn.onclick = () => profileModal?.close();
-
-if (saveProfileBtn) {
-    saveProfileBtn.onclick = async () => {
-        if (!currentUser) return;
-        saveProfileBtn.textContent = 'Сохранение...';
-        saveProfileBtn.disabled = true;
-        try {
-            let avatarUrl = userProfile.avatar;
-            if (avatarInput?.files[0]) {
-                const file = avatarInput.files[0];
-                const storageRef = ref(storage, `avatars/${currentUser.uid}/${Date.now()}_${file.name}`);
-                await uploadBytes(storageRef, file);
-                avatarUrl = await getDownloadURL(storageRef);
-            }
-            await updateDoc(doc(db, 'users', currentUser.uid), {
-                displayName: displayNameInput?.value.trim() || userProfile.displayName,
-                status: userStatusSelect?.value || 'online',
-                statusText: statusTextInput?.value.trim() || '',
-                avatar: avatarUrl,
-                lastSeen: serverTimestamp()
-            });
-            profileModal?.close();
-            showToast('Профиль обновлен');
-        } catch (e) {
-            console.error(e);
-            showToast('Ошибка сохранения', 'error');
-        } finally {
-            saveProfileBtn.textContent = 'Сохранить';
-            saveProfileBtn.disabled = false;
-        }
-    };
-}
-
-// Add contact modal
-if (addContactBtn) addContactBtn.onclick = () => addContactModal?.showModal();
-if (addContactEmptyBtn) addContactEmptyBtn.onclick = () => addContactModal?.showModal();
-if (closeAddContactBtn) closeAddContactBtn.onclick = () => addContactModal?.close();
-if (cancelAddContactBtn) cancelAddContactBtn.onclick = () => addContactModal?.close();
-
-if (sendInviteBtn) {
-    sendInviteBtn.onclick = async () => {
-        const email = contactEmailInput?.value.trim();
-        if (!email) {
-            showToast('Введите email');
-            return;
-        }
-        sendInviteBtn.textContent = 'Поиск...';
-        sendInviteBtn.disabled = true;
-        try {
-            const q = query(collection(db, 'users'), where('email', '==', email));
-            const snap = await getDocs(q);
-            if (snap.empty) {
-                showToast('Пользователь не найден', 'error');
-            } else {
-                const userDoc = snap.docs[0];
-                const userData = userDoc.data();
-                if (userDoc.id === currentUser?.uid) {
-                    showToast('Вы не можете добавить себя', 'error');
-                    return;
-                }
-                showToast('Контакт найден!', 'success');
-                addContactModal?.close();
-                openChat(userDoc.id, userData.displayName, userData.avatar);
-            }
-        } catch (e) {
-            console.error(e);
-            showToast('Ошибка при поиске', 'error');
-        } finally {
-            sendInviteBtn.textContent = 'Отправить';
-            sendInviteBtn.disabled = false;
-        }
-    };
-}
-
-// Emoji picker
-function initEmojiPicker() {
-    if (!emojiPicker) return;
-    emojiPicker.innerHTML = '';
-    EMOJIS.forEach(emoji => {
-        const btn = document.createElement('button');
-        btn.textContent = emoji;
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            if (!textInput) return;
-            const start = textInput.selectionStart;
-            const end = textInput.selectionEnd;
-            textInput.value = textInput.value.substring(0, start) + emoji + textInput.value.substring(end);
-            textInput.focus();
-            textInput.setSelectionRange(start + emoji.length, start + emoji.length);
-        };
-        emojiPicker.appendChild(btn);
-    });
-}
-
-if (emojiToggle) {
-    emojiToggle.onclick = (e) => {
-        e.stopPropagation();
-        if (emojiPicker) emojiPicker.classList.toggle('active');
-    };
-}
-
-document.addEventListener('click', (e) => {
-    if (emojiPicker && emojiToggle && !emojiPicker.contains(e.target) && e.target !== emojiToggle) {
-        emojiPicker.classList.remove('active');
-    }
-});
-
-// Auth state
-onAuthStateChanged(auth, (user) => {
+// --- АВТОРИЗАЦИЯ ---
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        if (authScreen) authScreen.classList.remove('active');
-        if (mainScreen) mainScreen.classList.add('active');
-        trackOwnProfile(user.uid);
-        loadUsersList();
-        updateLastSeenLoop();
+        screens.auth.classList.remove('active');
+        screens.main.classList.add('active');
+        await initApp(user.uid);
     } else {
         currentUser = null;
-        userProfile = {};
-        if (authScreen) authScreen.classList.add('active');
-        if (mainScreen) mainScreen.classList.remove('active');
-        if (chatScreen) chatScreen.classList.remove('active');
-        cleanupListeners();
+        screens.auth.classList.add('active');
+        screens.main.classList.remove('active');
+        screens.chat.classList.remove('active');
     }
 });
 
-// Initialize
-initEmojiPicker();
+$('login-btn').onclick = async () => {
+    try { await signInWithEmailAndPassword(auth, $('email').value, $('password').value); }
+    catch(e) { $('auth-error').textContent = e.message; }
+};
+$('register-btn').onclick = async () => {
+    try {
+        const c = await createUserWithEmailAndPassword(auth, $('email').value, $('password').value);
+        // Дефолтный профиль
+        await setDoc(doc(db, 'users', c.user.uid), {
+            username: c.user.email.split('@')[0],
+            displayName: c.user.email.split('@')[0],
+            avatar: `https://ui-avatars.com/api/?name=${c.user.email}&background=6366f1&color=fff`,
+            contacts: [],
+            notes: []
+        });
+    } catch(e) { $('auth-error').textContent = e.message; }
+};
+$('logout-btn').onclick = () => signOut(auth);
 
-if (authForm) {
-    authForm.onkeypress = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            if (loginBtn) loginBtn.click();
+// --- ИНИЦИАЛИЗАЦИЯ ---
+async function initApp(uid) {
+    // Загрузка профиля
+    onSnapshot(doc(db, 'users', uid), (docSnap) => {
+        if(docSnap.exists()) {
+            const data = docSnap.data();
+            $('profile-big-avatar').src = data.avatar;
+            $('profile-display-name').textContent = data.displayName;
+            $('profile-display-username').textContent = '@' + (data.username || '');
+            $('input-name').value = data.displayName || '';
+            $('input-username').value = data.username || '';
+            $('input-status').value = data.statusText || '';
         }
+    });
+
+    // Загрузка контактов
+    loadContacts();
+    // Загрузка чатов
+    loadChats();
+    // Рендер аватаров
+    renderAvatarGrid();
+    // Заметки из LocalStorage
+    loadNotes();
+    // Тема
+    applyTheme(localStorage.getItem('theme') || 'light');
+}
+
+// --- ПРОФИЛЬ И НАСТРОЙКИ ---
+function renderAvatarGrid() {
+    const grid = $('avatar-selection-grid');
+    grid.innerHTML = '';
+    AVATARS.forEach(av => {
+        const img = document.createElement('img');
+        img.src = `https://ui-avatars.com/api/?name=${av.name}&background=${av.color}&color=fff&size=128`;
+        img.className = 'avatar-option';
+        img.onclick = () => {
+            document.querySelectorAll('.avatar-option').forEach(i => i.classList.remove('selected'));
+            img.classList.add('selected');
+            $('profile-big-avatar').src = img.src;
+        };
+        grid.appendChild(img);
+    });
+}
+
+$('save-profile').onclick = async () => {
+    const selectedAvatar = document.querySelector('.avatar-option.selected');
+    const avatarUrl = selectedAvatar ? selectedAvatar.src : $('profile-big-avatar').src;
+    
+    await updateDoc(doc(db, 'users', currentUser.uid), {
+        displayName: $('input-name').value,
+        username: $('input-username').value,
+        statusText: $('input-status').value,
+        avatar: avatarUrl
+    });
+    alert('Профиль сохранен!');
+};
+
+$('open-settings').onclick = () => $('settingsModal').showModal();
+
+$('theme-toggle-btn').onclick = () => {
+    const current = document.body.getAttribute('data-theme') || 'light';
+    applyTheme(current === 'light' ? 'dark' : 'light');
+};
+
+function applyTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    $('theme-switch-indicator').textContent = theme === 'dark' ? '🟣' : '⚪';
+}
+
+// --- КОНТАКТЫ (СВАЙП) ---
+function loadContacts() {
+    // В реальном приложении мы бы брали список из профиля пользователя.
+    // Для демо берем всех пользователей (кроме себя).
+    const q = query(collection(db, 'users'), limit(50));
+    onSnapshot(q, (snap) => {
+        const list = $('contacts-list');
+        list.innerHTML = '';
+        snap.forEach(d => {
+            if (d.id === currentUser.uid) return;
+            const u = d.data();
+            const item = document.createElement('div');
+            item.className = 'swipe-wrapper';
+            item.innerHTML = `
+                <div class="swipe-bg">Удалить</div>
+                <div class="swipe-content" data-id="${d.id}">
+                    <img src="${u.avatar || ''}" class="avatar small">
+                    <div>
+                        <h4>${u.displayName}</h4>
+                        <span class="text-muted" style="font-size:12px;">@${u.username || '...'}</span>
+                    </div>
+                </div>
+            `;
+            list.appendChild(item);
+            initSwipe(item);
+            
+            // Клик для чата
+            item.querySelector('.swipe-content').onclick = () => openChat(d.id, u);
+        });
+    });
+}
+
+// Логика Свайпа
+function initSwipe(wrapper) {
+    let startX = 0, currentX = 0;
+    const content = wrapper.querySelector('.swipe-content');
+    
+    wrapper.ontouchstart = (e) => { startX = e.touches[0].clientX; };
+    wrapper.ontouchmove = (e) => {
+        const diff = startX - e.touches[0].clientX;
+        if (diff > 0) { // Свайп влево
+            currentX = Math.min(diff, 80); // Макс 80px
+            content.style.transform = `translateX(-${currentX}px)`;
+        }
+    };
+    wrapper.ontouchend = () => {
+        if (currentX > 50) {
+            // Показать кнопку удаления
+            content.style.transform = 'translateX(-70px)';
+            // Если кликнули на фон (красную зону)
+            content.onclick = null; // Отключаем переход в чат
+            wrapper.querySelector('.swipe-bg').onclick = () => {
+                // Удаление (в демо просто скрываем)
+                wrapper.style.height = '0'; wrapper.style.overflow = 'hidden'; wrapper.style.transition = '0.3s';
+            };
+        } else {
+            content.style.transform = 'translateX(0)';
+            const uid = content.dataset.id;
+            // Восстанавливаем клик
+            content.onclick = () => openChat(uid, { displayName: 'User' });
+        }
+        currentX = 0;
     };
 }
 
-console.log('Woops Chat Initialized');
+$('add-contact-btn').onclick = () => $('addContactModal').showModal();
+$('confirm-add-contact').onclick = () => {
+    alert('Функция поиска по Email в разработке, но контакт добавлен визуально!');
+    $('addContactModal').close();
+};
 
-// Service Worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
+// --- ЗАМЕТКИ ---
+function loadNotes() {
+    notes = JSON.parse(localStorage.getItem('woops_notes') || '[]');
+    renderNotes();
+}
+function saveNotes() {
+    localStorage.setItem('woops_notes', JSON.stringify(notes));
+    renderNotes();
+}
+function renderNotes() {
+    const list = $('notes-list');
+    list.innerHTML = '';
+    if (notes.length === 0) { list.innerHTML = '<p class="text-muted">Нет заметок</p>'; return; }
+    notes.forEach((n, i) => {
+        const card = document.createElement('div');
+        card.className = 'note-card';
+        card.innerHTML = `<h4>${n.title || 'Без названия'}</h4><p>${n.body ? n.body.substring(0, 30) + '...' : ''}</p>`;
+        card.onclick = () => openNote(i);
+        list.appendChild(card);
     });
 }
+function openNote(index) {
+    editingNoteId = index;
+    const n = notes[index];
+    $('note-title-input').value = n.title;
+    $('note-body-input').value = n.body;
+    $('delete-note-btn').style.display = 'block';
+    $('noteEditorModal').showModal();
+}
+$('add-note-btn').onclick = () => {
+    editingNoteId = -1; // Новая
+    $('note-title-input').value = ''; $('note-body-input').value = '';
+    $('delete-note-btn').style.display = 'none';
+    $('noteEditorModal').showModal();
+};
+$('save-note-btn').onclick = () => {
+    const title = $('note-title-input').value;
+    const body = $('note-body-input').value;
+    if (editingNoteId === -1) notes.unshift({ title, body });
+    else notes[editingNoteId] = { title, body };
+    saveNotes();
+    $('noteEditorModal').close();
+};
+$('delete-note-btn').onclick = () => {
+    notes.splice(editingNoteId, 1);
+    saveNotes();
+    $('noteEditorModal').close();
+};
+
+// Переключатель вида заметок
+let notesGrid = true;
+$('notes-view-toggle').onclick = () => {
+    notesGrid = !notesGrid;
+    $('notes-list').className = notesGrid ? 'notes-grid' : 'notes-list';
+    $('notes-view-toggle').textContent = notesGrid ? '▦' : '☰';
+};
+
+// --- ЧАТЫ ---
+function loadChats() {
+    const list = $('chat-list');
+    // Для демо просто копируем контакты в чаты
+    const q = query(collection(db, 'users'), limit(10));
+    onSnapshot(q, (snap) => {
+        list.innerHTML = '';
+        snap.forEach(d => {
+            if(d.id === currentUser.uid) return;
+            const u = d.data();
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `<img src="${u.avatar || ''}" class="avatar small"><div><h4>${u.displayName}</h4></div>`;
+            div.onclick = () => openChat(d.id, u);
+            list.appendChild(div);
+        });
+    });
+}
+
+function openChat(uid, user) {
+    currentChatUser = { id: uid, ...user };
+    $('chat-name').textContent = user.displayName;
+    $('chat-avatar').src = user.avatar || `https://ui-avatars.com/api/?name=${user.displayName}&background=random`;
+    
+    screens.main.classList.remove('active');
+    screens.chat.classList.add('active');
+    
+    // Load Messages (Basic Firebase)
+    const room = [currentUser.uid, uid].sort().join('_');
+    const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
+    if(unsubChat) unsubChat();
+    
+    unsubChat = onSnapshot(q, (snap) => {
+        $('msg-area').innerHTML = '';
+        snap.forEach(doc => {
+            const msg = doc.data();
+            const div = document.createElement('div');
+            div.className = `msg ${msg.senderId === currentUser.uid ? 'out' : 'in'}`;
+            div.textContent = msg.text;
+            $('msg-area').appendChild(div);
+        });
+        $('msg-area').scrollTop = $('msg-area').scrollHeight;
+    });
+}
+
+$('back-btn').onclick = () => {
+    screens.chat.classList.remove('active');
+    screens.main.classList.add('active');
+    if(unsubChat) unsubChat();
+};
+
+$('send-btn').onclick = async () => {
+    const text = $('text-input').value.trim();
+    if(!text || !currentChatUser) return;
+    const room = [currentUser.uid, currentChatUser.id].sort().join('_');
+    await addDoc(collection(db, 'messages'), {
+        room, text, senderId: currentUser.uid, createdAt: serverTimestamp()
+    });
+    $('text-input').value = '';
+};
+
+// Эмодзи
+$('emojiToggle').onclick = () => $('emoji-panel').classList.toggle('open');
+const emojis = ['😀','😎','🔥','❤️','👍','😂','🤔','👋'];
+emojis.forEach(e => {
+    const b = document.createElement('button');
+    b.textContent = e;
+    b.onclick = () => { $('text-input').value += e; $('text-input').focus(); };
+    $('emoji-grid').appendChild(b);
+});
+
+// --- НАВИГАЦИЯ ---
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        $('tab-' + btn.dataset.tab).classList.add('active');
+    };
+});
