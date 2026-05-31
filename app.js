@@ -1,8 +1,25 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser, updateProfile as updateAuthProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, arrayUnion, arrayRemove, limit, getDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body {
+                  background-color: white; /* Ensure the iframe has a white background */
+                }
 
-// 🔧 Config
+                
+              </style>
+                        </head>
+                        <body>
+                            
+
+              <script>
+                              import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, setDoc, serverTimestamp, updateDoc, arrayUnion, arrayRemove, deleteDoc, getDocs, limit, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// 🔧 Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
   authDomain: "woops-4ded6.firebaseapp.com",
@@ -15,26 +32,44 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 📦 DOM
-const $ = (sel) => document.querySelector(sel);
+// 📦 DOM Helpers
+const $ = (id) => document.getElementById(id);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// State
+// 🌍 State
 let currentUser = null;
+let userProfile = {};
 let currentChat = null;
-let listeners = { chat: null, users: null, contacts: null, feed: null, profile: null };
-let feedData = [];
+let listeners = {};
+let feedPosts = [];
 
-// ================= AUTH =================
-onAuthStateChanged(auth, (user) => {
+// ============================================
+// 🔐 АВТОРИЗАЦИЯ
+// ============================================
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     $('#auth-screen').classList.remove('active');
     $('#auth-screen').classList.add('hidden');
     $('#app-screen').classList.remove('hidden');
     $('#app-screen').classList.add('active');
+
+    // Создаем профиль если не существует
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        displayName: user.email.split('@')[0],
+        email: user.email,
+        status: 'online',
+        statusText: 'Привет, я в Woops!',
+        createdAt: serverTimestamp(),
+        theme: 'light'
+      });
+    }
+
     loadUserProfile(user.uid);
-    setupListeners();
+    setupTabs();
     initTheme();
   } else {
     currentUser = null;
@@ -43,113 +78,143 @@ onAuthStateChanged(auth, (user) => {
     $('#app-screen').classList.remove('active');
     $('#app-screen').classList.add('hidden');
     cleanupListeners();
-    $('#app-screen').classList.remove('active');
   }
 });
 
-$('#login-btn').onclick = async () => authAction('login');
-$('#register-btn').onclick = async () => authAction('register');
-async function authAction(type) {
+$('#login-btn').onclick = () => handleAuth('login');
+$('#register-btn').onclick = () => handleAuth('register');
+
+async function handleAuth(type) {
   const email = $('#auth-email').value.trim();
   const pass = $('#auth-password').value;
   $('#auth-error').textContent = '';
   try {
-    let cred;
-    if (type === 'login') cred = await signInWithEmailAndPassword(auth, email, pass);
-    else {
-      cred = await createUserWithEmailAndPassword(auth, email, pass);
+    if (type === 'login') {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } else {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
       await setDoc(doc(db, 'users', cred.user.uid), {
-        displayName: email.split('@')[0], email, createdAt: serverTimestamp(), status: 'online', statusText: 'Привет, я использую Woops!'
+        displayName: email.split('@')[0],
+        email: cred.user.email,
+        status: 'online',
+        statusText: 'Новый пользователь',
+        createdAt: serverTimestamp(),
+        theme: 'light'
       });
     }
-  } catch (e) { $('#auth-error').textContent = e.message; }
+  } catch (err) {
+    $('#auth-error').textContent = err.message;
+  }
 }
 
-// ================= PROFILE & THEME =================
+// ============================================
+// 👤 ПРОФИЛЬ & ТЕМА
+// ============================================
 async function loadUserProfile(uid) {
-  const unsub = onSnapshot(doc(db, 'users', uid), (snap) => {
+  listeners.profile = onSnapshot(doc(db, 'users', uid), (snap) => {
     if (snap.exists()) {
-      const data = snap.data();
-      userProfile = { id: uid, ...data };
-      $('#profile-name').textContent = data.displayName || 'Пользователь';
-      $('#profile-status').textContent = data.statusText || '';
-      $('#profile-avatar').src = data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName || 'U')}&background=6366f1&color=fff`;
-      $('#edit-displayName').value = data.displayName || '';
-      $('#edit-statusText').value = data.statusText || '';
-      if (data.theme === 'dark') document.documentElement.classList.add('dark');
+      userProfile = { id: uid, ...snap.data() };
+      $('#profile-name').textContent = userProfile.displayName || 'Пользователь';
+      $('#profile-status').textContent = userProfile.statusText || '';
+      $('#profile-avatar').src = userProfile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.displayName || 'U')}&background=6366f1&color=fff`;
+      $('#edit-displayName').value = userProfile.displayName || '';
+      $('#edit-statusText').value = userProfile.statusText || '';
+      if (userProfile.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        $('#theme-switch').checked = true;
+      }
     }
   });
-  listeners.profile = unsub;
 }
-
-$('#edit-profile-btn').onclick = () => $('#modal-edit-profile').showModal();
-$('#save-profile-btn').onclick = async () => {
-  if (!currentUser) return;
-  await updateDoc(doc(db, 'users', currentUser.uid), {
-    displayName: $('#edit-displayName').value.trim() || userProfile.displayName,
-    statusText: $('#edit-statusText').value.trim()
-  });
-  closeModal('modal-edit-profile');
-  showToast('Профиль обновлён');
-};
 
 $('#theme-switch').onchange = async (e) => {
   const isDark = e.target.checked;
   document.documentElement.classList.toggle('dark', isDark);
-  await updateDoc(doc(db, 'users', currentUser.uid), { theme: isDark ? 'dark' : 'light' });
+  if (currentUser) {
+    await updateDoc(doc(db, 'users', currentUser.uid), { theme: isDark ? 'dark' : 'light' });
+  }
+};
+
+$('#edit-profile-btn').onclick = () => $('#modal-edit-profile').showModal();
+$('#save-profile-btn').onclick = async () => {
+  const name = $('#edit-displayName').value.trim() || userProfile.displayName;
+  const text = $('#edit-statusText').value.trim();
+  await updateDoc(doc(db, 'users', currentUser.uid), { displayName: name, statusText: text });
+  closeModal('modal-edit-profile');
+  showToast('Профиль обновлён');
 };
 
 $('#share-profile-btn').onclick = () => {
   navigator.clipboard.writeText(currentUser.uid);
-  showToast('UID скопирован в буфер обмена');
+  showToast('Ваш ID скопирован');
 };
 
 $('#delete-profile-btn').onclick = async () => {
-  if (confirm('Удалить профиль и все данные? Это действие нельзя отменить.')) {
+  if (confirm('Вы уверены? Все данные и чаты будут удалены.')) {
     try {
-      // Очистка Firestore (упрощённо)
       await deleteDoc(doc(db, 'users', currentUser.uid));
       await deleteUser(auth.currentUser);
-      showToast('Профиль удалён');
-    } catch (e) { showToast('Ошибка удаления: ' + e.message, 'error'); }
+    } catch (err) { showToast('Ошибка удаления: ' + err.message, 'error'); }
   }
 };
 
-// ================= TABS =================
-$$('.nav-btn').forEach(btn => {
-  btn.onclick = () => {
-    $$('.nav-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    $$('.tab').forEach(t => t.classList.remove('active'));
-    $(`#tab-${tab}`).classList.add('active');
-    $('#header-title').textContent = btn.querySelector('span').textContent;
-    $('#search-btn').style.display = tab === 'profile' ? 'none' : 'flex';
-  };
-});
-
-// ================= CHATS =================
-function setupListeners() {
-  if (!currentUser) return;
-  // Чаты
-  listeners.chat = onSnapshot(query(collection(db, 'chatRooms'), where('participants', 'array-contains', currentUser.uid), orderBy('lastTime', 'desc')), (snap) => {
-    const list = $('#chat-list');
-    list.innerHTML = '';
-    if (snap.empty) { $('#chats-empty').style.display = 'block'; return; }
-    $('#chats-empty').style.display = 'none';
-    snap.forEach(docSnap => {
-      const data = docSnap.data();
-      const isLastSender = data.lastSenderId === currentUser.uid;
-      const li = document.createElement('li');
-      li.className = 'list-item';
-      li.innerHTML = `
-        <img class="avatar" src="${data.contactAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.contactName)}`}" alt="">
-        <div class="info"><h4>${escapeHtml(data.contactName)}</h4><p>${isLastSender ? 'Вы: ' : ''}${escapeHtml(data.lastMessage || 'Нет сообщений')}</p></div>
-      `;
-      li.onclick = () => openChat(docSnap.id, data.contactName, data.contactAvatar, data.contactId);
-      list.appendChild(li);
-    });
+// ============================================
+// 🧭 НАВИГАЦИЯ
+// ============================================
+function setupTabs() {
+  $$('.nav-btn').forEach(btn => {
+    btn.onclick = () => switchTab(btn.dataset.tab);
   });
+}
+
+function switchTab(tabId) {
+  $$('.nav-btn').forEach(b => b.classList.remove('active'));
+  $$(`.nav-btn[data-tab="${tabId}"]`).forEach(b => b.classList.add('active'));
+  $$('.tab').forEach(t => t.classList.remove('active'));
+  $(`#tab-${tabId}`).classList.add('active');
+  $('#header-title').textContent = $$(`.nav-btn[data-tab="${tabId}"] span`)[0].textContent;
+  $('#search-btn').style.display = tabId === 'profile' ? 'none' : 'flex';
+
+  if (tabId === 'chats') loadChats();
+  if (tabId === 'contacts') loadContacts();
+  if (tabId === 'feed') loadFeed();
+}
+
+// ============================================
+// 💬 ЧАТЫ
+// ============================================
+function loadChats() {
+  if (listeners.chats) listeners.chats();
+  listeners.chats = onSnapshot(
+    query(collection(db, 'chatRooms'), where('participants', 'array-contains', currentUser.uid)),
+    (snap) => {
+      const list = $('#chat-list');
+      list.innerHTML = '';
+      if (snap.empty) {
+        $('#chats-empty').style.display = 'block';
+        return;
+      }
+      $('#chats-empty').style.display = 'none';
+      
+      const rooms = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.lastTime?.toMillis?.() || 0) - (a.lastTime?.toMillis?.() || 0));
+
+      rooms.forEach(room => {
+        const li = document.createElement('li');
+        li.className = 'list-item';
+        const isLast = room.lastSenderId === currentUser.uid;
+        li.innerHTML = `
+          <img class="avatar" src="${room.contactAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(room.contactName)}`}" alt="">
+          <div class="info">
+            <h4>${escapeHtml(room.contactName)}</h4>
+            <p>${isLast ? 'Вы: ' : ''}${escapeHtml(room.lastMessage || 'Нет сообщений')}</p>
+          </div>
+        `;
+        li.onclick = () => openChat(room.id, room.contactName, room.contactAvatar, room.contactId);
+        list.appendChild(li);
+      });
+    }
+  );
 }
 
 async function openChat(roomId, name, avatar, contactId) {
@@ -159,21 +224,29 @@ async function openChat(roomId, name, avatar, contactId) {
   $('#chat-name').textContent = name;
   $('#chat-avatar').src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
   $('#msg-area').innerHTML = '<div class="empty-state">Загрузка...</div>';
-  if (listeners.chat) listeners.chat();
 
-  listeners.chat = onSnapshot(query(collection(db, 'messages'), where('room', '==', roomId), orderBy('createdAt', 'asc')), (snap) => {
-    const area = $('#msg-area');
-    area.innerHTML = '';
-    if (snap.empty) { area.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>'; return; }
-    snap.forEach(d => {
-      const msg = d.data();
-      const div = document.createElement('div');
-      div.className = `msg ${msg.senderId === currentUser.uid ? 'out' : 'in'}`;
-      div.innerHTML = `${escapeHtml(msg.text)}<span class="time">${formatTime(msg.createdAt)}</span>`;
-      area.appendChild(div);
-    });
-    area.scrollTop = area.scrollHeight;
-  });
+  if (listeners.chatMsg) listeners.chatMsg();
+  listeners.chatMsg = onSnapshot(
+    query(collection(db, 'messages'), where('room', '==', roomId)),
+    (snap) => {
+      const area = $('#msg-area');
+      area.innerHTML = '';
+      const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+        
+      if (msgs.length === 0) {
+        area.innerHTML = '<div class="empty-state">Начните диалог ✨</div>';
+        return;
+      }
+      msgs.forEach(msg => {
+        const div = document.createElement('div');
+        div.className = `msg ${msg.senderId === currentUser.uid ? 'out' : 'in'}`;
+        div.innerHTML = `${escapeHtml(msg.text)}<span class="time">${formatTime(msg.createdAt)}</span>`;
+        area.appendChild(div);
+      });
+      area.scrollTop = area.scrollHeight;
+    }
+  );
 }
 
 $('#back-btn').onclick = () => {
@@ -186,9 +259,16 @@ $('#send-btn').onclick = async () => {
   const text = $('#text-input').value.trim();
   if (!text || !currentChat) return;
   $('#text-input').value = '';
-  const room = currentChat.roomId;
-  await addDoc(collection(db, 'messages'), { room, senderId: currentUser.uid, text, createdAt: serverTimestamp() });
-  await setDoc(doc(db, 'chatRooms', room), {
+  const { roomId } = currentChat;
+
+  await addDoc(collection(db, 'messages'), {
+    room: roomId,
+    senderId: currentUser.uid,
+    text,
+    createdAt: serverTimestamp()
+  });
+
+  await setDoc(doc(db, 'chatRooms', roomId), {
     participants: [currentUser.uid, currentChat.id],
     contactId: currentChat.id,
     contactName: currentChat.name,
@@ -199,59 +279,84 @@ $('#send-btn').onclick = async () => {
   }, { merge: true });
 };
 
-$('#text-input').onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#send-btn').click(); } };
+$('#text-input').onkeypress = (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#send-btn').click(); } };
 
-// ================= CONTACTS =================
+// ============================================
+// 👥 КОНТАКТЫ
+// ============================================
+function loadContacts() {
+  if (listeners.contacts) listeners.contacts();
+  listeners.contacts = onSnapshot(
+    query(collection(db, 'contacts'), where('ownerId', '==', currentUser.uid)),
+    (snap) => {
+      const list = $('#contacts-list');
+      list.innerHTML = '';
+      if (snap.empty) {
+        $('#contacts-empty').style.display = 'block';
+        return;
+      }
+      $('#contacts-empty').style.display = 'none';
+      snap.forEach(d => {
+        const c = { id: d.id, ...d.data() };
+        const li = document.createElement('li');
+        li.className = 'list-item';
+        li.dataset.name = (c.displayName || '').toLowerCase();
+        li.innerHTML = `
+          <img class="avatar" src="${c.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.displayName)}`}" alt="">
+          <div class="info">
+            <h4>${escapeHtml(c.displayName)}</h4>
+            <p>Нажмите для чата</p>
+          </div>
+          <button class="btn danger remove-contact" data-id="${c.id}">✕</button>
+        `;
+        li.onclick = (e) => {
+          if (!e.target.classList.contains('remove-contact')) {
+            openChat([currentUser.uid, c.contactId].sort().join('_'), c.displayName, c.avatar, c.contactId);
+          }
+        };
+        list.appendChild(li);
+      });
+      $$('.remove-contact').forEach(btn => {
+        btn.onclick = async (e) => {
+          e.stopPropagation();
+          await deleteDoc(doc(db, 'contacts', btn.dataset.id));
+          showToast('Контакт удалён');
+        };
+      });
+    }
+  );
+}
+
 $('#add-contact-btn').onclick = () => $('#modal-add-contact').showModal();
 $('#search-contact-input').oninput = async (e) => {
   const q = e.target.value.trim();
-  if (q.length < 3) return;
-  const snap = await getDocs(query(collection(db, 'users'), where('displayName', '>=', q), where('displayName', '<=', q + '\uf8ff'), limit(5)));
   const res = $('#contact-search-results');
   res.innerHTML = '';
-  snap.forEach(d => {
-    const u = d.data();
-    if (u.id === currentUser.uid) return;
-    const li = document.createElement('li');
-    li.className = 'list-item';
-    li.innerHTML = `<div class="info"><h4>${escapeHtml(u.displayName)}</h4><p>${escapeHtml(u.email)}</p></div>`;
-    li.onclick = async () => {
-      await addDoc(collection(db, 'contacts'), { ownerId: currentUser.uid, contactId: d.id, displayName: u.displayName, avatar: u.avatar, addedAt: serverTimestamp() });
-      showToast('Контакт добавлен');
-      closeModal('modal-add-contact');
-    };
-    res.appendChild(li);
-  });
-};
-
-function loadContacts() {
-  listeners.contacts = onSnapshot(query(collection(db, 'contacts'), where('ownerId', '==', currentUser.uid)), (snap) => {
-    const list = $('#contacts-list');
-    list.innerHTML = '';
-    if (snap.empty) { $('#contacts-empty').style.display = 'block'; return; }
-    $('#contacts-empty').style.display = 'none';
+  if (q.length < 2) return;
+  try {
+    const snap = await getDocs(query(collection(db, 'users'), where('displayName', '>=', q), where('displayName', '<=', q + '\uf8ff'), limit(5)));
     snap.forEach(d => {
-      const c = d.data();
+      const u = d.data();
+      if (u.id === currentUser.uid) return;
       const li = document.createElement('li');
       li.className = 'list-item';
-      li.dataset.name = (c.displayName || '').toLowerCase();
-      li.innerHTML = `
-        <img class="avatar" src="${c.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.displayName)}`}" alt="">
-        <div class="info"><h4>${escapeHtml(c.displayName)}</h4><p>Нажмите для чата</p></div>
-        <button class="btn danger remove-contact" data-id="${d.id}">✕</button>
-      `;
-      li.onclick = (e) => { if (!e.target.classList.contains('remove-contact')) {
-        // Открыть чат (создаём комнату если нет)
-        const room = [currentUser.uid, c.contactId].sort().join('_');
-        openChat(room, c.displayName, c.avatar, c.contactId);
-      }};
-      list.appendChild(li);
+      li.innerHTML = `<div class="info"><h4>${escapeHtml(u.displayName)}</h4><p>${escapeHtml(u.email)}</p></div>`;
+      li.onclick = async () => {
+        await addDoc(collection(db, 'contacts'), {
+          ownerId: currentUser.uid,
+          contactId: d.id,
+          displayName: u.displayName,
+          avatar: u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.displayName)}`,
+          addedAt: serverTimestamp()
+        });
+        showToast('Контакт добавлен');
+        closeModal('modal-add-contact');
+      };
+      res.appendChild(li);
     });
-    $$('.remove-contact').forEach(btn => {
-      btn.onclick = async (e) => { e.stopPropagation(); await deleteDoc(doc(db, 'contacts', btn.dataset.id)); showToast('Контакт удалён'); };
-    });
-  });
-}
+    if (res.children.length === 0) res.innerHTML = '<div class="empty-state">Пользователи не найдены</div>';
+  } catch (err) { console.error(err); }
+};
 
 $('#contact-search').oninput = (e) => {
   const q = e.target.value.toLowerCase();
@@ -260,50 +365,42 @@ $('#contact-search').oninput = (e) => {
   });
 };
 
-// ================= FEED =================
+// ============================================
+// 📝 ЛЕНТА
+// ============================================
 function loadFeed() {
-  listeners.feed = onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50)), (snap) => {
-    feedData = [];
-    const cont = $('#feed-list');
-    cont.innerHTML = '';
-    snap.forEach(d => {
-      const p = { id: d.id, ...d.data() };
-      feedData.push(p);
-      cont.appendChild(renderPost(p));
-    });
-    // Также загружаем мои посты для профиля
-    const myCont = $('#my-posts-feed');
-    myCont.innerHTML = '';
-    feedData.filter(p => p.authorId === currentUser.uid).forEach(p => myCont.appendChild(renderPost(p, true)));
-  });
+  if (listeners.feed) listeners.feed();
+  listeners.feed = onSnapshot(
+    collection(db, 'posts'),
+    (snap) => {
+      feedPosts = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      renderFeedList(feedPosts, $('#feed-list'));
+      renderFeedList(feedPosts.filter(p => p.authorId === currentUser.uid), $('#my-posts-feed'));
+    }
+  );
 }
 
-$('#new-post-btn').onclick = () => $('#modal-new-post').showModal();
-$('#publish-post-btn').onclick = async () => {
-  const text = $('#post-text').value.trim();
-  if (!text) return;
-  await addDoc(collection(db, 'posts'), {
-    authorId: currentUser.uid,
-    authorName: userProfile.displayName || 'Пользователь',
-    authorAvatar: userProfile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.displayName)}`,
-    text,
-    createdAt: serverTimestamp(),
-    likes: [],
-    comments: []
-  });
-  $('#post-text').value = '';
-  closeModal('modal-new-post');
-  showToast('Пост опубликован');
-};
+function renderFeedList(posts, container) {
+  container.innerHTML = '';
+  if (posts.length === 0) {
+    container.innerHTML = '<div class="empty-state">Пока нет публикаций</div>';
+    return;
+  }
+  posts.forEach(post => container.appendChild(createPostCard(post)));
+}
 
-function renderPost(post, isProfile = false) {
+function createPostCard(post) {
   const div = document.createElement('div');
   div.className = 'feed-card';
   const isLiked = post.likes?.includes(currentUser.uid);
   div.innerHTML = `
     <div class="feed-author">
-      <img class="avatar" src="${post.authorAvatar}" style="width:32px;height:32px">
-      <div><h4>${escapeHtml(post.authorName)}</h4><p class="text-muted">${formatTime(post.createdAt)}</p></div>
+      <img class="avatar" src="${post.authorAvatar}" style="width:32px;height:32px;border-radius:50%">
+      <div>
+        <h4>${escapeHtml(post.authorName || 'Пользователь')}</h4>
+        <p class="text-muted">${formatTime(post.createdAt)}</p>
+      </div>
     </div>
     <div class="feed-text">${escapeHtml(post.text)}</div>
     <div class="feed-actions">
@@ -314,61 +411,100 @@ function renderPost(post, isProfile = false) {
     <div class="comments-section">
       ${(post.comments || []).map(c => `<div class="comment"><strong>${escapeHtml(c.name)}</strong>: ${escapeHtml(c.text)}</div>`).join('')}
       <div class="add-comment">
-        <input type="text" placeholder="Комментарий...">
+        <input type="text" placeholder="Написать комментарий...">
         <button class="btn primary">→</button>
       </div>
     </div>
   `;
 
-  // Like
   div.querySelector('[data-action="like"]').onclick = async () => {
     const ref = doc(db, 'posts', post.id);
-    const liked = post.likes?.includes(currentUser.uid);
-    if (liked) await updateDoc(ref, { likes: arrayRemove(currentUser.uid) });
-    else await updateDoc(ref, { likes: arrayUnion(currentUser.uid) });
-    showToast(liked ? 'Лайк убран' : 'Пост понравился');
+    if (post.likes?.includes(currentUser.uid)) {
+      await updateDoc(ref, { likes: arrayRemove(currentUser.uid) });
+    } else {
+      await updateDoc(ref, { likes: arrayUnion(currentUser.uid) });
+    }
   };
 
-  // Comments
-  div.querySelector('[data-action="comment"]').onclick = () => div.querySelector('.comments-section').classList.toggle('open');
+  div.querySelector('[data-action="comment"]').onclick = () => {
+    div.querySelector('.comments-section').classList.toggle('open');
+  };
+
   div.querySelector('.add-comment button').onclick = async () => {
     const inp = div.querySelector('.add-comment input');
     const txt = inp.value.trim();
     if (!txt) return;
-    await updateDoc(doc(db, 'posts', post.id), { comments: arrayUnion({ name: userProfile.displayName || 'Вы', authorId: currentUser.uid, text: txt, createdAt: new Date().toISOString() }) });
+    await updateDoc(doc(db, 'posts', post.id), {
+      comments: arrayUnion({
+        name: userProfile.displayName || 'Вы',
+        authorId: currentUser.uid,
+        text: txt,
+        createdAt: new Date().toISOString()
+      })
+    });
     inp.value = '';
   };
 
-  // Share
   div.querySelector('[data-action="share"]').onclick = () => {
-    if (navigator.share) navigator.share({ title: 'Woops Post', text: post.text });
-    else { navigator.clipboard.writeText(post.text); showToast('Текст скопирован'); }
+    if (navigator.share) {
+      navigator.share({ title: 'Woops Post', text: post.text });
+    } else {
+      navigator.clipboard.writeText(post.text);
+      showToast('Текст скопирован');
+    }
   };
 
   return div;
 }
 
-// ================= GLOBAL SEARCH =================
+$('#new-post-btn').onclick = () => $('#modal-new-post').showModal();
+$('#publish-post-btn').onclick = async () => {
+  const text = $('#post-text').value.trim();
+  if (!text) return;
+  await addDoc(collection(db, 'posts'), {
+    authorId: currentUser.uid,
+    authorName: userProfile.displayName || 'Пользователь',
+    authorAvatar: userProfile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.displayName || 'U')}&background=6366f1&color=fff`,
+    text,
+    createdAt: serverTimestamp(),
+    likes: [],
+    comments: []
+  });
+  $('#post-text').value = '';
+  closeModal('modal-new-post');
+  showToast('Пост опубликован');
+};
+
+// ============================================
+// 🔍 ГЛОБАЛЬНЫЙ ПОИСК
+// ============================================
 $('#search-btn').onclick = () => { $('#search-overlay').classList.remove('hidden'); $('#global-search').focus(); };
 $('#close-search').onclick = () => $('#search-overlay').classList.add('hidden');
 $('#global-search').oninput = async (e) => {
   const q = e.target.value.trim();
-  if (q.length < 2) return;
-  const snap = await getDocs(query(collection(db, 'users'), where('displayName', '>=', q), where('displayName', '<=', q + '\uf8ff'), limit(8)));
   const res = $('#search-results');
   res.innerHTML = '';
-  snap.forEach(d => {
-    const u = d.data();
-    if (u.id === currentUser.uid) return;
-    const li = document.createElement('li');
-    li.className = 'list-item';
-    li.innerHTML = `<img class="avatar" src="${u.avatar}" style="width:40px;height:40px"><div class="info"><h4>${escapeHtml(u.displayName)}</h4></div>`;
-    li.onclick = () => { openChat([currentUser.uid, d.id].sort().join('_'), u.displayName, u.avatar, d.id); $('#search-overlay').classList.add('hidden'); };
-    res.appendChild(li);
-  });
+  if (q.length < 2) return;
+  try {
+    const snap = await getDocs(query(collection(db, 'users'), where('displayName', '>=', q), where('displayName', '<=', q + '\uf8ff'), limit(8)));
+    snap.forEach(d => {
+      const u = d.data();
+      if (u.id === currentUser.uid) return;
+      const li = document.createElement('li');
+      li.className = 'list-item';
+      li.innerHTML = `<img class="avatar" src="${u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.displayName)}`}" style="width:40px;height:40px"><div class="info"><h4>${escapeHtml(u.displayName)}</h4><p>${escapeHtml(u.email)}</p></div>`;
+      li.onclick = () => {
+        openChat([currentUser.uid, d.id].sort().join('_'), u.displayName, u.avatar, d.id);
+        $('#search-overlay').classList.add('hidden');
+      };
+      res.appendChild(li);
+    });
+  } catch (err) { console.error(err); }
 };
 
-// ================= HELPERS =================
+// ============================================
+// 🛠️ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================
 function closeModal(id) { $(`#${id}`).close(); }
 function showToast(msg, type = 'success') {
   const t = $('#toast');
@@ -382,13 +518,14 @@ function formatTime(ts) {
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
-function cleanupListeners() { Object.values(listeners).forEach(l => l && l()); }
-function initTheme() {
-  const saved = localStorage.getItem('woops-theme') || userProfile.theme;
-  if (saved === 'dark') { document.documentElement.classList.add('dark'); $('#theme-switch').checked = true; }
+function cleanupListeners() {
+  Object.values(listeners).forEach(l => l && l());
 }
+function initTheme() { /* тема подгружается в loadUserProfile */ }
 
-// Init
-loadContacts();
-loadFeed();
-console.log('Woops v2 loaded');
+console.log('%c Woops Messenger v2 готов', 'color: #6366f1; font-weight: bold');
+
+
+              </script>
+                        </body>
+                        </html>
