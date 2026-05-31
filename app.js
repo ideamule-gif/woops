@@ -768,3 +768,41 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log('❌ SW failed:', err));
     });
 }
+
+// Полная блокировка автофокуса на мобильных
+if ('ontouchstart' in window) {
+    // Сохраняем исходное поведение
+    const originalFocus = HTMLInputElement.prototype.focus;
+    
+    // Переопределяем focus для поля ввода сообщения
+    HTMLInputElement.prototype.focus = function() {
+        if (this.id === 'text-input') {
+            // Не вызываем оригинальный focus автоматически
+            // Только если это не прямой клик
+            if (!this.hasAttribute('data-manual-focus')) {
+                return;
+            }
+        }
+        originalFocus.call(this);
+    };
+    
+    // Добавляем обработчик клика для ручного фокуса
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'text-input') {
+            e.target.setAttribute('data-manual-focus', 'true');
+            setTimeout(() => {
+                e.target.removeAttribute('data-manual-focus');
+            }, 100);
+        }
+    });
+}
+
+// Предотвращаем автофокус при открытии чата
+const originalOpenChat = openChat;
+window.openChat = function(userId, name, avatar) {
+    if (textInput) {
+        textInput.blur();
+        textInput.removeAttribute('data-manual-focus');
+    }
+    return originalOpenChat(userId, name, avatar);
+};
