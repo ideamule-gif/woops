@@ -407,8 +407,8 @@ function renderMessage(msgId, msg) {
     const safeText = escapeHtml(msg.text).replace(/'/g, "\\'").replace(/"/g, '&quot;');
     actionsHtml = `
       <div class="msg-actions">
-        <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')">✏️</button>
-        <button class="msg-action-btn delete" onclick="deleteMessage('${msgId}')">🗑️</button>
+        <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')" title="Редактировать">✍</button>
+        <button class="msg-action-btn delete" onclick="deleteMessage('${msgId}')" title="Удалить">✕</button>
       </div>
     `;
   }
@@ -691,24 +691,23 @@ const savedTheme = localStorage.getItem('theme');
 // Если сохранена светлая тема — активируем её при загрузке
 if (savedTheme === 'light') {
   document.body.classList.add('light-theme');
-  if (themeToggle) themeToggle.textContent = '☀️';
+  if (themeToggle) themeToggle.textContent = '◓'; // Светлый символ
 } else {
-  if (themeToggle) themeToggle.textContent = '🌙';
+  if (themeToggle) themeToggle.textContent = '◒'; // Темный символ
 }
 
 if (themeToggle) {
   themeToggle.onclick = () => {
-    // Переключаем класс light-theme на теге body
     const isLight = document.body.classList.toggle('light-theme');
     
     if (isLight) {
-      themeToggle.textContent = '☀️'; // Меняем иконку на солнце
-      localStorage.setItem('theme', 'light'); // Запоминаем выбор
-      showToast('Включена дневная тема ☀️');
+      themeToggle.textContent = '◓'; 
+      localStorage.setItem('theme', 'light');
+      showToast('Включена дневная тема');
     } else {
-      themeToggle.textContent = '🌙'; // Меняем иконку на луну
-      localStorage.setItem('theme', 'dark'); // Запоминаем выбор
-      showToast('Включена ночная тема 🌙');
+      themeToggle.textContent = '◒'; 
+      localStorage.setItem('theme', 'dark');
+      showToast('Включена ночная тема');
     }
   };
 }
