@@ -20,6 +20,13 @@
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// ВРЕМЕННАЯ ПРОВЕРКА - удалить после исправления
+console.log('=== ПРОВЕРКА ЭЛЕМЕНТОВ ===');
+console.log('loginBtn:', document.getElementById('login-btn'));
+console.log('registerBtn:', document.getElementById('register-btn'));
+console.log('authEmail:', document.getElementById('auth-email'));
+console.log('authPassword:', document.getElementById('auth-password'));
+
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
   authDomain: "woops-4ded6.firebaseapp.com",
