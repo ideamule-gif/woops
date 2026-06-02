@@ -11,7 +11,7 @@
   --text: #0f172a;
   --text-muted: #64748b;
   
-  --accent: #0f172a; /* Полный монохром вместо фиолетового */
+  --accent: #0f172a;
   --accent-light: #f1f5f9;
   --danger: #df1c1c;
   --danger-light: #fff5f5;
@@ -65,7 +65,7 @@ body, html {
 /* Главный контейнер приложения */
 #app-screen {
   display: grid;
-  grid-template-columns: 1fr; /* По умолчанию на мобилках одна колонка */
+  grid-template-columns: 1fr;
   width: 100%;
   height: 100%;
 }
@@ -243,7 +243,6 @@ input:focus, textarea:focus {
 }
 .icon-btn:hover { background: var(--surface); }
 
-/* Маленький плюсик для добавления контактов */
 .icon-btn-sm.primary-light {
   background: var(--surface-hover);
   border: none;
@@ -259,7 +258,6 @@ input:focus, textarea:focus {
   justify-content: center;
 }
 
-/* Тонкая и мелкая кнопка "Опубликовать" */
 .btn-text-sm {
   background: transparent;
   border: 1px solid var(--border);
@@ -276,7 +274,6 @@ input:focus, textarea:focus {
   color: var(--text);
 }
 
-/* Нижний бар вкладок */
 .bottom-nav {
   background: var(--bg);
   border-top: 1px solid var(--border);
@@ -352,7 +349,7 @@ input:focus, textarea:focus {
 .empty-state { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 13px; line-height: 1.5; }
 
 /* ==========================================================================
-   💬 ОКНО ЧАТА & УПРАВЛЕНИЕ СООБЩЕНИЯМИ
+   💬 ОКНО ЧАТА & УПРАВЛЕНИЕ СООБЩЕНИЯМИ (ФИКСИРОВАННАЯ ШАПКА)
    ========================================================================= */
 .chat-header {
   padding: 10px 16px;
@@ -360,6 +357,10 @@ input:focus, textarea:focus {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
 }
 
 .chat-header-info { display: flex; align-items: center; min-width: 0; }
@@ -374,6 +375,8 @@ input:focus, textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
+  z-index: 1;
 }
 
 .msg {
@@ -392,7 +395,6 @@ input:focus, textarea:focus {
 .msg.out { background: var(--msg-out); color: var(--text-out); align-self: flex-end; border-bottom-right-radius: 2px; }
 .msg .time { display: inline-block; font-size: 9px; margin-left: 8px; opacity: 0.5; float: right; margin-top: 4px; }
 
-/* Индикатор редактирования */
 .msg .edited-label { font-size: 9px; opacity: 0.5; margin-left: 4px; font-style: italic; }
 
 .chat-footer {
@@ -402,6 +404,10 @@ input:focus, textarea:focus {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  flex-shrink: 0;
 }
 .chat-footer input { margin-bottom: 0; background: var(--surface); }
 .icon-btn.send { background: var(--text); color: var(--bg); }
@@ -430,12 +436,10 @@ input:focus, textarea:focus {
 }
 .feed-actions button.active { color: var(--text); font-weight: 600; }
 
-/* Профиль */
 .profile-header { display: flex; flex-direction: column; align-items: center; padding: 20px 16px; }
 .profile-header h2 { font-size: 16px; font-weight: 700; }
 .profile-username { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; font-weight: 500; }
 
-/* Кнопки профиля в ряд */
 .profile-actions-row {
   display: flex;
   justify-content: center;
@@ -484,7 +488,6 @@ input:focus, textarea:focus {
 .ctx-item.danger { color: var(--danger); }
 .ctx-item.danger:hover { background: var(--danger-light); }
 
-/* Нативные модалки */
 dialog.modal {
   border: none; background: transparent; width: 100%; height: 100%;
   max-width: 100%; max-height: 100%; align-items: flex-end; justify-content: center; display: none;
@@ -506,7 +509,6 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-/* Оверлей поиска */
 .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 200; display: flex; flex-direction: column; }
 .search-box { padding: 10px; display: flex; gap: 6px; background: var(--bg); border-bottom: 1px solid var(--border); }
 .search-box input { margin-bottom: 0; }
@@ -520,35 +522,52 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2
 .toast.show { opacity: 0.95; transform: translate(-50%, 0); }
 
 /* ==========================================================================
-   ⚙️ АДАПТИВНОСТЬ: МОБИЛЬНАЯ VS ДЕСКТОПНАЯ ВЕРСИЯ
+   ⚙️ АДАПТИВНОСТЬ: МОБИЛЬНАЯ VS ДЕСКТОПНАЯ ВЕРСИЯ (ЕДИНЫЙ БЛОК)
    ========================================================================= */
 
-/* ТАК БУДЕТ НА СМАРТФОНАХ (экраны до 650px) */
+/* МОБИЛЬНЫЕ (экраны до 650px) */
 @media (max-width: 650px) {
-  /* По умолчанию прячем панель чата на мобилке, если у нее есть класс hidden-mobile */
   .chat-panel.hidden-mobile {
     display: none !important;
   }
 
-  /* Когда JS убирает класс hidden-mobile, чат раскрывается на ВЕСЬ экран поверх списков */
   .chat-panel:not(.hidden-mobile) {
     display: flex !important;
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100% !important;
     height: 100% !important;
     z-index: 150;
+    background: var(--bg);
+  }
+  
+  .chat-panel .chat-header {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 20;
+  }
+  
+  .chat-panel .chat-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg);
+    z-index: 20;
+  }
+  
+  .chat-panel .msg-area {
+    flex: 1;
+    overflow-y: auto;
   }
 }
 
-/* ТАК БУДЕТ НА КОМПЬЮТЕРАХ (экраны от 651px) */
+/* ДЕСКТОПНЫЕ (экраны от 651px) */
 @media (min-width: 651px) {
   #app-screen {
-    grid-template-columns: 340px 1fr; /* Включаем двухколоночную сетку на ПК */
+    grid-template-columns: 340px 1fr;
   }
 
-  /* Предотвращаем перебивание Grid-сетки свойством flex или block при активном экране */
   #app-screen.active {
     display: grid !important;
   }
@@ -557,84 +576,36 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2
     border-right: 1px solid var(--border);
   }
 
-  /* На ПК правая панель чата видна ВСЕГДА, даже если в фоне висит класс hidden-mobile */
   .chat-panel.hidden-mobile {
     display: flex !important;
   }
 
-  /* Прячем мобильную кнопку "Назад", так как на ПК видны обе колонки одновременно */
   .visible-mobile {
     display: none !important;
   }
 
-  /* Модалки по центру экрана, а не шторкой снизу */
-  dialog.modal { align-items: center; }
-  .modal-box { border-radius: var(--radius-lg); animation: fadeIn 0.15s ease; }
+  dialog.modal {
+    align-items: center;
+  }
+  
+  .modal-box {
+    border-radius: var(--radius-lg);
+    animation: fadeIn 0.15s ease;
+  }
 }
 
 /* ==========================================================================
-   ⚙️ АДАПТИВНОСТЬ: МОБИЛЬНАЯ VS ДЕСКТОПНАЯ ВЕРСИЯ
-   ========================================================================= */
-
-/* ТАК БУДЕТ НА СМАРТФОНАХ (экраны до 650px) */
-@media (max-width: 650px) {
-  /* По умолчанию прячем панель чата на мобилке, если у нее есть класс hidden-mobile */
-  .chat-panel.hidden-mobile {
-    display: none !important;
-  }
-
-  /* Когда JS убирает класс hidden-mobile, чат раскрывается на ВЕСЬ экран поверх списков */
-  .chat-panel:not(.hidden-mobile) {
-    display: flex !important;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100% !important;
-    z-index: 150;
-  }
-}
-
-/* ТАК БУДЕТ НА КОМПЬЮТЕРАХ (экраны от 651px) */
-@media (min-width: 651px) {
-  #app-screen {
-    grid-template-columns: 340px 1fr; /* Включаем двухколоночную сетку на ПК */
-  }
-
-  /* Предотвращаем перебивание Grid-сетки свойством flex или block при активном экране */
-  #app-screen.active {
-    display: grid !important;
-  }
-
-  .sidebar-panel {
-    border-right: 1px solid var(--border);
-  }
-
-  /* На ПК правая панель чата видна ВСЕГДА, даже если в фоне висит класс hidden-mobile */
-  .chat-panel.hidden-mobile {
-    display: flex !important;
-  }
-
-  /* Прячем мобильную кнопку "Назад", так как на ПК видны обе колонки одновременно */
-  .visible-mobile {
-    display: none !important;
-  }
-
-  /* Модалки по центру экрана, а не шторкой снизу */
-  dialog.modal { align-items: center; }
-  .modal-box { border-radius: var(--radius-lg); animation: fadeIn 0.15s ease; }
-}
-
-/* ==========================================================================
-   💥 УТИЛИТАРНЫЕ КЛАССЫ ПЕРЕКЛЮЧЕНИЯ ИНТЕРФЕЙСА (ДЛЯ JS)
+   💥 УТИЛИТАРНЫЕ КЛАССЫ ПЕРЕКЛЮЧЕНИЯ ИНТЕРФЕЙСА
    ========================================================================= */
 .hidden { 
   display: none !important; 
 }
 
-/* Для мобильных экранов active дает flex, чтобы корректно центровать карточку логина */
 .active { 
   display: flex !important; 
 }
 
-@keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+@keyframes fadeIn { 
+  from { opacity: 0; transform: scale(0.98); } 
+  to { opacity: 1; transform: scale(1); } 
+}
