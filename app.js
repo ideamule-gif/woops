@@ -545,7 +545,7 @@ window.deletePost = async (postId) => {
 };
 
 // ============================================
-// 🛠️ УТИЛИТЫ И UI
+// 🛠️ УТИЛИТЫ И UI (ЛОГИКА ЭМОДЗИ)
 // ============================================
 function initEmojiPicker() {
   if (!emojiPicker) return;
@@ -553,17 +553,31 @@ function initEmojiPicker() {
   EMOJIS.forEach(emoji => {
     const btn = document.createElement('button');
     btn.textContent = emoji;
-    btn.onclick = () => {
+    
+    // ИСПРАВЛЕНИЕ: Запрещаем полю ввода терять фокус при клике на смайлик
+    btn.onmousedown = (e) => {
+      e.preventDefault();
+    };
+
+    btn.onclick = (e) => {
+      e.preventDefault();
       const start = textInput.selectionStart;
       textInput.value = textInput.value.slice(0, start) + emoji + textInput.value.slice(start);
-      textInput.focus();
-      emojiPicker.classList.remove('active');
+      
+      // Сдвигаем курсор мыши за вставленный эмодзи, не трогая клавиатуру
+      const newCursorPos = start + emoji.length;
+      textInput.setSelectionRange(newCursorPos, newCursorPos);
     };
     emojiPicker.appendChild(btn);
   });
 }
 
 if (emojiToggle) {
+  // ИСПРАВЛЕНИЕ: Запрещаем скрытие клавиатуры при нажатии на саму кнопку вызова эмодзи
+  emojiToggle.onmousedown = (e) => {
+    e.preventDefault();
+  };
+
   emojiToggle.onclick = (e) => {
     e.stopPropagation();
     if (emojiPicker) emojiPicker.classList.toggle('active');
