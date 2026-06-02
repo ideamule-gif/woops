@@ -10,7 +10,7 @@
 </head>
 <body>
 
-  <div id="auth-screen" class="screen active">
+  <div id="auth-screen" class="active">
     <div class="auth-card">
       <h1 class="logo">Woops</h1>
       <p>Простой и современный мессенджер</p>
@@ -30,7 +30,7 @@
     </div>
   </div>
 
-  <div id="app-screen" class="screen hidden">
+  <div id="app-screen" class="hidden">
     
     <aside class="sidebar-panel">
       <header class="app-header">
@@ -71,6 +71,7 @@
 
         <div id="tab-feed" class="tab hidden">
           <div class="section-header">
+            <input type="text" id="contact-search-feed" placeholder="Фильтр ленты..." style="display:none;">
             <span class="section-caption">Публикации</span>
             <button id="new-post-btn" class="btn-text-sm">Опубликовать</button>
           </div>
@@ -130,7 +131,7 @@
         <p>Выберите чат, чтобы начать общение</p>
       </div>
       
-      <div id="chat-active-view" class="chat-area-container style-hidden">
+      <div id="chat-active-view" class="chat-area-container hidden">
         <header class="chat-header">
           <button id="back-btn" class="icon-btn visible-mobile">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -157,7 +158,7 @@
 
   </div>
 
-  <div id="msg-context-menu" class="context-menu style-hidden">
+  <div id="msg-context-menu" class="context-menu hidden">
     <button id="ctx-edit-btn" class="ctx-item">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <span>Изменить</span>
@@ -167,17 +168,6 @@
       <span>Удалить полностью</span>
     </button>
   </div>
-
-  <dialog id="modal-add-contact" class="modal">
-    <div class="modal-box">
-      <h3>Добавить в контакты</h3>
-      <input type="text" id="search-contact-input" placeholder="Введите имя или email...">
-      <div id="contact-search-results" class="search-list"></div>
-      <div class="modal-actions">
-        <button class="btn secondary sm" onclick="this.closest('dialog').close()">Отмена</button>
-      </div>
-    </div>
-  </dialog>
 
   <dialog id="modal-new-post" class="modal">
     <div class="modal-box">
