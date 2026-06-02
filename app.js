@@ -1,24 +1,6 @@
-
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body {
-                  background-color: white; /* Ensure the iframe has a white background */
-                }
-
-                
-              </style>
-                        </head>
-                        <body>
-                            
-
-              <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
@@ -147,10 +129,10 @@ onAuthStateChanged(auth, (user) => {
 if (loginBtn) {
   loginBtn.onclick = async () => {
     try {
-      authError.textContent = '';
+      if (authError) authError.textContent = '';
       await signInWithEmailAndPassword(auth, authEmail.value.trim(), authPassword.value);
     } catch (e) {
-      authError.textContent = 'Ошибка входа: ' + (e.message.includes('auth/') ? 'Неверный email или пароль' : e.message);
+      if (authError) authError.textContent = 'Ошибка входа: ' + (e.message.includes('auth/') ? 'Неверный email или пароль' : e.message);
     }
   };
 }
@@ -158,7 +140,7 @@ if (loginBtn) {
 if (registerBtn) {
   registerBtn.onclick = async () => {
     try {
-      authError.textContent = '';
+      if (authError) authError.textContent = '';
       const userCred = await createUserWithEmailAndPassword(auth, authEmail.value.trim(), authPassword.value);
       const defaultAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
       await setDoc(doc(db, 'users', userCred.user.uid), {
@@ -172,7 +154,7 @@ if (registerBtn) {
       });
       showToast('Аккаунт создан! 🎉');
     } catch (e) {
-      authError.textContent = 'Ошибка регистрации: ' + (e.message.includes('auth/') ? 'Email уже используется или слабый пароль' : e.message);
+      if (authError) authError.textContent = 'Ошибка регистрации: ' + (e.message.includes('auth/') ? 'Email уже используется или слабый пароль' : e.message);
     }
   };
 }
@@ -549,7 +531,7 @@ if (saveEditPost) {
 }
 
 window.deletePost = async (postId) => {
-  if (!confirm('Удалить этот post?')) return;
+  if (!confirm('Удалить этот пост?')) return;
   try {
     await deleteDoc(doc(db, 'posts', postId));
     showToast('Пост удалён');
@@ -644,7 +626,3 @@ function cleanupListeners() {
 // Инициализация
 initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
-              </script>
-                        </body>
-                        </html>
-                    
