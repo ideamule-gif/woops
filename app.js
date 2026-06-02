@@ -33,8 +33,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Ждем загрузки DOM перед поиском элементов
-document.addEventListener('DOMContentLoaded', () => {
+//  УБРАЛИ document.addEventListener('DOMContentLoaded'), так как это type="module"
 
 // 📦 DOM Elements
 const authScreen = document.getElementById('auth-screen');
@@ -47,7 +46,6 @@ const authError = document.getElementById('auth-error');
 const loginBtn = document.getElementById('login-btn');
 const registerBtn = document.getElementById('register-btn');
 const logoutBtn = document.getElementById('logout-btn');
-
 const tabTitle = document.getElementById('tab-title');
 const navBtns = document.querySelectorAll('.nav-btn');
 const tabs = document.querySelectorAll('.tab');
@@ -228,7 +226,8 @@ function renderAvatarSelector() {
   });
 }
 
-closeProfileModal.onclick = cancelProfile.onclick = () => profileModal.close();
+if (closeProfileModal) closeProfileModal.onclick = () => profileModal?.close(); 
+if (cancelProfile) cancelProfile.onclick = () => profileModal?.close();
 
 saveProfile.onclick = async () => {
   if (!currentUser) return;
@@ -499,7 +498,8 @@ window.openEditPost = (postId, currentText) => {
   editPostModal.showModal();
 };
 
-closeEditPostModal.onclick = cancelEditPost.onclick = () => {
+if (closeEditPostModal) closeEditPostModal.onclick = () => editPostModal?.close();
+if (cancelEditPost) cancelEditPost.onclick = () => editPostModal?.close();
   editPostModal.close();
   currentEditPostId = null;
 };
@@ -613,9 +613,6 @@ function cleanupListeners() {
 // Инициализация
 initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
-
-}); // ← Закрывающая скобка для DOMContentLoaded
-
 
               </script>
                         </body>
