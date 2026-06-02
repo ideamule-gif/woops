@@ -219,22 +219,27 @@ input::placeholder, textarea::placeholder {
     width: 100%;
 }
 
+/* Найти .icon-btn и заменить на это: */
 .icon-btn {
-    background: none;
-    border: none;
-    font-size: 22px;
+    background: transparent; 
+    border: 1px solid var(--glass-border);
     color: var(--text);
-    padding: 8px;
-    cursor: pointer;
-    border-radius: var(--radius-full);
-    transition: var(--transition);
-    display: flex;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: var(--transition);
+    flex-shrink: 0;
+    opacity: 0.6; /* Приглушаем кнопку в покое */
 }
-
 .icon-btn:hover {
     background: var(--glass-bg-hover);
+    border-color: var(--text-muted);
+    opacity: 1; /* Подсвечиваем при наведении */
 }
 
 .icon-btn:active {
@@ -596,42 +601,46 @@ input::placeholder, textarea::placeholder {
     text-align: right;
 }
 
+/* Найти этот блок стилей действий и заменить целиком: */
 .msg-actions {
     position: absolute;
-    top: -10px;
-    right: 0;
+    top: -14px;
+    right: 8px;
     background: var(--surface);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    padding: 4px;
+    padding: 2px;
     display: none;
-    gap: 4px;
-    box-shadow: var(--shadow);
+    gap: 2px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     z-index: 10;
 }
-
-.msg:hover .msg-actions,
-.msg:active .msg-actions {
-    display: flex;
-}
+.msg:hover .msg-actions, .msg:active .msg-actions { display: flex; }
 
 .msg-action-btn {
-    background: none;
+    background: transparent;
     border: none;
     color: var(--text-muted);
-    font-size: 14px;
-    padding: 4px 6px;
+    font-size: 11px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     border-radius: 4px;
+    transition: var(--transition);
 }
-
 .msg-action-btn:hover {
     background: var(--glass-bg-hover);
     color: var(--text);
 }
+.msg-action-btn.delete { color: var(--text-muted); }
 
+/* Эффект удаления: загорается нежным пастельно-красным только при наведении */
 .msg-action-btn.delete:hover {
-    color: var(--danger);
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
 }
 
 /* Chat footer */
