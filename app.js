@@ -33,6 +33,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Ждем загрузки DOM перед поиском элементов
+document.addEventListener('DOMContentLoaded', () => {
+
 // 📦 DOM Elements
 const authScreen = document.getElementById('auth-screen');
 const mainScreen = document.getElementById('main-screen');
@@ -610,6 +613,8 @@ function cleanupListeners() {
 // Инициализация
 initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
+
+}); // ← Закрывающая скобка для DOMContentLoaded
 
 
               </script>
