@@ -119,7 +119,7 @@ onAuthStateChanged(auth, (user) => {
   } else {
     currentUser = null;
     userProfile = {};
-    if (authScreen) authScreen.classList.add('active');
+    if (authScreen) authScreen.add ? authScreen.add('active') : authScreen.classList.add('active');
     if (mainScreen) mainScreen.classList.remove('active');
     if (chatScreen) chatScreen.classList.remove('active');
     cleanupListeners();
@@ -271,7 +271,7 @@ function loadUsersList(searchTerm = '') {
     chatList.innerHTML = '';
     let hasUsers = false;
     snap.forEach(docSnap => {
-      if (docSnap.id === currentUser.uid) return;
+      if (docSnap.id === currentUser?.uid) return;
       hasUsers = true;
       const user = docSnap.data();
       const li = createUserListItem(docSnap.id, user);
@@ -395,7 +395,6 @@ window.deleteMessage = async (msgId) => {
 };
 
 if (sendBtn) {
-  // Защищаем текстовое поле от потери фокуса при нажатии на кнопку
   sendBtn.onmousedown = (e) => {
     e.preventDefault(); 
   };
@@ -411,7 +410,7 @@ if (sendBtn) {
         text,
         createdAt: serverTimestamp()
       });
-      textInput.value = ''; // Просто очищаем поле, фокус теперь не пропадет сам по себе
+      textInput.value = '';
     } catch (e) {
       showToast('Не удалось отправить', 'error');
     }
@@ -554,7 +553,6 @@ function initEmojiPicker() {
     const btn = document.createElement('button');
     btn.textContent = emoji;
     
-    // ИСПРАВЛЕНИЕ: Запрещаем полю ввода терять фокус при клике на смайлик
     btn.onmousedown = (e) => {
       e.preventDefault();
     };
@@ -564,7 +562,6 @@ function initEmojiPicker() {
       const start = textInput.selectionStart;
       textInput.value = textInput.value.slice(0, start) + emoji + textInput.value.slice(start);
       
-      // Сдвигаем курсор мыши за вставленный эмодзи, не трогая клавиатуру
       const newCursorPos = start + emoji.length;
       textInput.setSelectionRange(newCursorPos, newCursorPos);
     };
@@ -573,7 +570,6 @@ function initEmojiPicker() {
 }
 
 if (emojiToggle) {
-  // ИСПРАВЛЕНИЕ: Запрещаем скрытие клавиатуры при нажатии на саму кнопку вызова эмодзи
   emojiToggle.onmousedown = (e) => {
     e.preventDefault();
   };
