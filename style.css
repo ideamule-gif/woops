@@ -520,14 +520,35 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2
 .toast.show { opacity: 0.95; transform: translate(-50%, 0); }
 
 /* ==========================================================================
-   🖥️ МЕДИАЗАПРОСЫ ДЛЯ СИНХРОНИЗАЦИИ КОМПЬЮТЕРНОЙ ВЕРСИИ
+   ⚙️ АДАПТИВНОСТЬ: МОБИЛЬНАЯ VS ДЕСКТОПНАЯ ВЕРСИЯ
    ========================================================================= */
+
+/* ТАК БУДЕТ НА СМАРТФОНАХ (экраны до 650px) */
+@media (max-width: 650px) {
+  /* По умолчанию прячем панель чата на мобилке, если у нее есть класс hidden-mobile */
+  .chat-panel.hidden-mobile {
+    display: none !important;
+  }
+
+  /* Когда JS убирает класс hidden-mobile, чат раскрывается на ВЕСЬ экран поверх списков */
+  .chat-panel:not(.hidden-mobile) {
+    display: flex !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 150;
+  }
+}
+
+/* ТАК БУДЕТ НА КОМПЬЮТЕРАХ (экраны от 651px) */
 @media (min-width: 651px) {
   #app-screen {
     grid-template-columns: 340px 1fr; /* Включаем двухколоночную сетку на ПК */
   }
 
-  /* Исправление: предотвращаем перебивание Grid-сетки свойством flex */
+  /* Предотвращаем перебивание Grid-сетки свойством flex или block при активном экране */
   #app-screen.active {
     display: grid !important;
   }
@@ -536,12 +557,65 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2
     border-right: 1px solid var(--border);
   }
 
-  /* На ПК правая панель чата всегда видна */
+  /* На ПК правая панель чата видна ВСЕГДА, даже если в фоне висит класс hidden-mobile */
   .chat-panel.hidden-mobile {
     display: flex !important;
   }
 
-  /* Прячем кнопку назад, она не нужна в двух колонках */
+  /* Прячем мобильную кнопку "Назад", так как на ПК видны обе колонки одновременно */
+  .visible-mobile {
+    display: none !important;
+  }
+
+  /* Модалки по центру экрана, а не шторкой снизу */
+  dialog.modal { align-items: center; }
+  .modal-box { border-radius: var(--radius-lg); animation: fadeIn 0.15s ease; }
+}
+
+/* ==========================================================================
+   ⚙️ АДАПТИВНОСТЬ: МОБИЛЬНАЯ VS ДЕСКТОПНАЯ ВЕРСИЯ
+   ========================================================================= */
+
+/* ТАК БУДЕТ НА СМАРТФОНАХ (экраны до 650px) */
+@media (max-width: 650px) {
+  /* По умолчанию прячем панель чата на мобилке, если у нее есть класс hidden-mobile */
+  .chat-panel.hidden-mobile {
+    display: none !important;
+  }
+
+  /* Когда JS убирает класс hidden-mobile, чат раскрывается на ВЕСЬ экран поверх списков */
+  .chat-panel:not(.hidden-mobile) {
+    display: flex !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 150;
+  }
+}
+
+/* ТАК БУДЕТ НА КОМПЬЮТЕРАХ (экраны от 651px) */
+@media (min-width: 651px) {
+  #app-screen {
+    grid-template-columns: 340px 1fr; /* Включаем двухколоночную сетку на ПК */
+  }
+
+  /* Предотвращаем перебивание Grid-сетки свойством flex или block при активном экране */
+  #app-screen.active {
+    display: grid !important;
+  }
+
+  .sidebar-panel {
+    border-right: 1px solid var(--border);
+  }
+
+  /* На ПК правая панель чата видна ВСЕГДА, даже если в фоне висит класс hidden-mobile */
+  .chat-panel.hidden-mobile {
+    display: flex !important;
+  }
+
+  /* Прячем мобильную кнопку "Назад", так как на ПК видны обе колонки одновременно */
   .visible-mobile {
     display: none !important;
   }
@@ -558,9 +632,9 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2
   display: none !important; 
 }
 
-/* На мобильных устройствах active дает flex, на десктопе медиазапрос выше переопределит его в grid */
+/* Для мобильных экранов active дает flex, чтобы корректно центровать карточку логина */
 .active { 
-  display: block !important; /* На мобилке разворачивает блоки на всю ширину */
+  display: flex !important; 
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
