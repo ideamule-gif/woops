@@ -13,10 +13,11 @@
     <!-- Экран авторизации -->
     <div id="auth-screen" class="screen active">
         <div class="auth-card">
-            <h2>Woops</h2>
+            <h2>Woops 👋</h2>
             <p>Вход в аккаунт</p>
             <input type="email" id="auth-email" placeholder="Email">
             <input type="password" id="auth-password" placeholder="Пароль">
+            <div id="auth-error" class="error-text"></div>
             <button id="login-btn" class="btn primary full-width">Войти</button>
             <button id="register-btn" class="btn secondary full-width" style="margin-top: 10px;">Регистрация</button>
         </div>
@@ -148,4 +149,11 @@
                 <button id="save-edit-post" class="btn primary">Сохранить</button>
             </div>
         </div>
-    </
+    </dialog>
+
+    <!-- Уведомление -->
+    <div id="toast" class="toast"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
