@@ -680,6 +680,39 @@ function cleanupListeners() {
   if (unsubOwnProfile) unsubOwnProfile();
 }
 
+// ============================================
+// 🌓 ЛОГИКА СМЕНЫ ТЕМЫ (ДЕНЬ / НОЧЬ)
+// ============================================
+const themeToggle = document.getElementById('theme-toggle');
+
+// Проверяем, была ли сохранена тема ранее
+const savedTheme = localStorage.getItem('theme');
+
+// Если сохранена светлая тема — активируем её при загрузке
+if (savedTheme === 'light') {
+  document.body.classList.add('light-theme');
+  if (themeToggle) themeToggle.textContent = '☀️';
+} else {
+  if (themeToggle) themeToggle.textContent = '🌙';
+}
+
+if (themeToggle) {
+  themeToggle.onclick = () => {
+    // Переключаем класс light-theme на теге body
+    const isLight = document.body.classList.toggle('light-theme');
+    
+    if (isLight) {
+      themeToggle.textContent = '☀️'; // Меняем иконку на солнце
+      localStorage.setItem('theme', 'light'); // Запоминаем выбор
+      showToast('Включена дневная тема ☀️');
+    } else {
+      themeToggle.textContent = '🌙'; // Меняем иконку на луну
+      localStorage.setItem('theme', 'dark'); // Запоминаем выбор
+      showToast('Включена ночная тема 🌙');
+    }
+  };
+}
+
 // Инициализация
 initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
