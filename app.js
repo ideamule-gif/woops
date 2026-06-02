@@ -395,6 +395,11 @@ window.deleteMessage = async (msgId) => {
 };
 
 if (sendBtn) {
+  // Защищаем текстовое поле от потери фокуса при нажатии на кнопку
+  sendBtn.onmousedown = (e) => {
+    e.preventDefault(); 
+  };
+
   sendBtn.onclick = async () => {
     const text = textInput.value.trim();
     if (!text || !currentChat) return;
@@ -406,8 +411,7 @@ if (sendBtn) {
         text,
         createdAt: serverTimestamp()
       });
-      textInput.value = '';
-      textInput.focus();
+      textInput.value = ''; // Просто очищаем поле, фокус теперь не пропадет сам по себе
     } catch (e) {
       showToast('Не удалось отправить', 'error');
     }
