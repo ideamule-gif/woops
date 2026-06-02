@@ -5,7 +5,9 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+/* ==================== ТЕМЫ ОФОРМЛЕНИЯ ==================== */
 :root {
+    /* Твоя стандартная ночная тема (уже есть в коде) */
     --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
     --glass-bg: rgba(255, 255, 255, 0.05);
     --glass-bg-hover: rgba(255, 255, 255, 0.1);
@@ -20,12 +22,45 @@
     --danger-hover: #dc2626;
     --success: #22c55e;
     --warning: #eab308;
+    
+    /* Переменные радиусов и теней (остаются прежними) */
     --radius-sm: 8px;
     --radius-md: 16px;
     --radius-lg: 24px;
     --radius-full: 9999px;
-    --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Красивая дневная (светлая) тема */
+body.light-theme {
+    --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    --glass-bg: rgba(15, 23, 42, 0.04);
+    --glass-bg-hover: rgba(15, 23, 42, 0.08);
+    --glass-border: rgba(15, 23, 42, 0.08);
+    --surface: rgba(255, 255, 255, 0.85);
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.15);
+}
+
+/* Эффект плавного изменения цветов при переключении */
+body, body *, .screen, .chat-header, .input-container, .nav-bar, .msg, input, textarea {
+    transition: background 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* Небольшая корректировка для светлых входящих сообщений, чтобы они читались */
+body.light-theme .msg.in {
+    background: rgba(15, 23, 42, 0.06);
+}
+/* Чтобы шапка чата и инпуты в светлой теме не сливались */
+body.light-theme .chat-header, 
+body.light-theme .main-header {
+    background: rgba(255, 255, 255, 0.8);
+}
+body.light-theme .input-container,
+body.light-theme .nav-bar {
+    background: rgba(255, 255, 255, 0.7);
 }
 
 body {
