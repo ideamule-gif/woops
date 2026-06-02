@@ -107,6 +107,8 @@ function setupAuth() {
   const errorDiv = $('auth-error');
 
   const processAuth = (isRegister = false) => {
+    if (!emailInput || !passwordInput || !errorDiv) return;
+
     const email = emailInput.value.trim();
     const password = passwordInput.value;
 
@@ -156,12 +158,36 @@ function setupAuth() {
   $('register-btn')?.addEventListener('click', () => processAuth(true));
 }
 
+// Функция успешного переключения экранов интерфейса
+function loginSuccess(user) {
+  state.currentUser = user;
+  
+  // Безотказное монохромное переключение экранов
+  $('auth-screen')?.classList.add('hidden');
+  $('auth-screen')?.classList.remove('active');
+  
+  $('app-screen')?.classList.remove('hidden');
+  $('app-screen')?.classList.add('active');
+  
+  updateProfileDOM();
+  showToast(`Успешный вход: ${user.name}`);
+  
+  renderChats();
+  renderContacts();
+  renderFeed();
+}
+
 function updateProfileDOM() {
   if (!state.currentUser) return;
-  $('profile-name').innerText = state.currentUser.name;
-  $('profile-username-display').innerText = `@${state.currentUser.username || 'username'}`;
-  $('profile-status').innerText = state.currentUser.statusText || 'В сети';
-  $('profile-avatar').src = CONFIG.avatarApi + encodeURIComponent(state.currentUser.name);
+  const nameEl = $('profile-name');
+  const userEl = $('profile-username-display');
+  const statusEl = $('profile-status');
+  const avatarEl = $('profile-avatar');
+
+  if (nameEl) nameEl.innerText = state.currentUser.name;
+  if (userEl) userEl.innerText = `@${state.currentUser.username || 'username'}`;
+  if (statusEl) statusEl.innerText = state.currentUser.statusText || 'В сети';
+  if (avatarEl) avatarEl.src = CONFIG.avatarApi + encodeURIComponent(state.currentUser.name);
 }
 
 // ==========================================================================
@@ -180,16 +206,20 @@ function setupNavigation() {
 
       $$('.tab-content .tab').forEach(tab => tab.classList.replace('active', 'hidden'));
       const activeTabEl = $(`tab-${targetTab}`);
-      activeTabEl.classList.replace('hidden', 'active');
+      activeTabEl?.classList.replace('hidden', 'active');
 
-      $('header-title').innerText = titles[targetTab] || 'Woops';
+      const titleEl = $('header-title');
+      if (titleEl) titleEl.innerText = titles[targetTab] || 'Woops';
       state.activeTab = targetTab;
 
       // Скрываем или показываем кнопку глобального поиска в зависимости от экрана
-      if (targetTab === 'profile' || targetTab === 'feed') {
-        $('search-btn').style.display = 'none';
-      } else {
-        $('search-btn').style.display = 'flex';
+      const searchBtn = $('search-btn');
+      if (searchBtn) {
+        if (targetTab === 'profile' || targetTab === 'feed') {
+          searchBtn.style.display = 'none';
+        } else {
+          searchBtn.style.display = 'flex';
+        }
       }
 
       if (targetTab === 'profile') renderMyPosts();
@@ -206,24 +236,25 @@ function setupGlobalSearch() {
   const results = $('search-results');
 
   $('search-btn')?.addEventListener('click', () => {
-    overlay.classList.remove('hidden');
-    input.focus();
+    overlay?.classList.remove('hidden');
+    input?.focus();
   });
 
   $('close-search')?.addEventListener('click', () => {
-    overlay.classList.add('hidden');
-    input.value = '';
-    results.innerHTML = '';
+    overlay?.classList.add('hidden');
+    if (input) input.value = '';
+    if (results) results.innerHTML = '';
   });
 
   input?.addEventListener('input', () => {
     const q = input.value.toLowerCase().trim();
+    if (!results) return;
     results.innerHTML = '';
     if (!q) return;
 
     // Ищем совпадения по Имени, Email или уникальному @username
     const matched = state.users.filter(u => 
-      u.id !== state.currentUser.id && (
+      u.id !== state.currentUser?.id && (
         u.name.toLowerCase().includes(q) || 
         u.email.toLowerCase().includes(q) || 
         (u.username && u.username.toLowerCase().includes(q))
@@ -246,8 +277,8 @@ function setupGlobalSearch() {
         </div>
       `;
       li.addEventListener('click', () => {
-        overlay.classList.add('hidden');
-        input.value = '';
+        overlay?.classList.add('hidden');
+        if (input) input.value = '';
         results.innerHTML = '';
         openChat(user);
       });
@@ -257,8 +288,8 @@ function setupGlobalSearch() {
 
   // Логика лаконичного плюсика в контактах
   $('add-contact-btn')?.addEventListener('click', () => {
-    overlay.classList.remove('hidden');
-    input.focus();
+    overlay?.classList.remove('hidden');
+    input?.focus();
   });
 }
 
@@ -267,13 +298,14 @@ function renderContacts() {
   if (!container) return;
   container.innerHTML = '';
 
-  const filtered = state.users.filter(u => u.id !== state.currentUser.id);
+  const filtered = state.users.filter(u => u.id !== state.currentUser?.id);
+  const emptyEl = $('contacts-empty');
   
   if (filtered.length === 0) {
-    $('contacts-empty').style.display = 'block';
+    if (emptyEl) emptyEl.style.display = 'block';
     return;
   }
-  $('contacts-empty').style.display = 'none';
+  if (emptyEl) emptyEl.style.display = 'none';
 
   filtered.forEach(user => {
     const li = document.createElement('li');
@@ -295,25 +327,26 @@ function renderChats() {
   if (!container) return;
   container.innerHTML = '';
 
-  const chatPartners = state.users.filter(u => u.id !== state.currentUser.id);
+  const chatPartners = state.users.filter(u => u.id !== state.currentUser?.id);
   
   // Отбираем только тех партнеров, с кем есть хотя бы одно сообщение
   const activePartners = chatPartners.filter(user => {
     return state.messages.some(m => 
-      (m.from === state.currentUser.id && m.to === user.id) || 
-      (m.from === user.id && m.to === state.currentUser.id)
+      (m.from === state.currentUser?.id && m.to === user.id) || 
+      (m.from === user.id && m.to === state.currentUser?.id)
     );
   });
 
+  const emptyEl = $('chats-empty');
   if (activePartners.length === 0) {
-    $('chats-empty').style.display = 'block';
+    if (emptyEl) emptyEl.style.display = 'block';
     return;
   }
-  $('chats-empty').style.display = 'none';
+  if (emptyEl) emptyEl.style.display = 'none';
 
   activePartners.forEach(user => {
     const lastMsg = state.messages
-      .filter(m => (m.from === state.currentUser.id && m.to === user.id) || (m.from === user.id && m.to === state.currentUser.id))
+      .filter(m => (m.from === state.currentUser?.id && m.to === user.id) || (m.from === user.id && m.to === state.currentUser?.id))
       .pop();
 
     const text = lastMsg ? lastMsg.text : '';
@@ -341,29 +374,36 @@ function renderChats() {
 // ==========================================================================
 function openChat(user) {
   state.activeChatUser = user;
-  $('chat-name').innerText = user.name;
-  $('chat-status').innerText = 'в сети';
-  $('chat-avatar').src = CONFIG.avatarApi + encodeURIComponent(user.name);
+  
+  const nameEl = $('chat-name');
+  const statusEl = $('chat-status');
+  const avatarEl = $('chat-avatar');
+
+  if (nameEl) nameEl.innerText = user.name;
+  if (statusEl) statusEl.innerText = 'в сети';
+  if (avatarEl) avatarEl.src = CONFIG.avatarApi + encodeURIComponent(user.name);
 
   // Переключение экранов на мобильных устройствах
-  $('chat-screen').classList.remove('hidden-mobile');
-  $('chat-welcome-view').classList.add('style-hidden');
-  $('chat-active-view').classList.remove('style-hidden');
+  $('chat-screen')?.classList.remove('hidden-mobile');
+  $('chat-welcome-view')?.classList.add('style-hidden');
+  $('chat-active-view')?.classList.remove('style-hidden');
   
   renderMessages();
 }
 
 function setupChat() {
   $('back-btn')?.addEventListener('click', () => {
-    $('chat-screen').classList.add('hidden-mobile');
+    $('chat-screen')?.classList.add('hidden-mobile');
     state.activeChatUser = null;
     renderChats();
   });
 
   const sendMsg = () => {
     const input = $('text-input');
+    if (!input || !state.activeChatUser || !state.currentUser) return;
+    
     const text = input.value.trim();
-    if (!text || !state.activeChatUser) return;
+    if (!text) return;
 
     if (state.isEditingMode && state.selectedMsgId) {
       // Режим редактирования существующего сообщения
@@ -402,7 +442,7 @@ function setupChat() {
 
 function renderMessages() {
   const area = $('msg-area');
-  if (!area || !state.activeChatUser) return;
+  if (!area || !state.activeChatUser || !state.currentUser) return;
   area.innerHTML = '';
 
   const activeId = state.activeChatUser.id;
@@ -446,7 +486,7 @@ function renderMessages() {
 }
 
 // ==========================================================================
-// 🛠️ ЛОГИКА РАБОТЫ КОНТЕКСТНОГО МЕНЮ СООБЩЕНИЙ
+// 🛠 *ЛОГИКА РАБОТЫ КОНТЕКСТНОГО МЕНЮ СООБЩЕНИЙ*
 // ==========================================================================
 function openContextMenu(x, y, msgId) {
   const menu = $('msg-context-menu');
@@ -465,11 +505,13 @@ function setupContextMenuActions() {
     const msgObj = state.messages.find(m => m.id === state.selectedMsgId);
     if (msgObj) {
       const input = $('text-input');
-      input.value = msgObj.text;
-      input.focus();
-      state.isEditingMode = true;
+      if (input) {
+        input.value = msgObj.text;
+        input.focus();
+        state.isEditingMode = true;
+      }
     }
-    $('msg-context-menu').classList.add('style-hidden');
+    $('msg-context-menu')?.classList.add('style-hidden');
   });
 
   // Действие: Полное удаление сообщения
@@ -478,11 +520,13 @@ function setupContextMenuActions() {
     state.messages = state.messages.filter(m => m.id !== state.selectedMsgId);
     state.selectedMsgId = null;
     state.isEditingMode = false;
-    $('text-input').value = '';
+    
+    const input = $('text-input');
+    if (input) input.value = '';
     
     renderMessages();
     showToast('Сообщение полностью удалено');
-    $('msg-context-menu').classList.add('style-hidden');
+    $('msg-context-menu')?.classList.add('style-hidden');
   });
 }
 
@@ -498,10 +542,13 @@ function setupContextMenuClose() {
 // 📝 ЛЕНТА ПУБЛИКАЦИЙ (FEED)
 // ==========================================================================
 function setupFeed() {
-  $('new-post-btn')?.addEventListener('click', () => $('modal-new-post').showModal());
+  $('new-post-btn')?.addEventListener('click', () => $('modal-new-post')?.showModal());
 
   $('publish-post-btn')?.addEventListener('click', () => {
-    const text = $('post-text').value.trim();
+    const postTextEl = $('post-text');
+    if (!postTextEl) return;
+
+    const text = postTextEl.value.trim();
     if (!text) return;
 
     state.posts.unshift({
@@ -513,8 +560,8 @@ function setupFeed() {
       liked: false
     });
 
-    $('post-text').value = '';
-    $('modal-new-post').close();
+    postTextEl.value = '';
+    $('modal-new-post')?.close();
     showToast('Публикация добавлена');
     renderFeed();
   });
@@ -525,11 +572,12 @@ function renderFeed() {
   if (!container) return;
   container.innerHTML = '';
 
+  const emptyEl = $('feed-empty');
   if (state.posts.length === 0) {
-    $('feed-empty').style.display = 'block';
+    if (emptyEl) emptyEl.style.display = 'block';
     return;
   }
-  $('feed-empty').style.display = 'none';
+  if (emptyEl) emptyEl.style.display = 'none';
 
   state.posts.forEach(post => {
     const card = createPostCard(post);
@@ -555,7 +603,7 @@ function createPostCard(post) {
   `;
 
   const likeBtn = div.querySelector('.like-btn');
-  likeBtn.addEventListener('click', () => {
+  likeBtn?.addEventListener('click', () => {
     post.liked = !post.liked;
     post.likes += post.liked ? 1 : -1;
     likeBtn.classList.toggle('active');
@@ -570,25 +618,32 @@ function createPostCard(post) {
 // ==========================================================================
 function setupProfile() {
   $('edit-profile-btn')?.addEventListener('click', () => {
-    $('edit-displayName').value = state.currentUser.name || '';
-    $('edit-username').value = state.currentUser.username || '';
-    $('edit-statusText').value = state.currentUser.statusText || '';
-    $('modal-edit-profile').showModal();
+    if (!state.currentUser) return;
+    const dispName = $('edit-displayName');
+    const uName = $('edit-username');
+    const sText = $('edit-statusText');
+
+    if (dispName) dispName.value = state.currentUser.name || '';
+    if (uName) uName.value = state.currentUser.username || '';
+    if (sText) sText.value = state.currentUser.statusText || '';
+    
+    $('modal-edit-profile')?.showModal();
   });
 
   $('save-profile-btn')?.addEventListener('click', () => {
-    const newName = $('edit-displayName').value.trim();
-    const newUsername = $('edit-username').value.replace(/[^a-zA-Z0-9__]/g, '').trim(); // Фильтруем никнейм от некорректных символов
-    const newStatus = $('edit-statusText').value.trim();
+    if (!state.currentUser) return;
+    const dispNameVal = $('edit-displayName')?.value.trim();
+    const uNameVal = $('edit-username')?.value.replace(/[^a-zA-Z0-9__]/g, '').trim(); 
+    const sTextVal = $('edit-statusText')?.value.trim();
 
-    if (!newName || !newUsername) {
+    if (!dispNameVal || !uNameVal) {
       showToast('Имя и никнейм обязательны');
       return;
     }
 
-    state.currentUser.name = newName;
-    state.currentUser.username = newUsername.toLowerCase();
-    state.currentUser.statusText = newStatus;
+    state.currentUser.name = dispNameVal;
+    state.currentUser.username = uNameVal.toLowerCase();
+    state.currentUser.statusText = sTextVal || '';
 
     // Синхронизируем обновленные данные во всех кэшированных сессиях
     const savedSession = localStorage.getItem(CONFIG.sessionKey);
@@ -597,11 +652,12 @@ function setupProfile() {
     }
 
     updateProfileDOM();
-    $('modal-edit-profile').close();
+    $('modal-edit-profile')?.close();
     showToast('Профиль сохранен');
   });
 
   $('share-profile-btn')?.addEventListener('click', () => {
+    if (!state.currentUser) return;
     const shareText = `Свяжись со мной в Woops! Мой ник: @${state.currentUser.username}`;
     if (navigator.share) {
       navigator.share({ title: 'Профиль Woops', text: shareText });
@@ -611,16 +667,16 @@ function setupProfile() {
     }
   });
 
-$('delete-profile-btn')?.addEventListener('click', () => {
+  $('delete-profile-btn')?.addEventListener('click', () => {
     localStorage.removeItem(CONFIG.sessionKey);
     state.currentUser = null;
     
     // Переключение обратно на вход
-    $('app-screen').classList.add('hidden');
-    $('app-screen').classList.remove('active');
+    $('app-screen')?.classList.add('hidden');
+    $('app-screen')?.classList.remove('active');
     
-    $('auth-screen').classList.remove('hidden');
-    $('auth-screen').classList.add('active');
+    $('auth-screen')?.classList.remove('hidden');
+    $('auth-screen')?.classList.add('active');
     
     showToast('Сессия завершена');
   });
@@ -628,7 +684,7 @@ $('delete-profile-btn')?.addEventListener('click', () => {
 
 function renderMyPosts() {
   const container = $('my-posts-feed');
-  if (!container) return;
+  if (!container || !state.currentUser) return;
   container.innerHTML = '';
 
   const myPosts = state.posts.filter(p => p.authorId === state.currentUser.id);
