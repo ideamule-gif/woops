@@ -1,6 +1,24 @@
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body {
+                  background-color: white; /* Ensure the iframe has a white background */
+                }
+
+                
+              </style>
+                        </head>
+                        <body>
+                            
+
+              <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
@@ -14,6 +32,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Ждем загрузки DOM перед поиском элементов
+document.addEventListener('DOMContentLoaded', () => {
 
 // 📦 DOM Elements
 const authScreen = document.getElementById('auth-screen');
@@ -110,8 +131,8 @@ const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉'
 onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
-    if (authScreen) authScreen.classList.remove('active');
-    if (mainScreen) mainScreen.classList.add('active');
+    authScreen.classList.remove('active');
+    mainScreen.classList.add('active');
     trackOwnProfile(user.uid);
     loadUsersList();
     loadFeed();
@@ -119,54 +140,48 @@ onAuthStateChanged(auth, (user) => {
   } else {
     currentUser = null;
     userProfile = {};
-    if (authScreen) authScreen.add ? authScreen.add('active') : authScreen.classList.add('active');
-    if (mainScreen) mainScreen.classList.remove('active');
-    if (chatScreen) chatScreen.classList.remove('active');
+    authScreen.classList.add('active');
+    mainScreen.classList.remove('active');
+    chatScreen.classList.remove('active');
     cleanupListeners();
   }
 });
 
-if (loginBtn) {
-  loginBtn.onclick = async () => {
-    try {
-      if (authError) authError.textContent = '';
-      await signInWithEmailAndPassword(auth, authEmail.value.trim(), authPassword.value);
-    } catch (e) {
-      if (authError) authError.textContent = 'Ошибка входа: ' + (e.message.includes('auth/') ? 'Неверный email или пароль' : e.message);
-    }
-  };
-}
+loginBtn.onclick = async () => {
+  try {
+    authError.textContent = '';
+    await signInWithEmailAndPassword(auth, authEmail.value.trim(), authPassword.value);
+  } catch (e) {
+    authError.textContent = 'Ошибка входа: ' + (e.message.includes('auth/') ? 'Неверный email или пароль' : e.message);
+  }
+};
 
-if (registerBtn) {
-  registerBtn.onclick = async () => {
-    try {
-      if (authError) authError.textContent = '';
-      const userCred = await createUserWithEmailAndPassword(auth, authEmail.value.trim(), authPassword.value);
-      const defaultAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
-      await setDoc(doc(db, 'users', userCred.user.uid), {
-        displayName: 'Новый пользователь',
-        status: 'online',
-        statusText: 'Привет! Я использую Woops',
-        avatar: defaultAvatar,
-        email: authEmail.value.trim(),
-        createdAt: serverTimestamp(),
-        lastSeen: serverTimestamp()
-      });
-      showToast('Аккаунт создан! 🎉');
-    } catch (e) {
-      if (authError) authError.textContent = 'Ошибка регистрации: ' + (e.message.includes('auth/') ? 'Email уже используется или слабый пароль' : e.message);
-    }
-  };
-}
+registerBtn.onclick = async () => {
+  try {
+    authError.textContent = '';
+    const userCred = await createUserWithEmailAndPassword(auth, authEmail.value.trim(), authPassword.value);
+    const defaultAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+    await setDoc(doc(db, 'users', userCred.user.uid), {
+      displayName: 'Новый пользователь',
+      status: 'online',
+      statusText: 'Привет! Я использую Woops',
+      avatar: defaultAvatar,
+      email: authEmail.value.trim(),
+      createdAt: serverTimestamp(),
+      lastSeen: serverTimestamp()
+    });
+    showToast('Аккаунт создан! 🎉');
+  } catch (e) {
+    authError.textContent = 'Ошибка регистрации: ' + (e.message.includes('auth/') ? 'Email уже используется или слабый пароль' : e.message);
+  }
+};
 
-if (logoutBtn) {
-  logoutBtn.onclick = async () => {
-    if (currentUser) {
-      await updateDoc(doc(db, 'users', currentUser.uid), { status: 'offline', lastSeen: serverTimestamp() });
-      await signOut(auth);
-    }
-  };
-}
+logoutBtn.onclick = async () => {
+  if (currentUser) {
+    await updateDoc(doc(db, 'users', currentUser.uid), { status: 'offline', lastSeen: serverTimestamp() });
+    await signOut(auth);
+  }
+};
 
 // ============================================
 // 👤 ПРОФИЛЬ
@@ -182,26 +197,23 @@ function trackOwnProfile(uid) {
 }
 
 function updateProfileUI(profile) {
-  if (profileAvatarView) profileAvatarView.src = profile.avatar || AVATARS[0];
-  if (profileNameView) profileNameView.textContent = profile.displayName || 'Без имени';
+  profileAvatarView.src = profile.avatar || AVATARS[0];
+  profileNameView.textContent = profile.displayName || 'Без имени';
   const statusMap = { online: 'В сети', busy: 'Занят', away: 'Отошёл', offline: 'Не в сети' };
-  if (profileStatusView) profileStatusView.textContent = profile.statusText || statusMap[profile.status] || 'В сети';
+  profileStatusView.textContent = profile.statusText || statusMap[profile.status] || 'В сети';
 }
 
-if (editProfileBtn) {
-  editProfileBtn.onclick = () => {
-    if (!currentUser) return;
-    if (editName) editName.value = userProfile.displayName || '';
-    if (editStatusText) editStatusText.value = userProfile.statusText || '';
-    if (editStatus) editStatus.value = userProfile.status || 'online';
-    selectedAvatar = userProfile.avatar || AVATARS[0];
-    renderAvatarSelector();
-    if (profileModal) profileModal.showModal();
-  };
-}
+editProfileBtn.onclick = () => {
+  if (!currentUser) return;
+  editName.value = userProfile.displayName || '';
+  editStatusText.value = userProfile.statusText || '';
+  editStatus.value = userProfile.status || 'online';
+  selectedAvatar = userProfile.avatar || AVATARS[0];
+  renderAvatarSelector();
+  profileModal.showModal();
+};
 
 function renderAvatarSelector() {
-  if (!avatarSelector) return;
   avatarSelector.innerHTML = '';
   AVATARS.forEach(url => {
     const img = document.createElement('img');
@@ -216,41 +228,36 @@ function renderAvatarSelector() {
   });
 }
 
-if (closeProfileModal) closeProfileModal.onclick = () => profileModal?.close();
-if (cancelProfile) cancelProfile.onclick = () => profileModal?.close();
+closeProfileModal.onclick = cancelProfile.onclick = () => profileModal.close();
 
-if (saveProfile) {
-  saveProfile.onclick = async () => {
-    if (!currentUser) return;
-    try {
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        displayName: editName.value.trim() || 'Пользователь',
-        status: editStatus.value,
-        statusText: editStatusText.value.trim(),
-        avatar: selectedAvatar,
-        lastSeen: serverTimestamp()
-      });
-      if (profileModal) profileModal.close();
-      showToast('Профиль обновлён ✨');
-    } catch (e) {
-      showToast('Ошибка сохранения', 'error');
-    }
-  };
-}
+saveProfile.onclick = async () => {
+  if (!currentUser) return;
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid), {
+      displayName: editName.value.trim() || 'Пользователь',
+      status: editStatus.value,
+      statusText: editStatusText.value.trim(),
+      avatar: selectedAvatar,
+      lastSeen: serverTimestamp()
+    });
+    profileModal.close();
+    showToast('Профиль обновлён ✨');
+  } catch (e) {
+    showToast('Ошибка сохранения', 'error');
+  }
+};
 
-if (deleteProfileBtn) {
-  deleteProfileBtn.onclick = async () => {
-    if (!currentUser) return;
-    if (!confirm('Вы уверены? Это действие нельзя отменить. Все ваши данные будут удалены.')) return;
-    try {
-      await deleteDoc(doc(db, 'users', currentUser.uid));
-      await deleteUser(currentUser);
-      showToast('Аккаунт удалён');
-    } catch (e) {
-      showToast('Ошибка удаления. Попробуйте выйти и войти снова.', 'error');
-    }
-  };
-}
+deleteProfileBtn.onclick = async () => {
+  if (!currentUser) return;
+  if (!confirm('Вы уверены? Это действие нельзя отменить. Все ваши данные будут удалены.')) return;
+  try {
+    await deleteDoc(doc(db, 'users', currentUser.uid));
+    await deleteUser(currentUser);
+    showToast('Аккаунт удалён');
+  } catch (e) {
+    showToast('Ошибка удаления. Попробуйте выйти и войти снова.', 'error');
+  }
+};
 
 // ============================================
 // 🔍 ПОИСК И СПИСОК ПОЛЬЗОВАТЕЛЕЙ
@@ -267,34 +274,29 @@ function loadUsersList(searchTerm = '') {
   }
 
   unsubUsers = onSnapshot(q, (snap) => {
-    if (!chatList) return;
     chatList.innerHTML = '';
     let hasUsers = false;
     snap.forEach(docSnap => {
-      if (docSnap.id === currentUser?.uid) return;
+      if (docSnap.id === currentUser.uid) return;
       hasUsers = true;
       const user = docSnap.data();
       const li = createUserListItem(docSnap.id, user);
       chatList.appendChild(li);
     });
-    if (chatsEmpty) {
-      chatsEmpty.style.display = hasUsers ? 'none' : 'block';
-      if (!hasUsers && searchTerm.trim()) {
-        chatsEmpty.textContent = 'Никого не найдено 😔';
-        chatsEmpty.style.display = 'block';
-      } else if (!hasUsers) {
-        chatsEmpty.textContent = 'Пока никого нет.\nНайдите друга через поиск! 🧐';
-        chatsEmpty.style.display = 'block';
-      }
+    chatsEmpty.style.display = hasUsers ? 'none' : 'block';
+    if (!hasUsers && searchTerm.trim()) {
+      chatsEmpty.textContent = 'Никого не найдено 😔';
+      chatsEmpty.style.display = 'block';
+    } else if (!hasUsers) {
+      chatsEmpty.textContent = 'Пока никого нет.\nНайдите друга через поиск! 🧐';
+      chatsEmpty.style.display = 'block';
     }
   });
 }
 
-if (userSearch) {
-  userSearch.addEventListener('input', (e) => {
-    loadUsersList(e.target.value);
-  });
-}
+userSearch.addEventListener('input', (e) => {
+  loadUsersList(e.target.value);
+});
 
 function createUserListItem(uid, user) {
   const li = document.createElement('li');
@@ -318,18 +320,17 @@ function createUserListItem(uid, user) {
 // ============================================
 async function openChat(userId, name, avatar) {
   currentChat = { id: userId, name, avatar };
-  if (window.innerWidth < 768 && mainScreen) mainScreen.classList.remove('active');
-  if (chatScreen) chatScreen.classList.add('active');
-  if (chatName) chatName.textContent = name || 'Пользователь';
-  if (chatAvatar) chatAvatar.src = avatar || AVATARS[0];
-  if (msgArea) msgArea.innerHTML = '<div class="empty-state">Загрузка сообщений...</div>';
+  if (window.innerWidth < 768) mainScreen.classList.remove('active');
+  chatScreen.classList.add('active');
+  chatName.textContent = name || 'Пользователь';
+  chatAvatar.src = avatar || AVATARS[0];
+  msgArea.innerHTML = '<div class="empty-state">Загрузка сообщений...</div>';
   
   const room = [currentUser.uid, userId].sort().join('_');
   const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
   
   if (unsubChat) unsubChat();
   unsubChat = onSnapshot(q, (snap) => {
-    if (!msgArea) return;
     msgArea.innerHTML = '';
     if (snap.empty) {
       msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
@@ -394,46 +395,37 @@ window.deleteMessage = async (msgId) => {
   }
 };
 
-if (sendBtn) {
-  sendBtn.onmousedown = (e) => {
-    e.preventDefault(); 
-  };
+sendBtn.onclick = async () => {
+  const text = textInput.value.trim();
+  if (!text || !currentChat) return;
+  const room = [currentUser.uid, currentChat.id].sort().join('_');
+  try {
+    await addDoc(collection(db, 'messages'), {
+      room,
+      senderId: currentUser.uid,
+      text,
+      createdAt: serverTimestamp()
+    });
+    textInput.value = '';
+    textInput.focus();
+  } catch (e) {
+    showToast('Не удалось отправить', 'error');
+  }
+};
 
-  sendBtn.onclick = async () => {
-    const text = textInput.value.trim();
-    if (!text || !currentChat) return;
-    const room = [currentUser.uid, currentChat.id].sort().join('_');
-    try {
-      await addDoc(collection(db, 'messages'), {
-        room,
-        senderId: currentUser.uid,
-        text,
-        createdAt: serverTimestamp()
-      });
-      textInput.value = '';
-    } catch (e) {
-      showToast('Не удалось отправить', 'error');
-    }
-  };
-}
+textInput.onkeypress = (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendBtn.click();
+  }
+};
 
-if (textInput) {
-  textInput.onkeypress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (sendBtn) sendBtn.click();
-    }
-  };
-}
-
-if (backBtn) {
-  backBtn.onclick = () => {
-    if (chatScreen) chatScreen.classList.remove('active');
-    if (mainScreen) mainScreen.classList.add('active');
-    if (unsubChat) unsubChat();
-    currentChat = null;
-  };
-}
+backBtn.onclick = () => {
+  chatScreen.classList.remove('active');
+  mainScreen.classList.add('active');
+  if (unsubChat) unsubChat();
+  currentChat = null;
+};
 
 // ============================================
 // 🌍 ЛЕНТА (FEED)
@@ -442,7 +434,6 @@ function loadFeed() {
   if (unsubFeed) unsubFeed();
   const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
   unsubFeed = onSnapshot(q, (snap) => {
-    if (!feedList) return;
     feedList.innerHTML = '';
     if (snap.empty) {
       feedList.innerHTML = '<div class="empty-state">Лента пуста. Напишите первый пост! 📝</div>';
@@ -484,54 +475,52 @@ function renderPost(postId, post) {
   return div;
 }
 
-if (postBtn) {
-  postBtn.onclick = async () => {
-    const text = feedInput.value.trim();
-    if (!text) return;
-    try {
-      await addDoc(collection(db, 'posts'), {
-        authorId: currentUser.uid,
-        authorName: userProfile.displayName || 'Пользователь',
-        authorAvatar: userProfile.avatar || AVATARS[0],
-        text,
-        createdAt: serverTimestamp()
-      });
-      feedInput.value = '';
-      showToast('Пост опубликован! 🚀');
-    } catch (e) {
-      showToast('Ошибка публикации', 'error');
-    }
-  };
-}
+postBtn.onclick = async () => {
+  const text = feedInput.value.trim();
+  if (!text) return;
+  try {
+    await addDoc(collection(db, 'posts'), {
+      authorId: currentUser.uid,
+      authorName: userProfile.displayName || 'Пользователь',
+      authorAvatar: userProfile.avatar || AVATARS[0],
+      text,
+      createdAt: serverTimestamp()
+    });
+    feedInput.value = '';
+    showToast('Пост опубликован! 🚀');
+  } catch (e) {
+    showToast('Ошибка публикации', 'error');
+  }
+};
 
 window.openEditPost = (postId, currentText) => {
   currentEditPostId = postId;
-  if (editPostText) editPostText.value = currentText;
-  if (editPostModal) editPostModal.showModal();
+  editPostText.value = currentText;
+  editPostModal.showModal();
 };
 
-if (closeEditPostModal) closeEditPostModal.onclick = () => editPostModal?.close();
-if (cancelEditPost) cancelEditPost.onclick = () => editPostModal?.close();
+closeEditPostModal.onclick = cancelEditPost.onclick = () => {
+  editPostModal.close();
+  currentEditPostId = null;
+};
 
-if (saveEditPost) {
-  saveEditPost.onclick = async () => {
-    if (!currentEditPostId) return;
-    const newText = editPostText.value.trim();
-    if (!newText) return;
-    try {
-      await updateDoc(doc(db, 'posts', currentEditPostId), {
-        text: newText,
-        isEdited: true,
-        editedAt: serverTimestamp()
-      });
-      if (editPostModal) editPostModal.close();
-      currentEditPostId = null;
-      showToast('Пост обновлён');
-    } catch (e) {
-      showToast('Ошибка обновления', 'error');
-    }
-  };
-}
+saveEditPost.onclick = async () => {
+  if (!currentEditPostId) return;
+  const newText = editPostText.value.trim();
+  if (!newText) return;
+  try {
+    await updateDoc(doc(db, 'posts', currentEditPostId), {
+      text: newText,
+      isEdited: true,
+      editedAt: serverTimestamp()
+    });
+    editPostModal.close();
+    currentEditPostId = null;
+    showToast('Пост обновлён');
+  } catch (e) {
+    showToast('Ошибка обновления', 'error');
+  }
+};
 
 window.deletePost = async (postId) => {
   if (!confirm('Удалить этот пост?')) return;
@@ -544,50 +533,35 @@ window.deletePost = async (postId) => {
 };
 
 // ============================================
-// 🛠️ УТИЛИТЫ И UI (ЛОГИКА ЭМОДЗИ)
+// 🛠️ УТИЛИТЫ И UI
 // ============================================
 function initEmojiPicker() {
-  if (!emojiPicker) return;
   emojiPicker.innerHTML = '';
   EMOJIS.forEach(emoji => {
     const btn = document.createElement('button');
     btn.textContent = emoji;
-    
-    btn.onmousedown = (e) => {
-      e.preventDefault();
-    };
-
-    btn.onclick = (e) => {
-      e.preventDefault();
+    btn.onclick = () => {
       const start = textInput.selectionStart;
       textInput.value = textInput.value.slice(0, start) + emoji + textInput.value.slice(start);
-      
-      const newCursorPos = start + emoji.length;
-      textInput.setSelectionRange(newCursorPos, newCursorPos);
+      textInput.focus();
+      emojiPicker.classList.remove('active');
     };
     emojiPicker.appendChild(btn);
   });
 }
 
-if (emojiToggle) {
-  emojiToggle.onmousedown = (e) => {
-    e.preventDefault();
-  };
-
-  emojiToggle.onclick = (e) => {
-    e.stopPropagation();
-    if (emojiPicker) emojiPicker.classList.toggle('active');
-  };
-}
+emojiToggle.onclick = (e) => {
+  e.stopPropagation();
+  emojiPicker.classList.toggle('active');
+};
 
 document.addEventListener('click', (e) => {
-  if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiToggle) {
+  if (!emojiPicker.contains(e.target) && e.target !== emojiToggle) {
     emojiPicker.classList.remove('active');
   }
 });
 
 function showToast(message, type = 'success') {
-  if (!toast) return;
   toast.textContent = message;
   toast.className = `toast show ${type}`;
   setTimeout(() => toast.classList.remove('show'), 3000);
@@ -622,11 +596,10 @@ navBtns.forEach(btn => {
     tabs.forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     const tabId = 'tab-' + btn.dataset.tab;
-    const targetTab = document.getElementById(tabId);
-    if (targetTab) targetTab.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
     
     const titles = { chats: 'Чаты', feed: 'Лента', profile: 'Профиль' };
-    if (tabTitle) tabTitle.textContent = titles[btn.dataset.tab] || 'Woops';
+    tabTitle.textContent = titles[btn.dataset.tab] || 'Woops';
   };
 });
 
@@ -640,3 +613,11 @@ function cleanupListeners() {
 // Инициализация
 initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
+
+}); // ← Закрывающая скобка для DOMContentLoaded
+
+
+              </script>
+                        </body>
+                        </html>
+                    
