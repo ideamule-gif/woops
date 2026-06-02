@@ -314,7 +314,7 @@ function createUserListItem(uid, user) {
 }
 
 // ============================================
-// ✉️ ЧАТ
+// ✉️ ЧАТ (БЕЗ МЕРЦАНИЯ И ПЕРЕРИСОВОК)
 // ============================================
 async function openChat(userId, name, avatar) {
   currentChat = { id: userId, name, avatar };
@@ -322,23 +322,71 @@ async function openChat(userId, name, avatar) {
   if (chatScreen) chatScreen.classList.add('active');
   if (chatName) chatName.textContent = name || 'Пользователь';
   if (chatAvatar) chatAvatar.src = avatar || AVATARS[0];
+  
+  // Показываем индикатор загрузки только один раз при входе в чат
   if (msgArea) msgArea.innerHTML = '<div class="empty-state">Загрузка сообщений...</div>';
   
   const room = [currentUser.uid, userId].sort().join('_');
   const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
   
   if (unsubChat) unsubChat();
+  
+  let isFirstLoad = true; // Переменная-флаг для первой отрисовки истории
+
   unsubChat = onSnapshot(q, (snap) => {
     if (!msgArea) return;
-    msgArea.innerHTML = '';
-    if (snap.empty) {
-      msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
+
+    // Сценарий 1: Первая загрузка чата — рендерим всю историю разом, чтобы не дергать верстку
+    if (isFirstLoad) {
+      msgArea.innerHTML = '';
+      if (snap.empty) {
+        msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
+      } else {
+        snap.forEach(docSnap => {
+          msgArea.appendChild(renderMessage(docSnap.id, docSnap.data()));
+        });
+        msgArea.scrollTop = msgArea.scrollHeight;
+      }
+      isFirstLoad = false;
       return;
     }
-    snap.forEach(docSnap => {
-      msgArea.appendChild(renderMessage(docSnap.id, docSnap.data()));
+
+    // Сценарий 2: Чат уже открыт — ловим только точечные изменения (новые смс, ред., удаление)
+    snap.docChanges().forEach((change) => {
+      // На всякий случай убираем заглушку пустого чата, если она есть
+      const emptyState = msgArea.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+
+      const msgId = change.doc.id;
+      const msgData = change.doc.data();
+
+      if (change.type === 'added') {
+        // Просто дописываем новое сообщение в конец, старые элементы вообще не трогаем!
+        const msgEl = renderMessage(msgId, msgData);
+        msgArea.appendChild(msgEl);
+        msgArea.scrollTop = msgArea.scrollHeight; // Плавный скролл к новому сообщению
+      } 
+      
+      else if (change.type === 'modified') {
+        // Находим измененное сообщение по его ID данных внутри атрибутов кнопок
+        const oldMsg = msgArea.querySelector(`[data-msg-id="${msgId}"]`);
+        if (oldMsg) {
+          const newMsg = renderMessage(msgId, msgData);
+          oldMsg.replaceWith(newMsg);
+        }
+      } 
+      
+      else if (change.type === 'removed') {
+        // Удаляем сообщение из верстки без перезагрузки экрана
+        const msgToDel = msgArea.querySelector(`[data-msg-id="${msgId}"]`);
+        if (msgToDel) msgToDel.remove();
+        
+        // Если удалили последнее сообщение и чат стал пустым — возвращаем заглушку
+        if (msgArea.children.length === 0) {
+          msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
+        }
+      }
     });
-    msgArea.scrollTop = msgArea.scrollHeight;
   });
 }
 
@@ -347,14 +395,19 @@ function renderMessage(msgId, msg) {
   const isOwn = msg.senderId === currentUser?.uid;
   div.className = `msg ${isOwn ? 'out' : 'in'} animate-fade-in`;
   
+  // Присваиваем дата-атрибут самому контейнеру сообщения, чтобы его было легко найти при обновлении/удалении
+  div.setAttribute('data-msg-id', msgId);
+  
   const time = formatTime(msg.createdAt);
   const editedTag = msg.isEdited ? ' <span style="font-size:10px; opacity:0.7">(изм.)</span>' : '';
   
   let actionsHtml = '';
   if (isOwn) {
+    // Безопасно экранируем кавычки для inline-функций onclick
+    const safeText = escapeHtml(msg.text).replace(/'/g, "\\'").replace(/"/g, '&quot;');
     actionsHtml = `
       <div class="msg-actions">
-        <button class="msg-action-btn" onclick="editMessage('${msgId}', '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">✏️</button>
+        <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')">✏️</button>
         <button class="msg-action-btn delete" onclick="deleteMessage('${msgId}')">🗑️</button>
       </div>
     `;
@@ -395,6 +448,11 @@ window.deleteMessage = async (msgId) => {
 };
 
 if (sendBtn) {
+  // Защищаем текстовое поле от потери фокуса при нажатии на кнопку отправки
+  sendBtn.onmousedown = (e) => {
+    e.preventDefault(); 
+  };
+
   sendBtn.onclick = async () => {
     const text = textInput.value.trim();
     if (!text || !currentChat) return;
@@ -406,8 +464,7 @@ if (sendBtn) {
         text,
         createdAt: serverTimestamp()
       });
-      textInput.value = '';
-      textInput.focus();
+      textInput.value = ''; // Просто очищаем поле, фокус и клавиатура остаются активными
     } catch (e) {
       showToast('Не удалось отправить', 'error');
     }
