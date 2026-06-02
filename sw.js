@@ -1,22 +1,4 @@
-
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body {
-                  background-color: white; /* Ensure the iframe has a white background */
-                }
-
-                
-              </style>
-                        </head>
-                        <body>
-                            
-
-              <script>
-                              const CACHE_NAME = 'woops-v3';
+const CACHE_NAME = 'woops-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -52,7 +34,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Пропускаем Firebase и внешние запросы (они должны идти по сети)
+  // Пропускаем Firebase и внешние запросы
   if (url.hostname.includes('firebase') || 
       url.hostname.includes('googleapis') || 
       url.hostname.includes('gstatic') ||
@@ -61,7 +43,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Стратегия Stale-While-Revalidate для статических файлов
+  // Стратегия Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
@@ -84,9 +66,3 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
-
-
-              </script>
-                        </body>
-                        </html>
-                    
