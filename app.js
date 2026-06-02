@@ -156,21 +156,6 @@ function setupAuth() {
   $('register-btn')?.addEventListener('click', () => processAuth(true));
 }
 
-// Автоматический вход, если юзер выбрал "Запомнить меня"
-function checkSavedSession() {
-  const savedUser = localStorage.getItem(CONFIG.sessionKey);
-  if (savedUser) {
-    try {
-      const user = JSON.parse(savedUser);
-      // Имитируем наполнение базы данных для корректного поиска сохраненного юзера
-      state.users = [user];
-      loginSuccess(user);
-    } catch (e) {
-      localStorage.removeItem(CONFIG.sessionKey);
-    }
-  }
-}
-
 function updateProfileDOM() {
   if (!state.currentUser) return;
   $('profile-name').innerText = state.currentUser.name;
