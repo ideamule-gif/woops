@@ -980,6 +980,344 @@ if (themeToggle) {
   };
 }
 
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Глобальное состояние для заметок
+let isGridView = true;
+let isSelectMode = false;
+let selectedNoteIds = new Set();
+let currentSharingNoteText = "";
+
+// DOM Элементы заметок
+const noteTextInput = document.getElementById('note-text-input');
+const noteTitleInput = document.getElementById('note-title-input');
+const saveNoteBtn = document.getElementById('save-note-btn');
+const notesWrapper = document.getElementById('notes-wrapper');
+const toggleNotesViewBtn = document.getElementById('toggle-notes-view-btn');
+
+// Элементы хедера для выделения
+const defaultHeaderView = document.querySelector('.header-default-view');
+const selectHeaderView = document.querySelector('.header-select-view');
+const notesSelectCount = document.getElementById('notes-select-count');
+const cancelNotesSelectBtn = document.getElementById('cancel-notes-select-btn');
+const deleteSelectedNotesBtn = document.getElementById('delete-selected-notes-btn');
+
+// Элементы экрана просмотра заметок
+const noteViewScreen = document.getElementById('note-view-screen');
+const noteViewBackBtn = document.getElementById('note-view-back-btn');
+const noteViewTitle = document.getElementById('note-view-title');
+const noteViewText = document.getElementById('note-view-text');
+const noteViewDate = document.getElementById('note-view-date');
+let activeViewingNoteId = null;
+
+// Элементы Bottom Sheet контактов
+const shareContactSheet = document.getElementById('share-contact-sheet');
+const shareContactsList = document.getElementById('share-contacts-list');
+const backdrop = document.querySelector('.bottom-sheet-backdrop');
+
+/* ========================================== */
+/* 1. ИНТЕРФЕЙС И СОЗДАНИЕ                    */
+/* ========================================== */
+
+// Показываем поле заголовка, когда пользователь начинает писать заметку
+if (noteTextInput) {
+  noteTextInput.addEventListener('focus', () => {
+    noteTitleInput.style.display = 'block';
+    noteTextInput.style.height = '80px';
+  });
+}
+
+// Скрываем заголовок обратно, если поле пустое и фокус ушел
+document.addEventListener('click', (e) => {
+  if (noteTextInput && !noteTextInput.contains(e.target) && !noteTitleInput.contains(e.target) && !saveNoteBtn.contains(e.target)) {
+    if (!noteTextInput.value.trim() && !noteTitleInput.value.trim()) {
+      noteTitleInput.style.display = 'none';
+      noteTextInput.style.height = '36px';
+    }
+  }
+});
+
+// Сохранение новой заметки на Firebase
+if (saveNoteBtn) {
+  saveNoteBtn.onclick = async () => {
+    const text = noteTextInput.value.trim();
+    const title = noteTitleInput.value.trim();
+    if (!text) return;
+
+    try {
+      await addDoc(collection(db, 'notes'), {
+        userId: currentUser.uid,
+        title: title || '',
+        text: text,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      noteTextInput.value = '';
+      noteTitleInput.value = '';
+      noteTitleInput.style.display = 'none';
+      noteTextInput.style.height = '36px';
+      showToast('Заметка сохранена! 📝');
+    } catch (e) {
+      showToast('Ошибка сохранения заметки', 'error');
+    }
+  };
+}
+
+// Переключение вида (Сетка / Список)
+if (toggleNotesViewBtn) {
+  toggleNotesViewBtn.onclick = () => {
+    isGridView = !isGridView;
+    if (isGridView) {
+      notesWrapper.className = 'notes-grid-view';
+      toggleNotesViewBtn.innerHTML = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+    } else {
+      notesWrapper.className = 'notes-list-view';
+      toggleNotesViewBtn.innerHTML = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
+    }
+  };
+}
+
+/* ========================================== */
+/* 2. ПОДГРУЗКА И ОТРЕНДЕРИВАНИЕ ЗАМЕТОК      */
+/* ========================================== */
+function loadNotes() {
+  if (!currentUser) return;
+  
+  const q = query(collection(db, 'notes'), where('userId', '==', currentUser.uid), orderBy('updatedAt', 'desc'));
+  
+  onSnapshot(q, (snapshot) => {
+    notesWrapper.innerHTML = '';
+    if (snapshot.empty) {
+      notesWrapper.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--text-muted); padding:40px;">У вас пока нет заметок 🏜️</div>`;
+      return;
+    }
+
+    snapshot.forEach((docSnap) => {
+      const note = docSnap.data();
+      const noteId = docSnap.id;
+      
+      const card = document.createElement('div');
+      card.className = `note-card ${isSelectMode ? 'selectable-mode' : ''} ${selectedNoteIds.has(noteId) ? 'selected-active' : ''}`;
+      card.dataset.id = noteId;
+
+      const dateStr = note.updatedAt ? new Date(note.updatedAt.seconds * 1000).toLocaleDateString() : '';
+
+      card.innerHTML = `
+        <h4>${escapeHtml(note.title) || 'Без названия'}</h4>
+        <p>${escapeHtml(note.text).replace(/\n/g, '<br>')}</p>
+        <div class="note-date">${dateStr}</div>
+        
+        <div class="note-card-actions" onclick="event.stopPropagation()">
+          <button class="note-action-btn share-feed" title="В ленту">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+          </button>
+          <button class="note-action-btn share-contact" title="Отправить контакту">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </button>
+        </div>
+      `;
+
+      // Регистрация событий тача/клика
+      setupNoteEvents(card, noteId, note);
+      notesWrapper.appendChild(card);
+    });
+  });
+}
+
+/* ========================================== */
+/* 3. ОБРАБОТКА НАЖАТИЙ (LONG PRESS) И КЛИКОВ */
+/* ========================================== */
+function setupNoteEvents(card, noteId, note) {
+  let pressTimer;
+
+  // Функция срабатывания Долгого зажатия
+  const startPress = () => {
+    pressTimer = setTimeout(() => {
+      if (!isSelectMode) {
+        enableSelectMode();
+        toggleNoteSelection(card, noteId);
+      }
+    }, 600); // 600 миллисекунд удержания
+  };
+
+  const cancelPress = () => clearTimeout(pressTimer);
+
+  card.addEventListener('mousedown', startPress);
+  card.addEventListener('touchstart', startPress);
+  card.addEventListener('mouseup', cancelPress);
+  card.addEventListener('mouseleave', cancelPress);
+  card.addEventListener('touchend', cancelPress);
+
+  // Обычный клик
+  card.onclick = () => {
+    if (isSelectMode) {
+      toggleNoteSelection(card, noteId);
+    } else {
+      openNoteFullScreen(noteId, note);
+    }
+  };
+
+  // Кнопка: Опубликовать в ленту
+  card.querySelector('.share-feed').onclick = async (e) => {
+    e.stopPropagation();
+    try {
+      await addDoc(collection(db, 'posts'), {
+        authorId: currentUser.uid,
+        authorName: userProfile.displayName || 'Пользователь',
+        authorAvatar: userProfile.avatar || AVATARS[0],
+        text: `📢 Из заметок:\n\n${note.title ? `*${note.title}*\n` : ''}${note.text}`,
+        likes: [],
+        commentsCount: 0,
+        createdAt: serverTimestamp()
+      });
+      showToast('Заметка опубликована в ленте ленты! 🌍');
+    } catch(err) {
+      showToast('Ошибка публикации', 'error');
+    }
+  };
+
+  // Кнопка: Отправить контакту (Всплывающий Bottom Sheet)
+  card.querySelector('.share-contact').onclick = (e) => {
+    e.stopPropagation();
+    currentSharingNoteText = `${note.title ? `📝 ${note.title}\n` : ''}${note.text}`;
+    openShareContactSheet();
+  };
+}
+
+/* ========================================== */
+/* 4. РЕЖИМ МНОЖЕСТВЕННОГО ВЫДЕЛЕНИЯ          */
+/* ========================================== */
+function enableSelectMode() {
+  isSelectMode = true;
+  defaultHeaderView.style.display = 'none';
+  selectHeaderView.style.display = 'flex';
+  document.querySelectorAll('.note-card').forEach(c => c.classList.add('selectable-mode'));
+}
+
+function disableSelectMode() {
+  isSelectMode = false;
+  selectedNoteIds.clear();
+  defaultHeaderView.style.display = 'flex';
+  selectHeaderView.style.display = 'none';
+  document.querySelectorAll('.note-card').forEach(c => {
+    c.classList.remove('selectable-mode');
+    c.classList.remove('selected-active');
+  });
+}
+
+function toggleNoteSelection(card, noteId) {
+  if (selectedNoteIds.has(noteId)) {
+    selectedNoteIds.delete(noteId);
+    card.classList.remove('selected-active');
+  } else {
+    selectedNoteIds.add(noteId);
+    card.classList.add('selected-active');
+  }
+  notesSelectCount.innerText = `Выбрано: ${selectedNoteIds.size}`;
+}
+
+if (cancelNotesSelectBtn) cancelNotesSelectBtn.onclick = disableSelectMode;
+
+// Групповое удаление выделенных заметок
+if (deleteSelectedNotesBtn) {
+  deleteSelectedNotesBtn.onclick = async () => {
+    if (selectedNoteIds.size === 0) return;
+    if (confirm(`Удалить выбранные заметки (${selectedNoteIds.size} шт.)?`)) {
+      for (let id of selectedNoteIds) {
+        await deleteDoc(doc(db, 'notes', id));
+      }
+      disableSelectMode();
+      showToast('Заметки успешно удалены');
+    }
+  };
+}
+
+/* ========================================== */
+/* 5. ПОЛНОЭКРАННЫЙ ПРОСМОТР И РЕДАКТИРОВАНИЕ */
+/* ========================================== */
+function openNoteFullScreen(noteId, note) {
+  activeViewingNoteId = noteId;
+  noteViewTitle.value = note.title || '';
+  noteViewText.value = note.text || '';
+  noteViewDate.innerText = note.updatedAt ? `Изменено: ${new Date(note.updatedAt.seconds * 1000).toLocaleString()}` : '';
+  noteViewScreen.classList.add('active');
+}
+
+// Закрытие экрана и автосохранение изменений в базу
+if (noteViewBackBtn) {
+  noteViewBackBtn.onclick = async () => {
+    if (activeViewingNoteId) {
+      const uTitle = noteViewTitle.value.trim();
+      const uText = noteViewText.value.trim();
+
+      if (uText) {
+        await updateDoc(doc(db, 'notes', activeViewingNoteId), {
+          title: uTitle,
+          text: uText,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // Если текст полностью стерли — удаляем пустую заметку
+        await deleteDoc(doc(db, 'notes', activeViewingNoteId));
+      }
+    }
+    noteViewScreen.classList.remove('active');
+    activeViewingNoteId = null;
+  };
+}
+
+/* ========================================== */
+/* 6. ОТПРАВКА КОНТАКТУ (BOTTOM SHEET ПОДГРУЗКА)*/
+/* ========================================== */
+function openShareContactSheet() {
+  shareContactSheet.classList.add('active');
+  shareContactsList.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">Загрузка контактов...</div>';
+  
+  // Берем существующую у тебя в приложении коллекцию активных чатов / или юзеров
+  // Допустим, мы выведем общую ленту пользователей для выбора, кому переслать
+  const q = query(collection(db, 'users'), limit(20));
+  onSnapshot(q, (snapshot) => {
+    shareContactsList.innerHTML = '';
+    snapshot.forEach(userSnap => {
+      const u = userSnap.data();
+      if (userSnap.id === currentUser.uid) return; // Себе не отправляем
+      
+      const row = document.createElement('div');
+      row.className = 'share-contact-item';
+      row.innerHTML = `
+        <img src="${u.avatar || AVATARS[0]}" style="width:36px; height:36px; border-radius:50%">
+        <span>${escapeHtml(u.displayName || 'Пользователь')}</span>
+      `;
+      
+      row.onclick = async () => {
+        // Логика создания сообщения в чате с этим пользователем
+        // Определяем ID чата (например, склеиванием двух UID)
+        const chatRoomId = currentUser.uid < userSnap.id ? `${currentUser.uid}_${userSnap.id}` : `${userSnap.id}_${currentUser.uid}`;
+        
+        await addDoc(collection(db, 'messages'), {
+          chatRoomId: chatRoomId,
+          senderId: currentUser.uid,
+          text: currentSharingNoteText,
+          timestamp: serverTimestamp()
+        });
+        
+        closeShareContactSheet();
+        showToast(`Отправлено пользователю ${u.displayName || 'Пользователь'}! ✈️`);
+      };
+      
+      shareContactsList.appendChild(row);
+    });
+  });
+}
+
+function closeShareContactSheet() {
+  shareContactSheet.classList.remove('active');
+}
+if (backdrop) backdrop.onclick = closeShareContactSheet;
+
+// Важно вызвать запуск логгера заметок при авторизации пользователя
+// Добавь вызов функции loadNotes() внутрь твоего корневого onAuthStateChanged()
+
 // Инициализация
 initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
