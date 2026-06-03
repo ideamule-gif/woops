@@ -10,7 +10,6 @@
 </head>
 <body>
 
-    <!-- Экран авторизации -->
     <div id="auth-screen" class="screen active">
         <div class="auth-card">
             <h2>Woops </h2>
@@ -23,31 +22,27 @@
         </div>
     </div>
 
-    <!-- Главный экран -->
     <div id="main-screen" class="screen">
-     <header class="main-header">
-    <h1 id="tab-title">Чаты</h1>
-    <div style="display: flex; gap: 8px;">
-        <!-- Кнопка темы со встроенным кодом твоего солнца (stroke заменен на currentColor) -->
-        <button id="theme-toggle" class="icon-btn" title="Сменить тему">
-            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="5"/>
-                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-            </svg>
-        </button>
-        <!-- Кнопка выхода со встроенным кодом твоей стрелки -->
-        <button id="logout-btn" class="icon-btn" title="Выйти">
-            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 9 21 12 16 15"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-        </button>
-    </div>
-</header>
+        <header class="main-header">
+            <h1 id="tab-title">Чаты</h1>
+            <div style="display: flex; gap: 8px;">
+                <button id="theme-toggle" class="icon-btn" title="Сменить тему">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                </button>
+                <button id="logout-btn" class="icon-btn" title="Выйти">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 9 21 12 16 15"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
 
         <div class="tabs-container">
-            <!-- Вкладка: Чаты -->
             <div id="tab-chats" class="tab active">
                 <div class="search-bar">
                     <input type="text" id="user-search" placeholder="Поиск по имени...">
@@ -57,7 +52,6 @@
                 </ul>
             </div>
 
-            <!-- Вкладка: Лента -->
             <div id="tab-feed" class="tab">
                 <div class="feed-composer">
                     <textarea id="feed-input" placeholder="Что у вас нового? 📝" rows="3"></textarea>
@@ -66,7 +60,11 @@
                 <div id="feed-list" class="feed-list"></div>
             </div>
 
-            <!-- Вкладка: Профиль -->
+            <div id="tab-notes" class="tab">
+                <div id="notes-tab-content" style="display: flex; flex-direction: column; height: 100%;">
+                    </div>
+            </div>
+
             <div id="tab-profile" class="tab">
                 <div class="profile-view">
                     <img id="profile-avatar-view" class="avatar huge" src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" alt="Аватар">
@@ -80,55 +78,53 @@
             </div>
         </div>
 
-        <!-- Нижняя навигация -->
-<nav class="nav-bar">
-    <button class="nav-btn active" data-tab="chats">
-        <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span>Чаты</span>
-    </button>
+        <nav class="nav-bar">
+            <button class="nav-btn active" data-tab="chats">
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span>Чаты</span>
+            </button>
 
-    <button class="nav-btn" data-tab="contacts">
-        <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        <span>Контакты</span>
-    </button>
+            <button class="nav-btn" data-tab="contacts">
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>Контакты</span>
+            </button>
 
-    <button class="nav-btn" data-tab="feed">
-        <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <line x1="3" y1="9" x2="21" y2="9"/>
-            <line x1="9" y1="21" x2="9" y2="9"/>
-        </svg>
-        <span>Лента</span>
-    </button>
+            <button class="nav-btn" data-tab="feed">
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="3" y1="9" x2="21" y2="9"/>
+                    <line x1="9" y1="21" x2="9" y2="9"/>
+                </svg>
+                <span>Лента</span>
+            </button>
 
-    <button class="nav-btn" data-tab="notes">
-        <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        <span>Заметки</span>
-    </button>
+            <button class="nav-btn" data-tab="notes">
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span>Заметки</span>
+            </button>
 
-    <button class="nav-btn" data-tab="profile">
-        <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-        </svg>
-        <span>Профиль</span>
-    </button>
-</nav>
+            <button class="nav-btn" data-tab="profile">
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>Профиль</span>
+            </button>
+        </nav>
     </div>
 
-    <!-- Экран чата -->
     <div id="chat-screen" class="screen">
         <header class="chat-header">
             <button id="back-btn" class="icon-btn">←</button>
@@ -149,7 +145,6 @@
         <div id="emoji-picker" class="emoji-picker"></div>
     </div>
 
-    <!-- Модалка редактирования профиля -->
     <dialog id="profile-modal" class="modal">
         <div class="modal-box">
             <div class="modal-header">
@@ -181,7 +176,6 @@
         </div>
     </dialog>
 
-    <!-- Модалка редактирования поста -->
     <dialog id="edit-post-modal" class="modal">
         <div class="modal-box">
             <div class="modal-header">
@@ -198,7 +192,6 @@
         </div>
     </dialog>
 
-    <!-- Уведомление -->
     <div id="toast" class="toast"></div>
 
     <script type="module" src="app.js"></script>
