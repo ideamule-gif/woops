@@ -846,81 +846,88 @@ input::placeholder, textarea::placeholder {
 }
 
 /* Bottom navigation */
-.bottom-nav {
+/* ==================== ИСПРАВЛЕННЫЙ ТАБ-БАР ==================== */
+.nav-bar {
     position: fixed;
     bottom: 0;
     left: 0;
-    right: 0;
-    height: 70px;
-    background: rgba(15, 23, 42, 0.9);
+    width: 100%;
+    height: 64px;
+    background: rgba(15, 23, 42, 0.6);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border-top: 1px solid var(--glass-border);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    z-index: 1000;
-    padding-bottom: env(safe-area-inset-bottom);
+    
+    /* Жестко заставляем панель быть флекс-контейнером в одну строку */
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+    z-index: 40;
 }
 
 .nav-btn {
-    background: none;
-    border: none;
-    color: var(--text); /* По умолчанию цвет как у основного текста */
-    opacity: 0.4;       /* Неактивные кнопки стильно приглушены */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    height: 100%;
-    gap: 2px;
-    font-size: 10px;    /* Чуть компактнее, чтобы текст не переносился */
-    font-weight: 500;
-    transition: var(--transition);
-    position: relative;
-    min-width: 0;       /* Защита от расползания флекс-элементов */
+    background: none !important;
+    border: none !important;
+    color: var(--text) !important;
+    opacity: 0.4;       /* Неактивные приглушены */
+    
+    /* Каждая из 5 кнопок получает ровно 1/5 часть ширины панели */
+    flex: 1 !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    transition: var(--transition) !important;
+    position: relative !important;
 }
 
-/* При наведении мышкой неактивная кнопка становится чуть ярче */
+/* При наведении мышки неактивная кнопка становится чуть ярче */
 .nav-btn:hover {
     opacity: 0.7;
 }
 
-/* Активная кнопка загорается на 100% монохромным белым/темным цветом */
+/* Активная кнопка загорается монохромным цветом */
 .nav-btn.active {
-    opacity: 1;
-    color: var(--text);
+    opacity: 1 !important;
+    color: var(--text) !important;
 }
 
-/* Твоя фирменная минималистичная полосочка сверху активной кнопки */
+/* Твоя минималистичная полосочка сверху активной кнопки */
 .nav-btn.active::before {
     content: '';
     position: absolute;
     top: 0;
     width: 40px;
     height: 3px;
-    background: var(--text); /* Делаем полосочку тоже монохромной в цвет текста */
+    background: var(--text); /* Монохромный цвет */
     border-radius: 0 0 4px 4px;
 }
 
-/* Стили для наших новых SVG-иконок внутри кнопок навигации */
+/* Стили для наших новых SVG-иконок */
 .nav-svg-icon {
-    width: 20px;
-    height: 20px;
-    display: block;
-    pointer-events: none;
-    transition: var(--transition);
+    width: 20px !important;
+    height: 20px !important;
+    display: block !important;
+    pointer-events: none !important;
+    transition: var(--transition) !important;
 }
 
-/* Эффект легкого сдвига на 2px вверх для активной SVG-иконки */
+/* Эффект легкого сдвига вверх для активной SVG-иконки */
 .nav-btn.active .nav-svg-icon {
-    transform: translateY(-2px);
+    transform: translateY(-2px) !important;
 }
 
-/* Защита: если где-то остался старый класс nav-icon или span, задаем монохромность */
 .nav-btn span {
-    white-space: nowrap;
+    white-space: nowrap !important;
 }
 
 /* Toast */
