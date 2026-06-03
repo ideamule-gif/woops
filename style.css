@@ -1308,7 +1308,7 @@ input::placeholder, textarea::placeholder {
     border-right: 1px solid var(--glass-border);
   }
 
-    /* ======================================================== */
+/* ======================================================== */
 /* 📝 СТИЛИ ДЛЯ ПРОФЕССИОНАЛЬНЫХ ЗАМЕТОК                    */
 /* ======================================================== */
 
@@ -1637,5 +1637,4 @@ input::placeholder, textarea::placeholder {
   .bottom-sheet.active .bottom-sheet-content {
     transform: translate(-50%, 0);
   }
-}
 }
