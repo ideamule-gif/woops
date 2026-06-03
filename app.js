@@ -113,18 +113,18 @@ const svgDelete = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg"
 const svgLike = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
 const svgComment = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
 
-// Динамическое создание экрана комментариев (копия экрана чата)
+// Динамическое создание экрана комментариев
 let commentScreen = document.getElementById('comment-screen');
 if (!commentScreen) {
   commentScreen = document.createElement('div');
   commentScreen.id = 'comment-screen';
   commentScreen.className = 'screen';
   commentScreen.innerHTML = `
-    <div class="screen-header">
-      <button id="comment-back-btn" class="icon-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    <div class="comment-nav-bar">
+      <button id="comment-back-btn" class="comment-back-icon-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
       </button>
-      <div class="chat-user-info">
+      <div class="comment-meta-info">
         <h3 id="comment-title">Комментарии</h3>
         <span id="comment-subtitle">к публикации</span>
       </div>
@@ -133,7 +133,7 @@ if (!commentScreen) {
     <div class="chat-input-area">
       <textarea id="comment-text-input" placeholder="Напишите комментарий..."></textarea>
       <button id="comment-send-btn" class="icon-btn active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
     </div>
   `;
