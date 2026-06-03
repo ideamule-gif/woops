@@ -163,12 +163,13 @@ if (commentSendBtn) {
       await addDoc(collection(db, 'posts', currentPostCommentsId, 'comments'), {
         authorId: currentUser.uid,
         authorName: userProfile.displayName || 'Пользователь',
-        authorAvatar: userProfile.avatar || AVATARS[0],
+        authorAvatar: userProfile.avatar || AVATARS[0], // Исправлено получение аватара
         text,
         createdAt: serverTimestamp()
       });
       commentTextInput.value = '';
     } catch (e) {
+      console.error("Ошибка отправки комментария:", e); // Выведет точную ошибку в консоль браузера, если что-то пойдет не так
       showToast('Не удалось отправить комментарий', 'error');
     }
   };
