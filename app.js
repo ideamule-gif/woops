@@ -223,6 +223,7 @@ onAuthStateChanged(auth, async (user) => {
     trackOwnProfile(user.uid);
     loadUsersList();
     loadFeed();
+    loadNotes();
     updateLastSeen();
   } else {
     currentUser = null;
@@ -980,8 +981,7 @@ if (themeToggle) {
   };
 }
 
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
+// ЗАМЕТКИ
 // Глобальное состояние для заметок
 let isGridView = true;
 let isSelectMode = false;
