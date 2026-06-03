@@ -658,7 +658,7 @@ if (postBtn) {
         authorName: userProfile.displayName || 'Пользователь',
         authorAvatar: userProfile.avatar || AVATARS[0],
         text,
-        likes: [],
+        likes: [], // <--- ОБЯЗАТЕЛЬНО: создаем пустой массив при публикации
         createdAt: serverTimestamp()
       });
       feedInput.value = '';
