@@ -405,10 +405,22 @@ function renderMessage(msgId, msg) {
   if (isOwn) {
     // Безопасно экранируем кавычки для inline-функций onclick
     const safeText = escapeHtml(msg.text).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    actionsHtml = `
+   actionsHtml = `
       <div class="msg-actions">
-        <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')" title="Редактировать">✍</button>
-        <button class="msg-action-btn delete" onclick="deleteMessage('${msgId}')" title="Удалить">✕</button>
+        <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')" title="Редактировать">
+          <svg class="svg-icon-sm" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+        <button class="msg-action-btn delete" onclick="deleteMessage('${msgId}')" title="Удалить">
+          <svg class="svg-icon-sm" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1 2 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </button>
       </div>
     `;
   }
@@ -683,17 +695,21 @@ function cleanupListeners() {
 // ============================================
 // 🌓 ЛОГИКА СМЕНЫ ТЕМЫ (ДЕНЬ / НОЧЬ)
 // ============================================
+// ============================================
+// 🌓 ЛОГИКА СМЕНЫ ТЕМЫ (ДЕНЬ / НОЧЬ)
+// ============================================
 const themeToggle = document.getElementById('theme-toggle');
-
-// Проверяем, была ли сохранена тема ранее
 const savedTheme = localStorage.getItem('theme');
 
-// Если сохранена светлая тема — активируем её при загрузке
+// Коды твоих иконок в виде строк
+const sunSvg = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`;
+const moonSvg = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+
 if (savedTheme === 'light') {
   document.body.classList.add('light-theme');
-  if (themeToggle) themeToggle.textContent = '◓'; // Светлый символ
+  if (themeToggle) themeToggle.innerHTML = sunSvg;
 } else {
-  if (themeToggle) themeToggle.textContent = '◒'; // Темный символ
+  if (themeToggle) themeToggle.innerHTML = moonSvg;
 }
 
 if (themeToggle) {
@@ -701,16 +717,21 @@ if (themeToggle) {
     const isLight = document.body.classList.toggle('light-theme');
     
     if (isLight) {
-      themeToggle.textContent = '◓'; 
+      themeToggle.innerHTML = sunSvg;
       localStorage.setItem('theme', 'light');
       showToast('Включена дневная тема');
     } else {
-      themeToggle.textContent = '◒'; 
+      themeToggle.innerHTML = moonSvg;
       localStorage.setItem('theme', 'dark');
       showToast('Включена ночная тема');
     }
   };
 }
+
+// Инициализация
+initEmojiPicker();
+console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
+
 
 // Инициализация
 initEmojiPicker();
