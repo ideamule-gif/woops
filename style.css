@@ -966,7 +966,38 @@ input::placeholder, textarea::placeholder {
     min-height: 20px;
 }
 
-/* Responsive desktop */
+/* ======================================================== */
+/* 🛠️ РАЗМЕРЫ И ПОВЕДЕНИЕ НАШИХ НОВЫХ SVG-ИКОНОК            */
+/* ======================================================== */
+
+/* Размер для иконок в шапке (Тема и Выход) */
+.svg-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
+    pointer-events: none; /* Клик проходит сквозь SVG на саму кнопку */
+}
+
+/* Размер для иконок действий в сообщениях (Редактировать и Удалить) */
+.svg-icon-sm {
+    width: 14px;
+    height: 14px;
+    display: block;
+    pointer-events: none;
+}
+
+/* Гарантируем, что SVG внутри кнопок навигации таб-бара тоже масштабируются аккуратно */
+.nav-btn svg, .nav-btn .icon svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    margin: 0 auto;
+}
+
+
+/* ======================================================== */
+/* 📱 АДАПТИВ ПОД ДЕСКТОП (ТВОЙ СТАРЫЙ КОД С КОРРЕКЦИЕЙ)    */
+/* ======================================================== */
 @media (min-width: 768px) {
     body {
         display: flex;
@@ -982,10 +1013,13 @@ input::placeholder, textarea::placeholder {
         transform: translateX(-50%);
     }
 
-    .bottom-nav {
+    /* Объединяем свойства для твоего .bottom-nav и .nav-bar, чтобы нижняя панель на десктопе не растягивалась шире самого чата */
+    .bottom-nav, .nav-bar {
         max-width: 480px;
         left: 50%;
         transform: translateX(-50%);
         border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        border-left: 1px solid var(--glass-border);
+        border-right: 1px solid var(--glass-border);
     }
 }
