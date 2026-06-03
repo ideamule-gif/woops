@@ -1063,4 +1063,75 @@ input::placeholder, textarea::placeholder {
         border-left: 1px solid var(--glass-border);
         border-right: 1px solid var(--glass-border);
     }
+} /* <--- Это закрывающая скобка твоего медиа-запроса, новые стили вставляем ниже */
+
+/* ======================================================== */
+/* 🌍 СТИЛИ ДЛЯ ЛЕНТЫ (ЛАЙКИ, КОММЕНТАРИИ, ИКОНКИ УПРАВЛЕНИЯ) */
+/* ======================================================== */
+.feed-post-owner-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.feed-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #888);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.feed-icon-btn:hover {
+  color: var(--text-color, #fff);
+}
+
+.feed-icon-btn.delete:hover {
+  color: #ef4444; /* Красный оттенок при наведении на удаление */
+}
+
+/* Нижний футер поста с лайками и комментариями */
+.feed-post-footer {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  border-top: 1px solid var(--glass-border, #333); /* Используем твой бордер */
+  padding-top: 8px;
+}
+
+.feed-action-trigger {
+  background: none;
+  border: none;
+  color: var(--text-muted, #888);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md, 6px);
+  transition: all 0.2s;
+}
+
+.feed-action-trigger:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-color, #fff);
+}
+
+.feed-action-trigger.liked {
+  color: #ec4899; /* Красивый монохромно-розовый оттенок для активного лайка */
+}
+
+.feed-action-trigger.liked svg {
+  fill: currentColor; /* Заливка иконки сердца при лайке */
+}
+
+/* Стили для SVG внутри постов ленты */
+.svg-feed-icon {
+  stroke: currentColor;
+  display: block;
 }
