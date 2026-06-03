@@ -1137,56 +1137,111 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ======================================================== */
-/* 💬 СТИЛИ ДЛЯ ЭКРАНА КОММЕНТАРИЕВ                          */
+/* 💬 ОБНОВЛЕННЫЕ СТИЛИ КОММЕНТАРИЕВ (ИДЕАЛЬНЫЕ ОТСТУПЫ)     */
 /* ======================================================== */
 
-/* Ограничиваем экран комментариев по ширине так же, как чаты, и центрируем */
 #comment-screen {
   display: none;
   flex-direction: column;
-  height: 100vh;
-  background: var(--bg-main, #0b0f19); /* Или твой цвет фона */
+  position: fixed;
+  top: 60px; /* Сдвигаем вниз, чтобы главный хедер приложения оставался видимым */
+  bottom: 60px; /* Оставляем место под нижнюю навигацию */
+  left: 0;
+  right: 0;
+  height: calc(100vh - 60px); /* Высота за вычетом хедера */
+  background: var(--bg-main, #0b0f19);
+  z-index: 10;
 }
 
 #comment-screen.active {
   display: flex;
 }
 
-/* Область со списком комментариев */
+/* Панель управления комментариями (стрелка + надпись) */
+.comment-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px; /* Просторные отступы от краев */
+  background: rgba(255, 255, 255, 0.01);
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.05));
+}
+
+/* Кнопка стрелки назад */
+.comment-back-icon-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  color: var(--text-color, #fff);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md, 10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.comment-back-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Блок с текстом заголовков */
+.comment-meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#comment-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color, #fff);
+}
+
+#comment-subtitle {
+  font-size: 12px;
+  color: var(--text-muted, #888);
+}
+
+/* Список комментариев */
 #comment-msg-area {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-/* Контейнер для ввода (строка + кнопка) */
+/* Нижняя область ввода */
 #comment-screen .chat-input-area {
   display: flex;
-  align-items: center; /* Выравнивание строго по центру линии */
+  align-items: center; /* Выравнивание строго по центру */
+  justify-content: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 16px 20px; /* Отступы от краев для симметрии */
   background: var(--bg-surface, rgba(255, 255, 255, 0.02));
   border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
-  margin-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Само текстовое поле */
+/* Поле ввода */
 #comment-text-input {
   flex: 1;
-  background: var(--bg-input, rgba(255, 255, 255, 0.05));
+  background: var(--bg-input, rgba(255, 255, 255, 0.04));
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-md, 12px);
   color: var(--text-color, #fff);
-  padding: 11px 14px; /* Чуть подкорректировали внутренний отступ */
+  padding: 12px 14px;
   font-family: inherit;
   font-size: 15px;
   resize: none;
-  height: 44px; /* Высота совпадает с высотой кнопки */
-  box-sizing: border-box; /* Чтобы padding не раздувал высоту */
+  height: 44px; /* Фиксированная высота */
+  line-height: 18px;
+  box-sizing: border-box; /* Важно, чтобы внутренние отступы не ломали высоту */
   outline: none;
+  display: block;
   transition: border-color 0.2s;
 }
 
@@ -1194,11 +1249,11 @@ input::placeholder, textarea::placeholder {
   border-color: var(--accent-color, #6366f1);
 }
 
-/* Кнопка отправки комментария */
+/* Кнопка отправки */
 #comment-send-btn {
   width: 44px;
   height: 44px;
-  min-width: 44px; /* Чтобы не сжималась */
+  min-width: 44px;
   border-radius: var(--radius-md, 12px);
   background: var(--accent-color, #6366f1);
   color: #fff;
@@ -1207,6 +1262,9 @@ input::placeholder, textarea::placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box; /* Гарантирует одинаковый размер со строкой ввода */
+  padding: 0;
+  margin: 0;
   transition: opacity 0.2s, transform 0.1s;
 }
 
@@ -1223,4 +1281,15 @@ input::placeholder, textarea::placeholder {
   height: 20px;
   stroke: currentColor;
   fill: none;
+}
+
+/* Коррекция адаптива для десктопа, чтобы комментарии не растягивались шире основного контейнера */
+@media (min-width: 768px) {
+  #comment-screen {
+    max-width: 480px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 1px solid var(--glass-border);
+    border-right: 1px solid var(--glass-border);
+  }
 }
