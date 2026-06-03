@@ -1165,12 +1165,12 @@ input::placeholder, textarea::placeholder {
 /* Контейнер для ввода (строка + кнопка) */
 #comment-screen .chat-input-area {
   display: flex;
-  align-items: flex-end;
+  align-items: center; /* Выравнивание строго по центру линии */
   gap: 12px;
   padding: 12px 16px;
   background: var(--bg-surface, rgba(255, 255, 255, 0.02));
   border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
-  margin-bottom: env(safe-area-inset-bottom, 0px); /* Отступ для айфонов */
+  margin-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Само текстовое поле */
@@ -1180,12 +1180,12 @@ input::placeholder, textarea::placeholder {
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-md, 12px);
   color: var(--text-color, #fff);
-  padding: 10px 14px;
+  padding: 11px 14px; /* Чуть подкорректировали внутренний отступ */
   font-family: inherit;
   font-size: 15px;
   resize: none;
-  height: 44px;
-  max-height: 120px;
+  height: 44px; /* Высота совпадает с высотой кнопки */
+  box-sizing: border-box; /* Чтобы padding не раздувал высоту */
   outline: none;
   transition: border-color 0.2s;
 }
