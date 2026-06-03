@@ -601,6 +601,73 @@ if (backBtn) {
   };
 }
 
+// КОНТЕЙНЕР ВКЛАДКИ ЗАМЕТОК
+const notesTab = document.getElementById('notes-tab'); 
+// Если у тебя вкладки переключаются по id, убедись, что структура внутри выглядит так:
+if (notesTab) {
+  notesTab.innerHTML = `
+    <header class="main-header" id="notes-header">
+      <div class="header-default-view">
+        <h2>Заметки</h2>
+        <div class="header-actions">
+          <button id="toggle-notes-view-btn" class="feed-icon-btn" title="Изменить вид">
+            <svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7 stream"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="header-select-view" style="display: none;">
+        <button id="cancel-notes-select-btn" class="feed-icon-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <span id="notes-select-count">Выбрано: 0</span>
+        <button id="delete-selected-notes-btn" class="feed-icon-btn delete" style="margin-left: auto;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="note-create-area">
+      <input type="text" id="note-title-input" placeholder="Заголовок (необязательно)" style="display: none;">
+      <div class="note-input-row">
+        <textarea id="note-text-input" placeholder="Новая заметка..."></textarea>
+        <button id="save-note-btn" class="icon-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="notes-wrapper" class="notes-grid-view"></div>
+
+    <div id="note-view-screen" class="screen">
+      <header class="main-header">
+        <button id="note-view-back-btn" class="comment-back-icon-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div class="comment-meta-info">
+          <h3>Просмотр заметки</h3>
+          <span id="note-view-date">Дата изменения</span>
+        </div>
+      </header>
+      <div class="note-view-body">
+        <input type="text" id="note-view-title" placeholder="Без заголовка">
+        <textarea id="note-view-text" placeholder="Текст заметки..."></textarea>
+      </div>
+    </div>
+
+    <div id="share-contact-sheet" class="bottom-sheet">
+      <div class="bottom-sheet-backdrop"></div>
+      <div class="bottom-sheet-content">
+        <div class="bottom-sheet-header">
+          <div class="drag-handle"></div>
+          <h3>Отправить контакту</h3>
+        </div>
+        <div id="share-contacts-list" class="share-contacts-list">
+          </div>
+      </div>
+    </div>
+  `;
+}
+
 // ============================================
 // 🌍 ЛЕНТА (FEED) WITH LIKES & COMMENTS
 // ============================================
