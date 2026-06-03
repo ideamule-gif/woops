@@ -981,68 +981,126 @@ if (themeToggle) {
   };
 }
 
-// ЗАМЕТКИ
-// Глобальное состояние для заметок
+/* ======================================================== */
+/* 📝 МОДУЛЬ ЛИЧНЫХ ЗАМЕТОК ДЛЯ WOOPS                      */
+/* ======================================================== */
+
+// 1. ДИНАМИЧЕСКАЯ СБОРКА ИНТЕРФЕЙСА (Чтобы не засорять index.html)
+const notesTabContent = document.getElementById('notes-tab-content'); 
+if (notesTabContent) {
+  notesTabContent.innerHTML = `
+    <div class="note-ui-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+      <div id="notes-header-container" style="padding: 10px 16px; background: rgba(0,0,0,0.1); border-bottom:1px solid rgba(255,255,255,0.05)">
+        <div class="header-default-view" style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 18px; font-weight: 700;">Личные заметки</span>
+          <button id="toggle-notes-view-btn" class="icon-btn" title="Изменить вид" style="background: none; border: none; color: inherit; cursor: pointer;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </button>
+        </div>
+        <div class="header-select-view" style="display: none; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="cancel-notes-select-btn" class="icon-btn" style="background:none; border:none; color:inherit;">✕</button>
+            <span id="notes-select-count" style="font-weight:600;">Выбрано: 0</span>
+          </div>
+          <button id="delete-selected-notes-btn" class="icon-btn" style="background:none; border:none; color:#ef4444;" title="Удалить выбранные">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="note-create-area" style="padding: 12px 16px;">
+        <input type="text" id="note-title-input" placeholder="Заголовок (необязательно)" style="display: none; width: 100%; margin-bottom: 8px; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff;">
+        <div class="note-input-row" style="display: flex; gap: 8px;">
+          <textarea id="note-text-input" placeholder="Новая заметка..." style="flex: 1; height: 36px; resize: none; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; transition: height 0.2s;"></textarea>
+          <button id="save-note-btn" class="icon-btn" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--primary-color, #6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="notes-wrapper" class="notes-grid-view" style="flex: 1; overflow-y: auto; padding: 0 16px 20px 16px;"></div>
+    </div>
+
+    <div id="note-view-screen" class="screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: none; flex-direction: column; background: #111;">
+      <header class="main-header" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <button id="note-view-back-btn" class="icon-btn" style="background:none; border:none; color:inherit; font-size:20px; cursor:pointer; padding: 5px 10px;">←</button>
+        <div style="flex:1; margin-left:10px;">
+          <h3 style="margin:0; font-size:16px;">Просмотр заметки</h3>
+          <span id="note-view-date" style="font-size:11px; opacity:0.5;">Дата</span>
+        </div>
+      </header>
+      <div class="note-view-body" style="flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <input type="text" id="note-view-title" placeholder="Без заголовка" style="width: 100%; font-size: 20px; font-weight: 700; background: none; border: none; color: #fff; outline: none;">
+        <textarea id="note-view-text" placeholder="Текст заметки..." style="flex: 1; width: 100%; font-size: 15px; background: none; border: none; color: #ccc; outline: none; resize: none; line-height: 1.5;"></textarea>
+      </div>
+    </div>
+
+    <div id="share-contact-sheet" class="bottom-sheet" style="position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; z-index: 1001; background: #1e1e1e; border-top-left-radius: 16px; border-top-right-radius: 16px; transition: bottom 0.3s; display: flex; flex-direction: column;">
+      <div class="bottom-sheet-backdrop" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: -1; display: none;"></div>
+      <div class="bottom-sheet-content" style="flex: 1; display: flex; flex-direction: column; padding: 16px;">
+        <div class="bottom-sheet-header" style="text-align: center; margin-bottom: 15px;">
+          <div class="drag-handle" style="width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 0 auto 10px auto;"></div>
+          <h3 style="margin: 0; font-size: 18px;">Отправить контакту</h3>
+        </div>
+        <div id="share-contacts-list" class="share-contacts-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+    </div>
+  `;
+}
+
+// 2. ИНИЦИАЛИЗАЦИЯ ГЛОБАЛЬНОГО СОСТОЯНИЯ ТВОЕГО КОДА
 let isGridView = true;
 let isSelectMode = false;
 let selectedNoteIds = new Set();
 let currentSharingNoteText = "";
+let activeViewingNoteId = null;
 
-// DOM Элементы заметок
+// СВЯЗЫВАЕМ ПЕРЕМЕННЫЕ С ДОМ ЭЛЕМЕНТАМИ
 const noteTextInput = document.getElementById('note-text-input');
 const noteTitleInput = document.getElementById('note-title-input');
 const saveNoteBtn = document.getElementById('save-note-btn');
 const notesWrapper = document.getElementById('notes-wrapper');
 const toggleNotesViewBtn = document.getElementById('toggle-notes-view-btn');
 
-// Элементы хедера для выделения
 const defaultHeaderView = document.querySelector('.header-default-view');
 const selectHeaderView = document.querySelector('.header-select-view');
 const notesSelectCount = document.getElementById('notes-select-count');
 const cancelNotesSelectBtn = document.getElementById('cancel-notes-select-btn');
 const deleteSelectedNotesBtn = document.getElementById('delete-selected-notes-btn');
 
-// Элементы экрана просмотра заметок
 const noteViewScreen = document.getElementById('note-view-screen');
 const noteViewBackBtn = document.getElementById('note-view-back-btn');
 const noteViewTitle = document.getElementById('note-view-title');
 const noteViewText = document.getElementById('note-view-text');
 const noteViewDate = document.getElementById('note-view-date');
-let activeViewingNoteId = null;
 
-// Элементы Bottom Sheet контактов
 const shareContactSheet = document.getElementById('share-contact-sheet');
 const shareContactsList = document.getElementById('share-contacts-list');
 const backdrop = document.querySelector('.bottom-sheet-backdrop');
 
-/* ========================================== */
-/* 1. ИНТЕРФЕЙС И СОЗДАНИЕ                    */
-/* ========================================== */
-
-// Показываем поле заголовка, когда пользователь начинает писать заметку
+// 3. ТВОЯ ЛОГИКА ВЗАИМОДЕЙСТВИЯ (ИНТЕРФЕЙС И ФОКУСЫ)
 if (noteTextInput) {
   noteTextInput.addEventListener('focus', () => {
-    noteTitleInput.style.display = 'block';
+    if (noteTitleInput) noteTitleInput.style.display = 'block';
     noteTextInput.style.height = '80px';
   });
 }
 
-// Скрываем заголовок обратно, если поле пустое и фокус ушел
 document.addEventListener('click', (e) => {
   if (noteTextInput && !noteTextInput.contains(e.target) && !noteTitleInput.contains(e.target) && !saveNoteBtn.contains(e.target)) {
     if (!noteTextInput.value.trim() && !noteTitleInput.value.trim()) {
-      noteTitleInput.style.display = 'none';
+      if (noteTitleInput) noteTitleInput.style.display = 'none';
       noteTextInput.style.height = '36px';
     }
   }
 });
 
-// Сохранение новой заметки на Firebase
+// СОХРАНЕНИЕ ЗАМЕТКИ В FIREBASE
 if (saveNoteBtn) {
   saveNoteBtn.onclick = async () => {
     const text = noteTextInput.value.trim();
-    const title = noteTitleInput.value.trim();
-    if (!text) return;
+    const title = noteTitleInput ? noteTitleInput.value.trim() : '';
+    if (!text || !currentUser) return;
 
     try {
       await addDoc(collection(db, 'notes'), {
@@ -1053,8 +1111,10 @@ if (saveNoteBtn) {
         updatedAt: serverTimestamp()
       });
       noteTextInput.value = '';
-      noteTitleInput.value = '';
-      noteTitleInput.style.display = 'none';
+      if (noteTitleInput) {
+        noteTitleInput.value = '';
+        noteTitleInput.style.display = 'none';
+      }
       noteTextInput.style.height = '36px';
       showToast('Заметка сохранена! 📝');
     } catch (e) {
@@ -1063,32 +1123,30 @@ if (saveNoteBtn) {
   };
 }
 
-// Переключение вида (Сетка / Список)
+// СЕТКА / СПИСОК
 if (toggleNotesViewBtn) {
   toggleNotesViewBtn.onclick = () => {
     isGridView = !isGridView;
     if (isGridView) {
       notesWrapper.className = 'notes-grid-view';
-      toggleNotesViewBtn.innerHTML = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+      toggleNotesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
     } else {
       notesWrapper.className = 'notes-list-view';
-      toggleNotesViewBtn.innerHTML = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
+      toggleNotesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
     }
   };
 }
 
-/* ========================================== */
-/* 2. ПОДГРУЗКА И ОТРЕНДЕРИВАНИЕ ЗАМЕТОК      */
-/* ========================================== */
-function loadNotes() {
-  if (!currentUser) return;
+// 4. ТВОЯ ПОДГРУЗКА ИЗ FIREBASE
+window.loadNotes = function() {
+  if (!currentUser || !notesWrapper) return;
   
   const q = query(collection(db, 'notes'), where('userId', '==', currentUser.uid), orderBy('updatedAt', 'desc'));
   
   onSnapshot(q, (snapshot) => {
     notesWrapper.innerHTML = '';
     if (snapshot.empty) {
-      notesWrapper.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--text-muted); padding:40px;">У вас пока нет заметок 🏜️</div>`;
+      notesWrapper.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--text-muted); padding:40px; opacity:0.5;">У вас пока нет заметок 🏜️</div>`;
       return;
     }
 
@@ -1106,7 +1164,6 @@ function loadNotes() {
         <h4>${escapeHtml(note.title) || 'Без названия'}</h4>
         <p>${escapeHtml(note.text).replace(/\n/g, '<br>')}</p>
         <div class="note-date">${dateStr}</div>
-        
         <div class="note-card-actions" onclick="event.stopPropagation()">
           <button class="note-action-btn share-feed" title="В ленту">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
@@ -1117,27 +1174,23 @@ function loadNotes() {
         </div>
       `;
 
-      // Регистрация событий тача/клика
       setupNoteEvents(card, noteId, note);
       notesWrapper.appendChild(card);
     });
   });
-}
+};
 
-/* ========================================== */
-/* 3. ОБРАБОТКА НАЖАТИЙ (LONG PRESS) И КЛИКОВ */
-/* ========================================== */
+// 5. ТВОИ СЛУШАТЕЛИ ТАЧЕЙ, КЛИКОВ И ШЕРИНГА
 function setupNoteEvents(card, noteId, note) {
   let pressTimer;
 
-  // Функция срабатывания Долгого зажатия
   const startPress = () => {
     pressTimer = setTimeout(() => {
       if (!isSelectMode) {
         enableSelectMode();
         toggleNoteSelection(card, noteId);
       }
-    }, 600); // 600 миллисекунд удержания
+    }, 600);
   };
 
   const cancelPress = () => clearTimeout(pressTimer);
@@ -1148,7 +1201,6 @@ function setupNoteEvents(card, noteId, note) {
   card.addEventListener('mouseleave', cancelPress);
   card.addEventListener('touchend', cancelPress);
 
-  // Обычный клик
   card.onclick = () => {
     if (isSelectMode) {
       toggleNoteSelection(card, noteId);
@@ -1157,26 +1209,26 @@ function setupNoteEvents(card, noteId, note) {
     }
   };
 
-  // Кнопка: Опубликовать в ленту
+  // Публикация в общую Ленту
   card.querySelector('.share-feed').onclick = async (e) => {
     e.stopPropagation();
     try {
       await addDoc(collection(db, 'posts'), {
         authorId: currentUser.uid,
-        authorName: userProfile.displayName || 'Пользователь',
-        authorAvatar: userProfile.avatar || AVATARS[0],
+        authorName: (typeof userProfile !== 'undefined' && userProfile.displayName) || 'Пользователь',
+        authorAvatar: (typeof userProfile !== 'undefined' && userProfile.avatar) || 'https://api.dicebear.com/7.x/avataaars/svg?seed=1',
         text: `📢 Из заметок:\n\n${note.title ? `*${note.title}*\n` : ''}${note.text}`,
         likes: [],
         commentsCount: 0,
         createdAt: serverTimestamp()
       });
-      showToast('Заметка опубликована в ленте ленты! 🌍');
+      showToast('Заметка опубликована в ленте! 🌍');
     } catch(err) {
       showToast('Ошибка публикации', 'error');
     }
   };
 
-  // Кнопка: Отправить контакту (Всплывающий Bottom Sheet)
+  // Пересылка контакту
   card.querySelector('.share-contact').onclick = (e) => {
     e.stopPropagation();
     currentSharingNoteText = `${note.title ? `📝 ${note.title}\n` : ''}${note.text}`;
@@ -1184,24 +1236,21 @@ function setupNoteEvents(card, noteId, note) {
   };
 }
 
-/* ========================================== */
-/* 4. РЕЖИМ МНОЖЕСТВЕННОГО ВЫДЕЛЕНИЯ          */
-/* ========================================== */
+// 6. УПРАВЛЕНИЕ МНОЖЕСТВЕННЫМ ВЫДЕЛЕНИЕМ
 function enableSelectMode() {
   isSelectMode = true;
-  defaultHeaderView.style.display = 'none';
-  selectHeaderView.style.display = 'flex';
+  if (defaultHeaderView) defaultHeaderView.style.display = 'none';
+  if (selectHeaderView) selectHeaderView.style.display = 'flex';
   document.querySelectorAll('.note-card').forEach(c => c.classList.add('selectable-mode'));
 }
 
 function disableSelectMode() {
   isSelectMode = false;
   selectedNoteIds.clear();
-  defaultHeaderView.style.display = 'flex';
-  selectHeaderView.style.display = 'none';
+  if (defaultHeaderView) defaultHeaderView.style.display = 'flex';
+  if (selectHeaderView) selectHeaderView.style.display = 'none';
   document.querySelectorAll('.note-card').forEach(c => {
-    c.classList.remove('selectable-mode');
-    c.classList.remove('selected-active');
+    c.classList.remove('selectable-mode', 'selected-active');
   });
 }
 
@@ -1213,12 +1262,11 @@ function toggleNoteSelection(card, noteId) {
     selectedNoteIds.add(noteId);
     card.classList.add('selected-active');
   }
-  notesSelectCount.innerText = `Выбрано: ${selectedNoteIds.size}`;
+  if (notesSelectCount) notesSelectCount.innerText = `Выбрано: ${selectedNoteIds.size}`;
 }
 
 if (cancelNotesSelectBtn) cancelNotesSelectBtn.onclick = disableSelectMode;
 
-// Групповое удаление выделенных заметок
 if (deleteSelectedNotesBtn) {
   deleteSelectedNotesBtn.onclick = async () => {
     if (selectedNoteIds.size === 0) return;
@@ -1232,18 +1280,15 @@ if (deleteSelectedNotesBtn) {
   };
 }
 
-/* ========================================== */
-/* 5. ПОЛНОЭКРАННЫЙ ПРОСМОТР И РЕДАКТИРОВАНИЕ */
-/* ========================================== */
+// 7. ПОЛНОЭКРАННЫЙ РЕЖИМ И АВТОСОХРАНЕНИЕ ПРИ ВЫХОДЕ
 function openNoteFullScreen(noteId, note) {
   activeViewingNoteId = noteId;
-  noteViewTitle.value = note.title || '';
-  noteViewText.value = note.text || '';
-  noteViewDate.innerText = note.updatedAt ? `Изменено: ${new Date(note.updatedAt.seconds * 1000).toLocaleString()}` : '';
-  noteViewScreen.classList.add('active');
+  if (noteViewTitle) noteViewTitle.value = note.title || '';
+  if (noteViewText) noteViewText.value = note.text || '';
+  if (noteViewDate) noteViewDate.innerText = note.updatedAt ? `Изменено: ${new Date(note.updatedAt.seconds * 1000).toLocaleString()}` : '';
+  if (noteViewScreen) noteViewScreen.style.display = 'flex';
 }
 
-// Закрытие экрана и автосохранение изменений в базу
 if (noteViewBackBtn) {
   noteViewBackBtn.onclick = async () => {
     if (activeViewingNoteId) {
@@ -1257,41 +1302,37 @@ if (noteViewBackBtn) {
           updatedAt: serverTimestamp()
         });
       } else {
-        // Если текст полностью стерли — удаляем пустую заметку
         await deleteDoc(doc(db, 'notes', activeViewingNoteId));
       }
     }
-    noteViewScreen.classList.remove('active');
+    if (noteViewScreen) noteViewScreen.style.display = 'none';
     activeViewingNoteId = null;
   };
 }
 
-/* ========================================== */
-/* 6. ОТПРАВКА КОНТАКТУ (BOTTOM SHEET ПОДГРУЗКА)*/
-/* ========================================== */
+// 8. ПАНЕЛЬ ВЫБОРА КОНТАКТА ДЛЯ ОТПРАВКИ ЗАМЕТКИ
 function openShareContactSheet() {
-  shareContactSheet.classList.add('active');
+  if (!shareContactSheet || !shareContactsList) return;
+  shareContactSheet.style.bottom = '0';
+  if (backdrop) backdrop.style.display = 'block';
   shareContactsList.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">Загрузка контактов...</div>';
   
-  // Берем существующую у тебя в приложении коллекцию активных чатов / или юзеров
-  // Допустим, мы выведем общую ленту пользователей для выбора, кому переслать
   const q = query(collection(db, 'users'), limit(20));
   onSnapshot(q, (snapshot) => {
     shareContactsList.innerHTML = '';
     snapshot.forEach(userSnap => {
       const u = userSnap.data();
-      if (userSnap.id === currentUser.uid) return; // Себе не отправляем
+      if (userSnap.id === currentUser.uid) return;
       
       const row = document.createElement('div');
       row.className = 'share-contact-item';
+      row.style.cssText = 'display:flex; align-items:center; gap:12px; padding:10px; cursor:pointer; border-radius:8px; transition: background 0.2s;';
       row.innerHTML = `
-        <img src="${u.avatar || AVATARS[0]}" style="width:36px; height:36px; border-radius:50%">
-        <span>${escapeHtml(u.displayName || 'Пользователь')}</span>
+        <img src="${u.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}" style="width:36px; height:36px; border-radius:50%">
+        <span style="color:#fff;">${escapeHtml(u.displayName || 'Пользователь')}</span>
       `;
       
       row.onclick = async () => {
-        // Логика создания сообщения в чате с этим пользователем
-        // Определяем ID чата (например, склеиванием двух UID)
         const chatRoomId = currentUser.uid < userSnap.id ? `${currentUser.uid}_${userSnap.id}` : `${userSnap.id}_${currentUser.uid}`;
         
         await addDoc(collection(db, 'messages'), {
@@ -1311,13 +1352,46 @@ function openShareContactSheet() {
 }
 
 function closeShareContactSheet() {
-  shareContactSheet.classList.remove('active');
+  if (shareContactSheet) shareContactSheet.style.bottom = '-100%';
+  if (backdrop) backdrop.style.display = 'none';
 }
 if (backdrop) backdrop.onclick = closeShareContactSheet;
 
-// Важно вызвать запуск логгера заметок при авторизации пользователя
-// Добавь вызов функции loadNotes() внутрь твоего корневого onAuthStateChanged()
+// Вспомогательная функция санитизации HTML
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
-// Инициализация
-initEmojiPicker();
+// 9. ИНИЦИАЛИЗАТОР ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК МЕНЮ
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    
+    btn.classList.add('active');
+    const tabId = `tab-${btn.dataset.tab}`;
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) targetTab.classList.add('active');
+    
+    const tabTitle = document.getElementById('tab-title');
+    if (tabTitle) {
+      if (btn.dataset.tab === 'chats') tabTitle.innerText = 'Чаты';
+      if (btn.dataset.tab === 'contacts') tabTitle.innerText = 'Контакты';
+      if (btn.dataset.tab === 'feed') tabTitle.innerText = 'Лента';
+      if (btn.dataset.tab === 'notes') tabTitle.innerText = 'Заметки';
+      if (btn.dataset.tab === 'profile') tabTitle.innerText = 'Профиль';
+    }
+  });
+});
+
+// КОРНЕВОЙ ЗАПУСК И ЛОГИ ИНИЦИАЛИЗАЦИИ
+if (typeof initEmojiPicker === 'function') {
+  initEmojiPicker();
+}
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
