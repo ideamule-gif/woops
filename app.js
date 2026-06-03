@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
@@ -76,13 +76,15 @@ const toast = document.getElementById('toast');
 let currentUser = null;
 let currentChat = null;
 let currentEditPostId = null;
+let currentPostCommentsId = null; // ID поста, чьи комментарии сейчас открыты
 let unsubChat = null;
+let unsubComments = null; // Подписка на комментарии
 let unsubUsers = null;
 let unsubFeed = null;
 let unsubOwnProfile = null;
 let userProfile = {};
 let selectedAvatar = '';
-let lastSeenInterval = null; // Переменная для контроля интервала пинга активности
+let lastSeenInterval = null;
 
 const AVATARS = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Spiderman&backgroundColor=b6e3f4',
@@ -105,6 +107,82 @@ const AVATARS = [
 
 const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪','🎯','🌟','💬','🚀','✅','❌','⚡','🎮','🎵','🍕'];
 
+// Монохромные SVG-иконки для ленты (средний размер)
+const svgEdit = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const svgDelete = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+const svgLike = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+const svgComment = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+
+// Динамическое создание экрана комментариев (копия экрана чата)
+let commentScreen = document.getElementById('comment-screen');
+if (!commentScreen) {
+  commentScreen = document.createElement('div');
+  commentScreen.id = 'comment-screen';
+  commentScreen.className = 'screen';
+  commentScreen.innerHTML = `
+    <div class="screen-header">
+      <button id="comment-back-btn" class="icon-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div class="chat-user-info">
+        <h3 id="comment-title">Комментарии</h3>
+        <span id="comment-subtitle">к публикации</span>
+      </div>
+    </div>
+    <div id="comment-msg-area" class="chat-messages"></div>
+    <div class="chat-input-area">
+      <textarea id="comment-text-input" placeholder="Напишите комментарий..."></textarea>
+      <button id="comment-send-btn" class="icon-btn active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(commentScreen);
+}
+
+// Привязка событий для экрана комментариев
+const commentBackBtn = document.getElementById('comment-back-btn');
+const commentMsgArea = document.getElementById('comment-msg-area');
+const commentTextInput = document.getElementById('comment-text-input');
+const commentSendBtn = document.getElementById('comment-send-btn');
+
+if (commentBackBtn) {
+  commentBackBtn.onclick = () => {
+    if (commentScreen) commentScreen.classList.remove('active');
+    if (mainScreen) mainScreen.classList.add('active');
+    if (unsubComments) unsubComments();
+    currentPostCommentsId = null;
+  };
+}
+
+if (commentSendBtn) {
+  commentSendBtn.onclick = async () => {
+    const text = commentTextInput.value.trim();
+    if (!text || !currentPostCommentsId) return;
+    try {
+      await addDoc(collection(db, 'posts', currentPostCommentsId, 'comments'), {
+        authorId: currentUser.uid,
+        authorName: userProfile.displayName || 'Пользователь',
+        authorAvatar: userProfile.avatar || AVATARS[0],
+        text,
+        createdAt: serverTimestamp()
+      });
+      commentTextInput.value = '';
+    } catch (e) {
+      showToast('Не удалось отправить комментарий', 'error');
+    }
+  };
+}
+
+if (commentTextInput) {
+  commentTextInput.onkeypress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (commentSendBtn) commentSendBtn.click();
+    }
+  };
+}
+
 // ============================================
 // 🔐 АВТОРИЗАЦИЯ И СТАТУСЫ
 // ============================================
@@ -114,7 +192,6 @@ onAuthStateChanged(auth, async (user) => {
     if (authScreen) authScreen.classList.remove('active');
     if (mainScreen) mainScreen.classList.add('active');
     
-    // Принудительно обновляем статус текущего пользователя на "online" в Firestore при входе
     try {
       await updateDoc(doc(db, 'users', user.uid), {
         status: 'online',
@@ -134,6 +211,7 @@ onAuthStateChanged(auth, async (user) => {
     if (authScreen) authScreen.classList.add('active');
     if (mainScreen) mainScreen.classList.remove('active');
     if (chatScreen) chatScreen.classList.remove('active');
+    if (commentScreen) commentScreen.classList.remove('active');
     cleanupListeners();
   }
 });
@@ -175,7 +253,6 @@ if (logoutBtn) {
   logoutBtn.onclick = async () => {
     if (currentUser) {
       try {
-        // Меняем статус на offline и только после успешного ответа базы делаем signOut
         await updateDoc(doc(db, 'users', currentUser.uid), { 
           status: 'offline', 
           lastSeen: serverTimestamp() 
@@ -321,7 +398,6 @@ function createUserListItem(uid, user) {
   const li = document.createElement('li');
   li.className = 'chat-item animate-fade-in';
   
-  // Динамическое определение статуса для корректного отображения (В сети / Оффлайн)
   const isOnline = user.status === 'online';
   const statusClass = isOnline ? 'status-online' : 'status-offline';
   const statusText = isOnline ? 'в сети' : 'был(а) недавно';
@@ -422,18 +498,10 @@ function renderMessage(msgId, msg) {
     actionsHtml = `
       <div class="msg-actions">
         <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')" title="Редактировать">
-          <svg class="svg-icon-sm" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
+          ${svgEdit}
         </button>
         <button class="msg-action-btn delete" onclick="deleteMessage('${msgId}')" title="Удалить">
-          <svg class="svg-icon-sm" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1 2 2v2"/>
-            <line x1="10" y1="11" x2="10" y2="17"/>
-            <line x1="14" y1="11" x2="14" y2="17"/>
-          </svg>
+          ${svgDelete}
         </button>
       </div>
     `;
@@ -458,7 +526,7 @@ window.editMessage = async (msgId, currentText) => {
       });
       showToast('Сообщение обновлено');
     } catch (e) {
-      showToast('Ошибка редактирования', 'error');
+      showToast('Ошибка editing', 'error');
     }
   }
 };
@@ -515,7 +583,7 @@ if (backBtn) {
 }
 
 // ============================================
-// 🌍 ЛЕНТА (FEED)
+// 🌍 ЛЕНТА (FEED) WITH LIKES & COMMENTS
 // ============================================
 function loadFeed() {
   if (unsubFeed) unsubFeed();
@@ -539,11 +607,19 @@ function renderPost(postId, post) {
   const isOwn = post.authorId === currentUser?.uid;
   const time = formatTime(post.createdAt);
   
-  let actionsHtml = '';
+  const likesArr = post.likes || [];
+  const hasLiked = likesArr.includes(currentUser?.uid);
+  const likesCount = likesArr.length;
+
+  let ownerActionsHtml = '';
   if (isOwn) {
-    actionsHtml = `
-      <button class="action-btn" onclick="openEditPost('${postId}', '${escapeHtml(post.text).replace(/'/g, "\\'")}')">✏️ Изменить</button>
-      <button class="action-btn delete" onclick="deletePost('${postId}')">🗑️ Удалить</button>
+    ownerActionsHtml = `
+      <button class="feed-icon-btn" onclick="openEditPost('${postId}', '${escapeHtml(post.text).replace(/'/g, "\\'")}')" title="Изменить">
+        ${svgEdit}
+      </button>
+      <button class="feed-icon-btn delete" onclick="deletePost('${postId}')" title="Удалить">
+        ${svgDelete}
+      </button>
     `;
   }
 
@@ -554,10 +630,19 @@ function renderPost(postId, post) {
         <h4>${escapeHtml(post.authorName || 'Пользователь')}</h4>
         <span>${time}${post.isEdited ? ' • (изменено)' : ''}</span>
       </div>
+      <div class="feed-post-owner-actions">
+        ${ownerActionsHtml}
+      </div>
     </div>
     <div class="feed-post-content">${escapeHtml(post.text).replace(/\n/g, '<br>')}</div>
-    <div class="feed-post-actions">
-      ${actionsHtml}
+    
+    <div class="feed-post-footer">
+      <button class="feed-action-trigger ${hasLiked ? 'liked' : ''}" onclick="toggleLike('${postId}', ${hasLiked})">
+        ${svgLike} <span class="counter">${likesCount}</span>
+      </button>
+      <button class="feed-action-trigger" onclick="openComments('${postId}')">
+        ${svgComment} <span class="counter">Обсудить</span>
+      </button>
     </div>
   `;
   return div;
@@ -573,6 +658,7 @@ if (postBtn) {
         authorName: userProfile.displayName || 'Пользователь',
         authorAvatar: userProfile.avatar || AVATARS[0],
         text,
+        likes: [],
         createdAt: serverTimestamp()
       });
       feedInput.value = '';
@@ -582,6 +668,62 @@ if (postBtn) {
     }
   };
 }
+
+window.toggleLike = async (postId, hasLiked) => {
+  if (!currentUser) return;
+  const postRef = doc(db, 'posts', postId);
+  try {
+    if (hasLiked) {
+      await updateDoc(postRef, { likes: arrayRemove(currentUser.uid) });
+    } else {
+      await updateDoc(postRef, { likes: arrayUnion(currentUser.uid) });
+    }
+  } catch (e) {
+    console.error("Ошибка при переключении лайка:", e);
+  }
+};
+
+window.openComments = (postId) => {
+  currentPostCommentsId = postId;
+  if (mainScreen) mainScreen.classList.remove('active');
+  if (commentScreen) commentScreen.classList.add('active');
+  
+  if (commentMsgArea) commentMsgArea.innerHTML = '<div class="empty-state">Загрузка комментариев...</div>';
+  
+  const q = query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc'));
+  
+  if (unsubComments) unsubComments();
+  
+  unsubComments = onSnapshot(q, (snap) => {
+    if (!commentMsgArea) return;
+    commentMsgArea.innerHTML = '';
+    
+    if (snap.empty) {
+      commentMsgArea.innerHTML = '<div class="empty-state">Пока нет комментариев. Будьте первым! 💬</div>';
+      return;
+    }
+    
+    snap.forEach(docSnap => {
+      const comm = docSnap.data();
+      const div = document.createElement('div');
+      const isOwnComm = comm.authorId === currentUser?.uid;
+      
+      div.className = `msg ${isOwnComm ? 'out' : 'in'} animate-fade-in`;
+      div.style.flexDirection = 'column';
+      div.style.alignItems = isOwnComm ? 'flex-end' : 'flex-start';
+      
+      const commTime = formatTime(comm.createdAt);
+      
+      div.innerHTML = `
+        <div style="font-size: 11px; font-weight: bold; opacity: 0.6; margin-bottom: 2px;">${escapeHtml(comm.authorName)}</div>
+        <div>${escapeHtml(comm.text)}</div>
+        <span class="time">${commTime}</span>
+      `;
+      commentMsgArea.appendChild(div);
+    });
+    commentMsgArea.scrollTop = commentMsgArea.scrollHeight;
+  });
+};
 
 window.openEditPost = (postId, currentText) => {
   currentEditPostId = postId;
@@ -674,7 +816,6 @@ function formatTime(timestamp) {
   return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Полноценная логика циклического пинга статуса активности
 function updateLastSeen() {
   if (!currentUser) return;
   if (lastSeenInterval) clearInterval(lastSeenInterval);
@@ -688,8 +829,8 @@ function updateLastSeen() {
     }
   };
 
-  sendPing(); // Запускаем сразу при входе
-  lastSeenInterval = setInterval(sendPing, 45000); // И далее каждые 45 секунд
+  sendPing(); 
+  lastSeenInterval = setInterval(sendPing, 45000); 
 }
 
 navBtns.forEach(btn => {
@@ -711,6 +852,7 @@ function cleanupListeners() {
   if (unsubUsers) unsubUsers();
   if (unsubFeed) unsubFeed();
   if (unsubOwnProfile) unsubOwnProfile();
+  if (unsubComments) unsubComments();
   if (lastSeenInterval) {
     clearInterval(lastSeenInterval);
     lastSeenInterval = null;
