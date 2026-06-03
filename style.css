@@ -1307,4 +1307,335 @@ input::placeholder, textarea::placeholder {
     border-left: 1px solid var(--glass-border);
     border-right: 1px solid var(--glass-border);
   }
+
+    /* ======================================================== */
+/* 📝 СТИЛИ ДЛЯ ПРОФЕССИОНАЛЬНЫХ ЗАМЕТОК                    */
+/* ======================================================== */
+
+/* Зона создания заметок */
+.note-create-area {
+  padding: 16px;
+  background: var(--bg-surface, rgba(255, 255, 255, 0.02));
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.05));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#note-title-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.05));
+  color: var(--text-color, #fff);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 4px 0;
+  outline: none;
+}
+
+.note-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#note-text-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-color, #fff);
+  font-size: 15px;
+  resize: none;
+  height: 36px;
+  outline: none;
+  font-family: inherit;
+  line-height: 20px;
+}
+
+#save-note-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: var(--radius-md, 10px);
+  background: var(--accent-color, #6366f1);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Оболочка заметок */
+#notes-wrapper {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: gap;
+  transition: all 0.3s ease;
+}
+
+/* Вид СЕТКИ (2 колонки) */
+.notes-grid-view {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* Вид СПИСКА (1 колонка) */
+.notes-list-view {
+  display: flex !important;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Карточка заметки */
+.note-card {
+  background: var(--bg-surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 12px);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  cursor: pointer;
+  user-select: none; /* Запрещаем стандартное выделение текста при долгом нажатии */
+  -webkit-user-select: none;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.note-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.note-card:active {
+  transform: scale(0.98);
+}
+
+/* Контент внутри карточки */
+.note-card h4 {
+  margin: 0 0 6px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-color, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, #aaa);
+  line-height: 18px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Обрезает текст после 3 строк в сетке */
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
+}
+
+.note-card .note-date {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+/* Нижний футер действий внутри карточки */
+.note-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 8px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.note-card:hover .note-card-actions {
+  opacity: 1;
+}
+
+.note-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #888);
+  padding: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.note-action-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Стили для режима выделения */
+.note-card.selectable-mode::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  transition: all 0.2s;
+  z-index: 2;
+}
+
+.note-card.selected-active {
+  border-color: var(--accent-color, #6366f1) !important;
+  background: rgba(99, 102, 241, 0.1) !important;
+}
+
+.note-card.selected-active::before {
+  background: var(--accent-color, #6366f1);
+  border-color: var(--accent-color, #6366f1);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-size: 12px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Полноэкранный просмотр заметки */
+#note-view-screen {
+  display: none;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-main, #0b0f19);
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+#note-view-screen.active {
+  display: flex;
+}
+
+.note-view-body {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#note-view-title {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  outline: none;
+}
+
+#note-view-text {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-color, #e2e8f0);
+  font-size: 16px;
+  line-height: 24px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+}
+
+/* Всплывающее меню Bottom Sheet */
+.bottom-sheet {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+}
+
+.bottom-sheet.active {
+  display: flex;
+}
+
+.bottom-sheet-backdrop {
+  position: absolute;
+  top: 0;bottom: 0;left: 0;right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.bottom-sheet-content {
+  position: relative;
+  width: 100%;
+  max-height: 70vh;
+  background: #0f172a;
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: 20px 20px 0 0;
+  padding: 16px 20px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 2;
+  transform: translateY(100%);
+  transition: transform 0.3s ease-out;
+}
+
+.bottom-sheet.active .bottom-sheet-content {
+  transform: translateY(0);
+}
+
+.drag-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 0 auto;
+}
+
+.bottom-sheet-header h3 {
+  margin: 8px 0 0 0;
+  font-size: 18px;
+  text-align: center;
+}
+
+.share-contacts-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.share-contact-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Адаптив для десктопа */
+@media (min-width: 768px) {
+  #note-view-screen, .bottom-sheet-content {
+    max-width: 480px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .bottom-sheet.active .bottom-sheet-content {
+    transform: translate(-50%, 0);
+  }
+}
 }
