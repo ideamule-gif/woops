@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
@@ -160,16 +160,24 @@ if (commentSendBtn) {
     const text = commentTextInput.value.trim();
     if (!text || !currentPostCommentsId) return;
     try {
+      // 1. Создаем сам комментарий
       await addDoc(collection(db, 'posts', currentPostCommentsId, 'comments'), {
         authorId: currentUser.uid,
         authorName: userProfile.displayName || 'Пользователь',
-        authorAvatar: userProfile.avatar || AVATARS[0], // Исправлено получение аватара
+        authorAvatar: userProfile.avatar || AVATARS[0],
         text,
         createdAt: serverTimestamp()
       });
+
+      // 2. Увеличиваем счетчик комментариев в документе поста на +1
+      const postRef = doc(db, 'posts', currentPostCommentsId);
+      await updateDoc(postRef, {
+        commentsCount: increment(1)
+      });
+
       commentTextInput.value = '';
     } catch (e) {
-      console.error("Ошибка отправки комментария:", e); // Выведет точную ошибку в консоль браузера, если что-то пойдет не так
+      console.error("Ошибка отправки комментария:", e);
       showToast('Не удалось отправить комментарий', 'error');
     }
   };
@@ -624,6 +632,8 @@ function renderPost(postId, post) {
     `;
   }
 
+const commentsCount = post.commentsCount || 0; // Получаем количество или 0
+
   div.innerHTML = `
     <div class="feed-post-header">
       <img class="avatar" src="${post.authorAvatar || AVATARS[0]}" alt="avatar">
@@ -642,7 +652,7 @@ function renderPost(postId, post) {
         ${svgLike} <span class="counter">${likesCount}</span>
       </button>
       <button class="feed-action-trigger" onclick="openComments('${postId}')">
-        ${svgComment} <span class="counter">Обсудить</span>
+        ${svgComment} <span class="counter">${commentsCount}</span>
       </button>
     </div>
   `;
@@ -659,7 +669,8 @@ if (postBtn) {
         authorName: userProfile.displayName || 'Пользователь',
         authorAvatar: userProfile.avatar || AVATARS[0],
         text,
-        likes: [], // <--- ОБЯЗАТЕЛЬНО: создаем пустой массив при публикации
+        likes: [],
+        commentsCount: 0, // <--- Инициализируем счётчик нулем
         createdAt: serverTimestamp()
       });
       feedInput.value = '';
