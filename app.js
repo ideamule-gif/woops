@@ -1357,17 +1357,6 @@ function closeShareContactSheet() {
 }
 if (backdrop) backdrop.onclick = closeShareContactSheet;
 
-// Вспомогательная функция санитизации HTML
-function escapeHtml(text) {
-  if (!text) return '';
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 // 9. ИНИЦИАЛИЗАТОР ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК МЕНЮ
 document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
