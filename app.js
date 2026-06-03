@@ -82,6 +82,7 @@ let unsubFeed = null;
 let unsubOwnProfile = null;
 let userProfile = {};
 let selectedAvatar = '';
+let lastSeenInterval = null; // Переменная для контроля интервала пинга активности
 
 const AVATARS = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Spiderman&backgroundColor=b6e3f4',
@@ -105,13 +106,24 @@ const AVATARS = [
 const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪','🎯','🌟','💬','🚀','✅','❌','⚡','🎮','🎵','🍕'];
 
 // ============================================
-// 🔐 АВТОРИЗАЦИЯ
+// 🔐 АВТОРИЗАЦИЯ И СТАТУСЫ
 // ============================================
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     if (authScreen) authScreen.classList.remove('active');
     if (mainScreen) mainScreen.classList.add('active');
+    
+    // Принудительно обновляем статус текущего пользователя на "online" в Firestore при входе
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        status: 'online',
+        lastSeen: serverTimestamp()
+      });
+    } catch (e) {
+      console.error("Ошибка обновления статуса при входе:", e);
+    }
+
     trackOwnProfile(user.uid);
     loadUsersList();
     loadFeed();
@@ -162,8 +174,17 @@ if (registerBtn) {
 if (logoutBtn) {
   logoutBtn.onclick = async () => {
     if (currentUser) {
-      await updateDoc(doc(db, 'users', currentUser.uid), { status: 'offline', lastSeen: serverTimestamp() });
-      await signOut(auth);
+      try {
+        // Меняем статус на offline и только после успешного ответа базы делаем signOut
+        await updateDoc(doc(db, 'users', currentUser.uid), { 
+          status: 'offline', 
+          lastSeen: serverTimestamp() 
+        });
+        await signOut(auth);
+      } catch (e) {
+        console.error("Ошибка при выходе:", e);
+        await signOut(auth);
+      }
     }
   };
 }
@@ -299,14 +320,20 @@ if (userSearch) {
 function createUserListItem(uid, user) {
   const li = document.createElement('li');
   li.className = 'chat-item animate-fade-in';
+  
+  // Динамическое определение статуса для корректного отображения (В сети / Оффлайн)
+  const isOnline = user.status === 'online';
+  const statusClass = isOnline ? 'status-online' : 'status-offline';
+  const statusText = isOnline ? 'в сети' : 'был(а) недавно';
+
   li.innerHTML = `
     <div class="avatar-wrapper">
       <img class="avatar" src="${user.avatar || AVATARS[0]}" alt="avatar">
-      <span class="status-indicator status-${user.status || 'offline'}"></span>
+      <span class="status-indicator ${statusClass}"></span>
     </div>
     <div class="chat-info">
       <h4>${escapeHtml(user.displayName || 'Пользователь')}</h4>
-      <p>${escapeHtml(user.statusText || 'В сети')}</p>
+      <p>${escapeHtml(user.statusText || statusText)}</p>
     </div>
   `;
   li.onclick = () => openChat(uid, user.displayName, user.avatar);
@@ -323,7 +350,6 @@ async function openChat(userId, name, avatar) {
   if (chatName) chatName.textContent = name || 'Пользователь';
   if (chatAvatar) chatAvatar.src = avatar || AVATARS[0];
   
-  // Показываем индикатор загрузки только один раз при входе в чат
   if (msgArea) msgArea.innerHTML = '<div class="empty-state">Загрузка сообщений...</div>';
   
   const room = [currentUser.uid, userId].sort().join('_');
@@ -331,12 +357,11 @@ async function openChat(userId, name, avatar) {
   
   if (unsubChat) unsubChat();
   
-  let isFirstLoad = true; // Переменная-флаг для первой отрисовки истории
+  let isFirstLoad = true;
 
   unsubChat = onSnapshot(q, (snap) => {
     if (!msgArea) return;
 
-    // Сценарий 1: Первая загрузка чата — рендерим всю историю разом, чтобы не дергать верстку
     if (isFirstLoad) {
       msgArea.innerHTML = '';
       if (snap.empty) {
@@ -351,9 +376,7 @@ async function openChat(userId, name, avatar) {
       return;
     }
 
-    // Сценарий 2: Чат уже открыт — ловим только точечные изменения (новые смс, ред., удаление)
     snap.docChanges().forEach((change) => {
-      // На всякий случай убираем заглушку пустого чата, если она есть
       const emptyState = msgArea.querySelector('.empty-state');
       if (emptyState) emptyState.remove();
 
@@ -361,27 +384,21 @@ async function openChat(userId, name, avatar) {
       const msgData = change.doc.data();
 
       if (change.type === 'added') {
-        // Просто дописываем новое сообщение в конец, старые элементы вообще не трогаем!
         const msgEl = renderMessage(msgId, msgData);
         msgArea.appendChild(msgEl);
-        msgArea.scrollTop = msgArea.scrollHeight; // Плавный скролл к новому сообщению
+        msgArea.scrollTop = msgArea.scrollHeight;
       } 
-      
       else if (change.type === 'modified') {
-        // Находим измененное сообщение по его ID данных внутри атрибутов кнопок
         const oldMsg = msgArea.querySelector(`[data-msg-id="${msgId}"]`);
         if (oldMsg) {
           const newMsg = renderMessage(msgId, msgData);
           oldMsg.replaceWith(newMsg);
         }
       } 
-      
       else if (change.type === 'removed') {
-        // Удаляем сообщение из верстки без перезагрузки экрана
         const msgToDel = msgArea.querySelector(`[data-msg-id="${msgId}"]`);
         if (msgToDel) msgToDel.remove();
         
-        // Если удалили последнее сообщение и чат стал пустым — возвращаем заглушку
         if (msgArea.children.length === 0) {
           msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
         }
@@ -394,8 +411,6 @@ function renderMessage(msgId, msg) {
   const div = document.createElement('div');
   const isOwn = msg.senderId === currentUser?.uid;
   div.className = `msg ${isOwn ? 'out' : 'in'} animate-fade-in`;
-  
-  // Присваиваем дата-атрибут самому контейнеру сообщения, чтобы его было легко найти при обновлении/удалении
   div.setAttribute('data-msg-id', msgId);
   
   const time = formatTime(msg.createdAt);
@@ -403,9 +418,8 @@ function renderMessage(msgId, msg) {
   
   let actionsHtml = '';
   if (isOwn) {
-    // Безопасно экранируем кавычки для inline-функций onclick
     const safeText = escapeHtml(msg.text).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-   actionsHtml = `
+    actionsHtml = `
       <div class="msg-actions">
         <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')" title="Редактировать">
           <svg class="svg-icon-sm" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -460,7 +474,6 @@ window.deleteMessage = async (msgId) => {
 };
 
 if (sendBtn) {
-  // Защищаем текстовое поле от потери фокуса при нажатии на кнопку отправки
   sendBtn.onmousedown = (e) => {
     e.preventDefault(); 
   };
@@ -476,7 +489,7 @@ if (sendBtn) {
         text,
         createdAt: serverTimestamp()
       });
-      textInput.value = ''; // Просто очищаем поле, фокус и клавиатура остаются активными
+      textInput.value = '';
     } catch (e) {
       showToast('Не удалось отправить', 'error');
     }
@@ -661,14 +674,22 @@ function formatTime(timestamp) {
   return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Полноценная логика циклического пинга статуса активности
 function updateLastSeen() {
   if (!currentUser) return;
-  setInterval(() => {
-    updateDoc(doc(db, 'users', currentUser.uid), {
-      lastSeen: serverTimestamp(),
-      status: 'online'
-    }).catch(() => {});
-  }, 45000);
+  if (lastSeenInterval) clearInterval(lastSeenInterval);
+
+  const sendPing = () => {
+    if (currentUser) {
+      updateDoc(doc(db, 'users', currentUser.uid), {
+        lastSeen: serverTimestamp(),
+        status: 'online'
+      }).catch((e) => console.error("Ошибка периодического пинга:", e));
+    }
+  };
+
+  sendPing(); // Запускаем сразу при входе
+  lastSeenInterval = setInterval(sendPing, 45000); // И далее каждые 45 секунд
 }
 
 navBtns.forEach(btn => {
@@ -680,7 +701,7 @@ navBtns.forEach(btn => {
     const targetTab = document.getElementById(tabId);
     if (targetTab) targetTab.classList.add('active');
     
-    const titles = { chats: 'Чаты', feed: 'Лента', profile: 'Профиль' };
+    const titles = { chats: 'Чаты', feed: 'Лента', profile: 'Профиль', contacts: 'Контакты', notes: 'Заметки' };
     if (tabTitle) tabTitle.textContent = titles[btn.dataset.tab] || 'Woops';
   };
 });
@@ -690,18 +711,18 @@ function cleanupListeners() {
   if (unsubUsers) unsubUsers();
   if (unsubFeed) unsubFeed();
   if (unsubOwnProfile) unsubOwnProfile();
+  if (lastSeenInterval) {
+    clearInterval(lastSeenInterval);
+    lastSeenInterval = null;
+  }
 }
 
-// ============================================
-// 🌓 ЛОГИКА СМЕНЫ ТЕМЫ (ДЕНЬ / НОЧЬ)
-// ============================================
 // ============================================
 // 🌓 ЛОГИКА СМЕНЫ ТЕМЫ (ДЕНЬ / НОЧЬ)
 // ============================================
 const themeToggle = document.getElementById('theme-toggle');
 const savedTheme = localStorage.getItem('theme');
 
-// Коды твоих иконок в виде строк
 const sunSvg = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`;
 const moonSvg = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 
@@ -727,11 +748,6 @@ if (themeToggle) {
     }
   };
 }
-
-// Инициализация
-initEmojiPicker();
-console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
-
 
 // Инициализация
 initEmojiPicker();
