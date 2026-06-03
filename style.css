@@ -1137,18 +1137,18 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ======================================================== */
-/* 💬 ОБНОВЛЕННЫЕ СТИЛИ КОММЕНТАРИЕВ (ИДЕАЛЬНЫЕ ОТСТУПЫ)     */
+/* 💬 ОБНОВЛЕННЫЕ СТИЛИ КОММЕНТАРИЕВ (ФИКС ХЕДЕРА)          */
 /* ======================================================== */
 
 #comment-screen {
   display: none;
   flex-direction: column;
   position: fixed;
-  top: 60px; /* Сдвигаем вниз, чтобы главный хедер приложения оставался видимым */
+  top: 0; /* Теперь разворачиваем с самого верха, так как внутри свой хедер */
   bottom: 60px; /* Оставляем место под нижнюю навигацию */
   left: 0;
   right: 0;
-  height: calc(100vh - 60px); /* Высота за вычетом хедера */
+  height: calc(100vh - 60px);
   background: var(--bg-main, #0b0f19);
   z-index: 10;
 }
@@ -1157,12 +1157,27 @@ input::placeholder, textarea::placeholder {
   display: flex;
 }
 
-/* Панель управления комментариями (стрелка + надпись) */
+/* Навешиваем те же стили на внутренний хедер */
+#comment-screen .main-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.05));
+  background: rgba(2, 6, 23, 0.8); /* Фирменный темный полупрозрачный фон */
+  backdrop-filter: blur(12px);
+}
+
+#comment-screen .main-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-color, #fff);
+}
+
+/* Панель управления комментариями (стрелка + надпись) под главным хедером */
 .comment-nav-bar {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px 20px; /* Просторные отступы от краев */
+  padding: 12px 20px;
   background: rgba(255, 255, 255, 0.01);
   border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.05));
 }
@@ -1195,13 +1210,13 @@ input::placeholder, textarea::placeholder {
 
 #comment-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-color, #fff);
 }
 
 #comment-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted, #888);
 }
 
@@ -1218,10 +1233,10 @@ input::placeholder, textarea::placeholder {
 /* Нижняя область ввода */
 #comment-screen .chat-input-area {
   display: flex;
-  align-items: center; /* Выравнивание строго по центру */
+  align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 16px 20px; /* Отступы от краев для симметрии */
+  padding: 16px 20px;
   background: var(--bg-surface, rgba(255, 255, 255, 0.02));
   border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
 }
@@ -1237,9 +1252,9 @@ input::placeholder, textarea::placeholder {
   font-family: inherit;
   font-size: 15px;
   resize: none;
-  height: 44px; /* Фиксированная высота */
+  height: 44px;
   line-height: 18px;
-  box-sizing: border-box; /* Важно, чтобы внутренние отступы не ломали высоту */
+  box-sizing: border-box;
   outline: none;
   display: block;
   transition: border-color 0.2s;
@@ -1262,7 +1277,7 @@ input::placeholder, textarea::placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box; /* Гарантирует одинаковый размер со строкой ввода */
+  box-sizing: border-box;
   padding: 0;
   margin: 0;
   transition: opacity 0.2s, transform 0.1s;
@@ -1283,7 +1298,7 @@ input::placeholder, textarea::placeholder {
   fill: none;
 }
 
-/* Коррекция адаптива для десктопа, чтобы комментарии не растягивались шире основного контейнера */
+/* Коррекция адаптива для десктопа */
 @media (min-width: 768px) {
   #comment-screen {
     max-width: 480px;
