@@ -120,6 +120,12 @@ if (!commentScreen) {
   commentScreen.id = 'comment-screen';
   commentScreen.className = 'screen';
   commentScreen.innerHTML = `
+    <!-- Главный хедер, который остаётся сверху -->
+    <header class="main-header">
+      <h2>Лента</h2>
+    </header>
+
+    <!-- Подзаголовок со стрелкой назад -->
     <div class="comment-nav-bar">
       <button id="comment-back-btn" class="comment-back-icon-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -129,7 +135,11 @@ if (!commentScreen) {
         <span id="comment-subtitle">к публикации</span>
       </div>
     </div>
+
+    <!-- Область вывода комментариев -->
     <div id="comment-msg-area" class="chat-messages"></div>
+
+    <!-- Поле ввода -->
     <div class="chat-input-area">
       <textarea id="comment-text-input" placeholder="Напишите комментарий..."></textarea>
       <button id="comment-send-btn" class="icon-btn active">
