@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
   './manifest.json'
 ];
 
+// Установка: Кэшируем статику
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -16,6 +17,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
+// Активация: Чистим старый кэш
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -31,6 +33,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Перехват запросов (Stale-While-Revalidate)
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
@@ -43,7 +46,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Стратегия Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
@@ -61,8 +63,70 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Обновление SW из интерфейса
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+
+/* ======================================================== */
+/* 🔔 ОБРАБОТКА PUSH-УВЕДОМЛЕНИЙ И КЛИКОВ (BACKGROUND)       */
+/* ======================================================== */
+
+// 1. Прием push-уведомления от сервера (когда вкладка закрыта/свернута)
+self.addEventListener('push', (event) => {
+  let data = { title: 'Woops', body: 'Новое уведомление в мессенджере!' };
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: 'Woops', body: event.data.text() };
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: 'https://api.dicebear.com/7.x/avataaars/svg?seed=woops&backgroundColor=6366f1', 
+    badge: './manifest.json', // Иконка для статус-бара (опционально)
+    vibrate: [200, 100, 200],
+    data: {
+      url: data.url || '/' // Куда перенаправить пользователя при клике
+    },
+    actions: [
+      { action: 'open', title: 'Открыть Woops' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// 2. Обработка клика по уведомлению на экране телефона/ПК
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close(); // Сразу закрываем шторку уведомления
+
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    // Ищем, открыта ли уже вкладка с нашим приложением
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        // Если вкладка найдена, фокусируемся на ней и переводим на нужный URL
+        if ('focus' in client) {
+          if (client.url !== targetUrl) {
+            return client.navigate(targetUrl).then(c => c.focus());
+          }
+          return client.focus();
+        }
+      }
+      // Если ни одной вкладки мессенджера не открыто, запускаем новую
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
 });
