@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, arrayUnion, arrayRemove, increment, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
@@ -76,9 +76,9 @@ const toast = document.getElementById('toast');
 let currentUser = null;
 let currentChat = null;
 let currentEditPostId = null;
-let currentPostCommentsId = null; // ID поста, чьи комментарии сейчас открыты
+let currentPostCommentsId = null; 
 let unsubChat = null;
-let unsubComments = null; // Подписка на комментарии
+let unsubComments = null; 
 let unsubUsers = null;
 let unsubFeed = null;
 let unsubOwnProfile = null;
@@ -107,7 +107,6 @@ const AVATARS = [
 
 const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪','🎯','🌟','💬','🚀','✅','❌','⚡','🎮','🎵','🍕'];
 
-// Монохромные SVG-иконки для ленты (средний размер)
 const svgEdit = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 const svgDelete = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
 const svgLike = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
@@ -120,12 +119,9 @@ if (!commentScreen) {
   commentScreen.id = 'comment-screen';
   commentScreen.className = 'screen';
   commentScreen.innerHTML = `
-    <!-- Главный хедер, который остаётся сверху -->
     <header class="main-header">
       <h2>Лента</h2>
     </header>
-
-    <!-- Подзаголовок со стрелкой назад -->
     <div class="comment-nav-bar">
       <button id="comment-back-btn" class="comment-back-icon-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -135,22 +131,17 @@ if (!commentScreen) {
         <span id="comment-subtitle">к публикации</span>
       </div>
     </div>
-
-    <!-- Область вывода комментариев -->
     <div id="comment-msg-area" class="chat-messages"></div>
-
-    <!-- Поле ввода -->
     <div class="chat-input-area">
       <textarea id="comment-text-input" placeholder="Напишите комментарий..."></textarea>
       <button id="comment-send-btn" class="icon-btn active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
     </div>
   `;
   document.body.appendChild(commentScreen);
 }
 
-// Привязка событий для экрана комментариев
 const commentBackBtn = document.getElementById('comment-back-btn');
 const commentMsgArea = document.getElementById('comment-msg-area');
 const commentTextInput = document.getElementById('comment-text-input');
@@ -170,7 +161,6 @@ if (commentSendBtn) {
     const text = commentTextInput.value.trim();
     if (!text || !currentPostCommentsId) return;
     try {
-      // 1. Создаем сам комментарий
       await addDoc(collection(db, 'posts', currentPostCommentsId, 'comments'), {
         authorId: currentUser.uid,
         authorName: userProfile.displayName || 'Пользователь',
@@ -179,11 +169,18 @@ if (commentSendBtn) {
         createdAt: serverTimestamp()
       });
 
-      // 2. Увеличиваем счетчик комментариев в документе поста на +1
       const postRef = doc(db, 'posts', currentPostCommentsId);
-      await updateDoc(postRef, {
-        commentsCount: increment(1)
-      });
+      await updateDoc(postRef, { commentsCount: increment(1) });
+
+      // Отправляем уведомление автору поста (если это не мы сами)
+      if (typeof window.sendPostNotification === 'function') {
+        const postSnap = await getDocs(query(collection(db, 'posts')));
+        postSnap.forEach(d => {
+          if (d.id === currentPostCommentsId) {
+            window.sendPostNotification(d.data().authorId, 'comment', `прокомментировал: "${text}"`, currentPostCommentsId);
+          }
+        });
+      }
 
       commentTextInput.value = '';
     } catch (e) {
@@ -224,6 +221,11 @@ onAuthStateChanged(auth, async (user) => {
     loadUsersList();
     loadFeed();
     loadNotes();
+    
+    // Подключаем real-time уведомления и счетчик чатов при входе
+    if (typeof window.loadRealtimeNotifications === 'function') window.loadRealtimeNotifications();
+    if (typeof window.listenUnreadMessagesCount === 'function') window.listenUnreadMessagesCount();
+    
     updateLastSeen();
   } else {
     currentUser = null;
@@ -469,6 +471,8 @@ async function openChat(userId, name, avatar) {
         msgArea.scrollTop = msgArea.scrollHeight;
       }
       isFirstLoad = false;
+      // Сбрасываем непрочитанные для этого чата
+      if (typeof window.markMessagesAsRead === 'function') window.markMessagesAsRead(room);
       return;
     }
 
@@ -483,6 +487,7 @@ async function openChat(userId, name, avatar) {
         const msgEl = renderMessage(msgId, msgData);
         msgArea.appendChild(msgEl);
         msgArea.scrollTop = msgArea.scrollHeight;
+        if (typeof window.markMessagesAsRead === 'function') window.markMessagesAsRead(room);
       } 
       else if (change.type === 'modified') {
         const oldMsg = msgArea.querySelector(`[data-msg-id="${msgId}"]`);
@@ -555,17 +560,14 @@ window.deleteMessage = async (msgId) => {
   if (!confirm('Удалить это сообщение?')) return;
   try {
     await deleteDoc(doc(db, 'messages', msgId));
-    showToast('Сообщение удалено');
+    showToast('Сообщение deleted');
   } catch (e) {
     showToast('Ошибка удаления', 'error');
   }
 };
 
 if (sendBtn) {
-  sendBtn.onmousedown = (e) => {
-    e.preventDefault(); 
-  };
-
+  sendBtn.onmousedown = (e) => { e.preventDefault(); };
   sendBtn.onclick = async () => {
     const text = textInput.value.trim();
     if (!text || !currentChat) return;
@@ -573,10 +575,19 @@ if (sendBtn) {
     try {
       await addDoc(collection(db, 'messages'), {
         room,
+        chatRoomId: room, // Для совместимости с заметками
         senderId: currentUser.uid,
+        recipientId: currentChat.id, // Поле получателя для счетчиков
         text,
+        isRead: false,
         createdAt: serverTimestamp()
       });
+
+      // Отправка внутреннего уведомления
+      if (typeof window.sendPostNotification === 'function') {
+        window.sendPostNotification(currentChat.id, 'message', text, room);
+      }
+
       textInput.value = '';
     } catch (e) {
       showToast('Не удалось отправить', 'error');
@@ -604,7 +615,6 @@ if (backBtn) {
 
 // КОНТЕЙНЕР ВКЛАДКИ ЗАМЕТОК
 const notesTab = document.getElementById('notes-tab'); 
-// Если у тебя вкладки переключаются по id, убедись, что структура внутри выглядит так:
 if (notesTab) {
   notesTab.innerHTML = `
     <header class="main-header" id="notes-header">
@@ -626,7 +636,6 @@ if (notesTab) {
         </button>
       </div>
     </header>
-
     <div class="note-create-area">
       <input type="text" id="note-title-input" placeholder="Заголовок (необязательно)" style="display: none;">
       <div class="note-input-row">
@@ -636,9 +645,7 @@ if (notesTab) {
         </button>
       </div>
     </div>
-
     <div id="notes-wrapper" class="notes-grid-view"></div>
-
     <div id="note-view-screen" class="screen">
       <header class="main-header">
         <button id="note-view-back-btn" class="comment-back-icon-btn">
@@ -654,7 +661,6 @@ if (notesTab) {
         <textarea id="note-view-text" placeholder="Текст заметки..."></textarea>
       </div>
     </div>
-
     <div id="share-contact-sheet" class="bottom-sheet">
       <div class="bottom-sheet-backdrop"></div>
       <div class="bottom-sheet-content">
@@ -662,8 +668,7 @@ if (notesTab) {
           <div class="drag-handle"></div>
           <h3>Отправить контакту</h3>
         </div>
-        <div id="share-contacts-list" class="share-contacts-list">
-          </div>
+        <div id="share-contacts-list" class="share-contacts-list"></div>
       </div>
     </div>
   `;
@@ -697,6 +702,7 @@ function renderPost(postId, post) {
   const likesArr = post.likes || [];
   const hasLiked = likesArr.includes(currentUser?.uid);
   const likesCount = likesArr.length;
+  const commentsCount = post.commentsCount || 0;
 
   let ownerActionsHtml = '';
   if (isOwn) {
@@ -710,8 +716,6 @@ function renderPost(postId, post) {
     `;
   }
 
-const commentsCount = post.commentsCount || 0; // Получаем количество или 0
-
   div.innerHTML = `
     <div class="feed-post-header">
       <img class="avatar" src="${post.authorAvatar || AVATARS[0]}" alt="avatar">
@@ -724,7 +728,6 @@ const commentsCount = post.commentsCount || 0; // Получаем количе�
       </div>
     </div>
     <div class="feed-post-content">${escapeHtml(post.text).replace(/\n/g, '<br>')}</div>
-    
     <div class="feed-post-footer">
       <button class="feed-action-trigger ${hasLiked ? 'liked' : ''}" onclick="toggleLike('${postId}', ${hasLiked})">
         ${svgLike} <span class="counter">${likesCount}</span>
@@ -748,7 +751,7 @@ if (postBtn) {
         authorAvatar: userProfile.avatar || AVATARS[0],
         text,
         likes: [],
-        commentsCount: 0, // <--- Инициализируем счётчик нулем
+        commentsCount: 0,
         createdAt: serverTimestamp()
       });
       feedInput.value = '';
@@ -767,6 +770,13 @@ window.toggleLike = async (postId, hasLiked) => {
       await updateDoc(postRef, { likes: arrayRemove(currentUser.uid) });
     } else {
       await updateDoc(postRef, { likes: arrayUnion(currentUser.uid) });
+      // Отправляем уведомление автору поста
+      const postSnap = await getDocs(query(collection(db, 'posts')));
+      postSnap.forEach(d => {
+        if (d.id === postId) {
+          window.sendPostNotification(d.data().authorId, 'like', 'поставил лайк вашему посту', postId);
+        }
+      });
     }
   } catch (e) {
     console.error("Ошибка при переключении лайка:", e);
@@ -781,7 +791,6 @@ window.openComments = (postId) => {
   if (commentMsgArea) commentMsgArea.innerHTML = '<div class="empty-state">Загрузка комментариев...</div>';
   
   const q = query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc'));
-  
   if (unsubComments) unsubComments();
   
   unsubComments = onSnapshot(q, (snap) => {
@@ -845,7 +854,7 @@ if (saveEditPost) {
 }
 
 window.deletePost = async (postId) => {
-  if (!confirm('Удалить этот пост?')) return;
+  if (!confirm('Удалить этот post?')) return;
   try {
     await deleteDoc(doc(db, 'posts', postId));
     showToast('Пост удалён');
@@ -968,7 +977,6 @@ if (savedTheme === 'light') {
 if (themeToggle) {
   themeToggle.onclick = () => {
     const isLight = document.body.classList.toggle('light-theme');
-    
     if (isLight) {
       themeToggle.innerHTML = sunSvg;
       localStorage.setItem('theme', 'light');
@@ -981,81 +989,14 @@ if (themeToggle) {
   };
 }
 
-/* ======================================================== */
-/* 📝 МОДУЛЬ ЛИЧНЫХ ЗАМЕТОК ДЛЯ WOOPS                      */
-/* ======================================================== */
-
-// 1. ДИНАМИЧЕСКАЯ СБОРКА ИНТЕРФЕЙСА (Чтобы не засорять index.html)
-const notesTabContent = document.getElementById('notes-tab-content'); 
-if (notesTabContent) {
-  notesTabContent.innerHTML = `
-    <div class="note-ui-wrapper" style="display: flex; flex-direction: column; height: 100%;">
-      <div id="notes-header-container" style="padding: 10px 16px; background: rgba(0,0,0,0.1); border-bottom:1px solid rgba(255,255,255,0.05)">
-        <div class="header-default-view" style="display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 18px; font-weight: 700;">Личные заметки</span>
-          <button id="toggle-notes-view-btn" class="icon-btn" title="Изменить вид" style="background: none; border: none; color: inherit; cursor: pointer;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          </button>
-        </div>
-        <div class="header-select-view" style="display: none; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <button id="cancel-notes-select-btn" class="icon-btn" style="background:none; border:none; color:inherit;">✕</button>
-            <span id="notes-select-count" style="font-weight:600;">Выбрано: 0</span>
-          </div>
-          <button id="delete-selected-notes-btn" class="icon-btn" style="background:none; border:none; color:#ef4444;" title="Удалить выбранные">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="note-create-area" style="padding: 12px 16px;">
-        <input type="text" id="note-title-input" placeholder="Заголовок (необязательно)" style="display: none; width: 100%; margin-bottom: 8px; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff;">
-        <div class="note-input-row" style="display: flex; gap: 8px;">
-          <textarea id="note-text-input" placeholder="Новая заметка..." style="flex: 1; height: 36px; resize: none; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; transition: height 0.2s;"></textarea>
-          <button id="save-note-btn" class="icon-btn" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--primary-color, #6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <div id="notes-wrapper" class="notes-grid-view" style="flex: 1; overflow-y: auto; padding: 0 16px 20px 16px;"></div>
-    </div>
-
-    <div id="note-view-screen" class="screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: none; flex-direction: column; background: #111;">
-      <header class="main-header" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-        <button id="note-view-back-btn" class="icon-btn" style="background:none; border:none; color:inherit; font-size:20px; cursor:pointer; padding: 5px 10px;">←</button>
-        <div style="flex:1; margin-left:10px;">
-          <h3 style="margin:0; font-size:16px;">Просмотр заметки</h3>
-          <span id="note-view-date" style="font-size:11px; opacity:0.5;">Дата</span>
-        </div>
-      </header>
-      <div class="note-view-body" style="flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-        <input type="text" id="note-view-title" placeholder="Без заголовка" style="width: 100%; font-size: 20px; font-weight: 700; background: none; border: none; color: #fff; outline: none;">
-        <textarea id="note-view-text" placeholder="Текст заметки..." style="flex: 1; width: 100%; font-size: 15px; background: none; border: none; color: #ccc; outline: none; resize: none; line-height: 1.5;"></textarea>
-      </div>
-    </div>
-
-    <div id="share-contact-sheet" class="bottom-sheet" style="position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; z-index: 1001; background: #1e1e1e; border-top-left-radius: 16px; border-top-right-radius: 16px; transition: bottom 0.3s; display: flex; flex-direction: column;">
-      <div class="bottom-sheet-backdrop" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: -1; display: none;"></div>
-      <div class="bottom-sheet-content" style="flex: 1; display: flex; flex-direction: column; padding: 16px;">
-        <div class="bottom-sheet-header" style="text-align: center; margin-bottom: 15px;">
-          <div class="drag-handle" style="width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 0 auto 10px auto;"></div>
-          <h3 style="margin: 0; font-size: 18px;">Отправить контакту</h3>
-        </div>
-        <div id="share-contacts-list" class="share-contacts-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
-      </div>
-    </div>
-  `;
-}
-
-// 2. ИНИЦИАЛИЗАЦИЯ ГЛОБАЛЬНОГО СОСТОЯНИЯ ТВОЕГО КОДА
+// ==========================================
+// 📝 ЗАМЕТКИ (РАБОЧИЙ МОДУЛЬ)
+// ==========================================
 let isGridView = true;
 let isSelectMode = false;
 let selectedNoteIds = new Set();
 let currentSharingNoteText = "";
-let activeViewingNoteId = null;
 
-// СВЯЗЫВАЕМ ПЕРЕМЕННЫЕ С ДОМ ЭЛЕМЕНТАМИ
 const noteTextInput = document.getElementById('note-text-input');
 const noteTitleInput = document.getElementById('note-title-input');
 const saveNoteBtn = document.getElementById('save-note-btn');
@@ -1073,12 +1014,12 @@ const noteViewBackBtn = document.getElementById('note-view-back-btn');
 const noteViewTitle = document.getElementById('note-view-title');
 const noteViewText = document.getElementById('note-view-text');
 const noteViewDate = document.getElementById('note-view-date');
+let activeViewingNoteId = null;
 
 const shareContactSheet = document.getElementById('share-contact-sheet');
 const shareContactsList = document.getElementById('share-contacts-list');
 const backdrop = document.querySelector('.bottom-sheet-backdrop');
 
-// 3. ТВОЯ ЛОГИКА ВЗАИМОДЕЙСТВИЯ (ИНТЕРФЕЙС И ФОКУСЫ)
 if (noteTextInput) {
   noteTextInput.addEventListener('focus', () => {
     if (noteTitleInput) noteTitleInput.style.display = 'block';
@@ -1087,20 +1028,19 @@ if (noteTextInput) {
 }
 
 document.addEventListener('click', (e) => {
-  if (noteTextInput && !noteTextInput.contains(e.target) && !noteTitleInput.contains(e.target) && !saveNoteBtn.contains(e.target)) {
-    if (!noteTextInput.value.trim() && !noteTitleInput.value.trim()) {
+  if (noteTextInput && !noteTextInput.contains(e.target) && (!noteTitleInput || !noteTitleInput.contains(e.target)) && (!saveNoteBtn || !saveNoteBtn.contains(e.target))) {
+    if (!noteTextInput.value.trim() && (!noteTitleInput || !noteTitleInput.value.trim())) {
       if (noteTitleInput) noteTitleInput.style.display = 'none';
       noteTextInput.style.height = '36px';
     }
   }
 });
 
-// СОХРАНЕНИЕ ЗАМЕТКИ В FIREBASE
 if (saveNoteBtn) {
   saveNoteBtn.onclick = async () => {
     const text = noteTextInput.value.trim();
     const title = noteTitleInput ? noteTitleInput.value.trim() : '';
-    if (!text || !currentUser) return;
+    if (!text) return;
 
     try {
       await addDoc(collection(db, 'notes'), {
@@ -1123,37 +1063,33 @@ if (saveNoteBtn) {
   };
 }
 
-// СЕТКА / СПИСОК
 if (toggleNotesViewBtn) {
   toggleNotesViewBtn.onclick = () => {
     isGridView = !isGridView;
     if (isGridView) {
-      notesWrapper.className = 'notes-grid-view';
-      toggleNotesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+      if (notesWrapper) notesWrapper.className = 'notes-grid-view';
+      toggleNotesViewBtn.innerHTML = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
     } else {
-      notesWrapper.className = 'notes-list-view';
-      toggleNotesViewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
+      if (notesWrapper) notesWrapper.className = 'notes-list-view';
+      toggleNotesViewBtn.innerHTML = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
     }
   };
 }
 
-// 4. ТВОЯ ПОДГРУЗКА ИЗ FIREBASE
-window.loadNotes = function() {
+function loadNotes() {
   if (!currentUser || !notesWrapper) return;
-  
   const q = query(collection(db, 'notes'), where('userId', '==', currentUser.uid), orderBy('updatedAt', 'desc'));
   
   onSnapshot(q, (snapshot) => {
     notesWrapper.innerHTML = '';
     if (snapshot.empty) {
-      notesWrapper.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--text-muted); padding:40px; opacity:0.5;">У вас пока нет заметок 🏜️</div>`;
+      notesWrapper.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:gray; padding:40px;">У вас пока нет заметок 🏜️</div>`;
       return;
     }
 
     snapshot.forEach((docSnap) => {
       const note = docSnap.data();
       const noteId = docSnap.id;
-      
       const card = document.createElement('div');
       card.className = `note-card ${isSelectMode ? 'selectable-mode' : ''} ${selectedNoteIds.has(noteId) ? 'selected-active' : ''}`;
       card.dataset.id = noteId;
@@ -1173,17 +1109,14 @@ window.loadNotes = function() {
           </button>
         </div>
       `;
-
       setupNoteEvents(card, noteId, note);
       notesWrapper.appendChild(card);
     });
   });
-};
+}
 
-// 5. ТВОИ СЛУШАТЕЛИ ТАЧЕЙ, КЛИКОВ И ШЕРИНГА
 function setupNoteEvents(card, noteId, note) {
   let pressTimer;
-
   const startPress = () => {
     pressTimer = setTimeout(() => {
       if (!isSelectMode) {
@@ -1192,7 +1125,6 @@ function setupNoteEvents(card, noteId, note) {
       }
     }, 600);
   };
-
   const cancelPress = () => clearTimeout(pressTimer);
 
   card.addEventListener('mousedown', startPress);
@@ -1209,26 +1141,22 @@ function setupNoteEvents(card, noteId, note) {
     }
   };
 
-  // Публикация в общую Ленту
   card.querySelector('.share-feed').onclick = async (e) => {
     e.stopPropagation();
     try {
       await addDoc(collection(db, 'posts'), {
         authorId: currentUser.uid,
-        authorName: (typeof userProfile !== 'undefined' && userProfile.displayName) || 'Пользователь',
-        authorAvatar: (typeof userProfile !== 'undefined' && userProfile.avatar) || 'https://api.dicebear.com/7.x/avataaars/svg?seed=1',
+        authorName: userProfile.displayName || 'Пользователь',
+        authorAvatar: userProfile.avatar || AVATARS[0],
         text: `📢 Из заметок:\n\n${note.title ? `*${note.title}*\n` : ''}${note.text}`,
         likes: [],
         commentsCount: 0,
         createdAt: serverTimestamp()
       });
       showToast('Заметка опубликована в ленте! 🌍');
-    } catch(err) {
-      showToast('Ошибка публикации', 'error');
-    }
+    } catch(err) { showToast('Ошибка публикации', 'error'); }
   };
 
-  // Пересылка контакту
   card.querySelector('.share-contact').onclick = (e) => {
     e.stopPropagation();
     currentSharingNoteText = `${note.title ? `📝 ${note.title}\n` : ''}${note.text}`;
@@ -1236,7 +1164,6 @@ function setupNoteEvents(card, noteId, note) {
   };
 }
 
-// 6. УПРАВЛЕНИЕ МНОЖЕСТВЕННЫМ ВЫДЕЛЕНИЕМ
 function enableSelectMode() {
   isSelectMode = true;
   if (defaultHeaderView) defaultHeaderView.style.display = 'none';
@@ -1250,7 +1177,8 @@ function disableSelectMode() {
   if (defaultHeaderView) defaultHeaderView.style.display = 'flex';
   if (selectHeaderView) selectHeaderView.style.display = 'none';
   document.querySelectorAll('.note-card').forEach(c => {
-    c.classList.remove('selectable-mode', 'selected-active');
+    c.classList.remove('selectable-mode');
+    c.classList.remove('selected-active');
   });
 }
 
@@ -1280,13 +1208,12 @@ if (deleteSelectedNotesBtn) {
   };
 }
 
-// 7. ПОЛНОЭКРАННЫЙ РЕЖИМ И АВТОСОХРАНЕНИЕ ПРИ ВЫХОДЕ
 function openNoteFullScreen(noteId, note) {
   activeViewingNoteId = noteId;
   if (noteViewTitle) noteViewTitle.value = note.title || '';
   if (noteViewText) noteViewText.value = note.text || '';
   if (noteViewDate) noteViewDate.innerText = note.updatedAt ? `Изменено: ${new Date(note.updatedAt.seconds * 1000).toLocaleString()}` : '';
-  if (noteViewScreen) noteViewScreen.style.display = 'flex';
+  if (noteViewScreen) noteViewScreen.classList.add('active');
 }
 
 if (noteViewBackBtn) {
@@ -1294,7 +1221,6 @@ if (noteViewBackBtn) {
     if (activeViewingNoteId) {
       const uTitle = noteViewTitle.value.trim();
       const uText = noteViewText.value.trim();
-
       if (uText) {
         await updateDoc(doc(db, 'notes', activeViewingNoteId), {
           title: uTitle,
@@ -1305,16 +1231,14 @@ if (noteViewBackBtn) {
         await deleteDoc(doc(db, 'notes', activeViewingNoteId));
       }
     }
-    if (noteViewScreen) noteViewScreen.style.display = 'none';
+    if (noteViewScreen) noteViewScreen.classList.remove('active');
     activeViewingNoteId = null;
   };
 }
 
-// 8. ПАНЕЛЬ ВЫБОРА КОНТАКТА ДЛЯ ОТПРАВКИ ЗАМЕТКИ
 function openShareContactSheet() {
   if (!shareContactSheet || !shareContactsList) return;
-  shareContactSheet.style.bottom = '0';
-  if (backdrop) backdrop.style.display = 'block';
+  shareContactSheet.classList.add('active');
   shareContactsList.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">Загрузка контактов...</div>';
   
   const q = query(collection(db, 'users'), limit(20));
@@ -1326,61 +1250,192 @@ function openShareContactSheet() {
       
       const row = document.createElement('div');
       row.className = 'share-contact-item';
-      row.style.cssText = 'display:flex; align-items:center; gap:12px; padding:10px; cursor:pointer; border-radius:8px; transition: background 0.2s;';
       row.innerHTML = `
-        <img src="${u.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}" style="width:36px; height:36px; border-radius:50%">
-        <span style="color:#fff;">${escapeHtml(u.displayName || 'Пользователь')}</span>
+        <img src="${u.avatar || AVATARS[0]}" style="width:36px; height:36px; border-radius:50%">
+        <span>${escapeHtml(u.displayName || 'Пользователь')}</span>
       `;
       
       row.onclick = async () => {
         const chatRoomId = currentUser.uid < userSnap.id ? `${currentUser.uid}_${userSnap.id}` : `${userSnap.id}_${currentUser.uid}`;
-        
         await addDoc(collection(db, 'messages'), {
+          room: chatRoomId,
           chatRoomId: chatRoomId,
           senderId: currentUser.uid,
+          recipientId: userSnap.id,
           text: currentSharingNoteText,
-          timestamp: serverTimestamp()
+          isRead: false,
+          createdAt: serverTimestamp()
         });
         
-        closeShareContactSheet();
+        shareContactSheet.classList.remove('active');
         showToast(`Отправлено пользователю ${u.displayName || 'Пользователь'}! ✈️`);
       };
-      
       shareContactsList.appendChild(row);
     });
   });
 }
 
-function closeShareContactSheet() {
-  if (shareContactSheet) shareContactSheet.style.bottom = '-100%';
-  if (backdrop) backdrop.style.display = 'none';
-}
-if (backdrop) backdrop.onclick = closeShareContactSheet;
+if (backdrop) backdrop.onclick = () => shareContactSheet?.classList.remove('active');
 
-// 9. ИНИЦИАЛИЗАТОР ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК МЕНЮ
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    
-    btn.classList.add('active');
-    const tabId = `tab-${btn.dataset.tab}`;
-    const targetTab = document.getElementById(tabId);
-    if (targetTab) targetTab.classList.add('active');
-    
-    const tabTitle = document.getElementById('tab-title');
-    if (tabTitle) {
-      if (btn.dataset.tab === 'chats') tabTitle.innerText = 'Чаты';
-      if (btn.dataset.tab === 'contacts') tabTitle.innerText = 'Контакты';
-      if (btn.dataset.tab === 'feed') tabTitle.innerText = 'Лента';
-      if (btn.dataset.tab === 'notes') tabTitle.innerText = 'Заметки';
-      if (btn.dataset.tab === 'profile') tabTitle.innerText = 'Профиль';
+
+/* ======================================================== */
+/* 🔔 МОДУЛЬ ИНТЕРАКТИВНЫХ УВЕДОМЛЕНИЙ ДЛЯ WOOPS           */
+/* ======================================================== */
+
+const notifyBtn = document.getElementById('header-notifications-btn');
+const notifyModal = document.getElementById('notifications-modal');
+const closeNotifyBtn = document.getElementById('close-notifications-btn');
+const notifyList = document.getElementById('notifications-list');
+const notifyBadge = document.getElementById('notifications-badge');
+const clearNotifyBtn = document.getElementById('clear-notifications-btn');
+const chatsBadge = document.getElementById('chats-badge');
+
+if (notifyBtn) {
+  notifyBtn.onclick = () => {
+    if (notifyModal) notifyModal.style.display = 'flex';
+    markAllNotificationsAsRead();
+  };
+}
+if (closeNotifyBtn) {
+  closeNotifyBtn.onclick = () => {
+    if (notifyModal) notifyModal.style.display = 'none';
+  };
+}
+if (notifyModal) {
+  notifyModal.onclick = (e) => {
+    if (e.target === notifyModal) notifyModal.style.display = 'none';
+  };
+}
+
+window.sendPostNotification = async function(targetUserId, type, text, relatedId = '') {
+  if (!targetUserId || !currentUser || targetUserId === currentUser.uid) return;
+  try {
+    await addDoc(collection(db, 'notifications'), {
+      toUserId: targetUserId,
+      fromUserId: currentUser.uid,
+      fromUserName: userProfile.displayName || 'Пользователь',
+      fromUserAvatar: userProfile.avatar || AVATARS[0],
+      type: type, 
+      text: text,
+      relatedId: relatedId,
+      isRead: false,
+      createdAt: serverTimestamp()
+    });
+  } catch (e) {
+    console.error("Ошибка уведомления:", e);
+  }
+};
+
+window.loadRealtimeNotifications = function() {
+  if (!currentUser || !notifyList) return;
+  const q = query(collection(db, 'notifications'), where('toUserId', '==', currentUser.uid), orderBy('createdAt', 'desc'), limit(25));
+
+  onSnapshot(q, (snapshot) => {
+    notifyList.innerHTML = '';
+    let unreadCount = 0;
+
+    if (snapshot.empty) {
+      notifyList.innerHTML = `<div style="color: #888; text-align: center; padding: 20px;">Новых уведомлений пока нет 🏜️</div>`;
+      if (notifyBadge) notifyBadge.style.display = 'none';
+      return;
+    }
+
+    snapshot.forEach(docSnap => {
+      const n = docSnap.data();
+      if (!n.isRead) unreadCount++;
+
+      const item = document.createElement('div');
+      item.style.cssText = `display: flex; align-items: center; gap: 12px; padding: 10px; background: ${n.isRead ? 'rgba(255,255,255,0.02)' : 'rgba(99, 102, 241, 0.08)'}; border-radius: 8px; border-left: 4px solid ${n.isRead ? 'transparent' : '#6366f1'}; margin-bottom: 4px;`;
+      
+      let typeIcon = '🔔';
+      if (n.type === 'like') typeIcon = '❤️';
+      if (n.type === 'comment') typeIcon = '💬';
+      if (n.type === 'message') typeIcon = '✉️';
+
+      const safeName = n.fromUserName ? n.fromUserName.replace(/</g, '&lt;') : 'Пользователь';
+      const safeText = n.text ? n.text.replace(/</g, '&lt;') : '';
+
+      item.innerHTML = `
+        <img src="${n.fromUserAvatar || AVATARS[0]}" style="width: 36px; height: 36px; border-radius: 50%;">
+        <div style="flex: 1;">
+          <div style="font-size: 13px; color: #fff;"><span style="font-weight: 700;">${safeName}</span> ${typeIcon}</div>
+          <div style="font-size: 12px; color: #aaa; margin-top: 2px;">${safeText}</div>
+        </div>
+      `;
+      notifyList.appendChild(item);
+    });
+
+    if (notifyBadge) {
+      if (unreadCount > 0) {
+        if (parseInt(notifyBadge.innerText || '0') < unreadCount) {
+          triggerNotificationEffects();
+        }
+        notifyBadge.innerText = unreadCount;
+        notifyBadge.style.display = 'block';
+      } else {
+        notifyBadge.style.display = 'none';
+      }
     }
   });
-});
+};
 
-// КОРНЕВОЙ ЗАПУСК И ЛОГИ ИНИЦИАЛИЗАЦИИ
-if (typeof initEmojiPicker === 'function') {
-  initEmojiPicker();
+function triggerNotificationEffects() {
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+  const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2357/2357-84.wav');
+  audio.volume = 0.4;
+  audio.play().catch(() => {});
 }
+
+async function markAllNotificationsAsRead() {
+  if (!currentUser) return;
+  const q = query(collection(db, 'notifications'), where('toUserId', '==', currentUser.uid), where('isRead', '==', false));
+  try {
+    const snapshot = await getDocs(q);
+    snapshot.forEach(async (docSnap) => {
+      await updateDoc(doc(db, 'notifications', docSnap.id), { isRead: true });
+    });
+  } catch(e) {}
+}
+
+if (clearNotifyBtn) {
+  clearNotifyBtn.onclick = async () => {
+    if (!currentUser || !confirm('Очистить историю уведомлений?')) return;
+    const q = query(collection(db, 'notifications'), where('toUserId', '==', currentUser.uid));
+    try {
+      const snapshot = await getDocs(q);
+      snapshot.forEach(async (docSnap) => {
+        await deleteDoc(doc(db, 'notifications', docSnap.id));
+      });
+    } catch(e) {}
+  };
+}
+
+window.listenUnreadMessagesCount = function() {
+  if (!currentUser || !chatsBadge) return;
+  const q = query(collection(db, 'messages'), where('recipientId', '==', currentUser.uid), where('isRead', '==', false));
+
+  onSnapshot(q, (snapshot) => {
+    const count = snapshot.size;
+    if (count > 0) {
+      chatsBadge.innerText = count;
+      chatsBadge.style.display = 'block';
+    } else {
+      chatsBadge.style.display = 'none';
+    }
+  });
+};
+
+window.markMessagesAsRead = async function(chatRoomId) {
+  if (!currentUser) return;
+  const q = query(collection(db, 'messages'), where('room', '==', chatRoomId), where('recipientId', '==', currentUser.uid), where('isRead', '==', false));
+  try {
+    const snap = await getDocs(q);
+    snap.forEach(async (docSnap) => {
+      await updateDoc(doc(db, 'messages', docSnap.id), { isRead: true });
+    });
+  } catch(e) {}
+};
+
+// Инициализация
+initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
