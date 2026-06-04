@@ -1,6 +1,7 @@
+```javascript
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, arrayUnion, arrayRemove, increment, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, arrayUnion, arrayRemove, increment, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAIN2kwSLT6zyFOY7WyonpvdtNM9xpmV4g",
@@ -19,32 +20,26 @@ const db = getFirestore(app);
 const authScreen = document.getElementById('auth-screen');
 const mainScreen = document.getElementById('main-screen');
 const chatScreen = document.getElementById('chat-screen');
-
 const authEmail = document.getElementById('auth-email');
 const authPassword = document.getElementById('auth-password');
 const authError = document.getElementById('auth-error');
 const loginBtn = document.getElementById('login-btn');
 const registerBtn = document.getElementById('register-btn');
 const logoutBtn = document.getElementById('logout-btn');
-
 const tabTitle = document.getElementById('tab-title');
 const navBtns = document.querySelectorAll('.nav-btn');
 const tabs = document.querySelectorAll('.tab');
-
 const userSearch = document.getElementById('user-search');
 const chatList = document.getElementById('chat-list');
 const chatsEmpty = document.getElementById('chats-empty');
-
 const feedInput = document.getElementById('feed-input');
 const postBtn = document.getElementById('post-btn');
 const feedList = document.getElementById('feed-list');
-
 const profileAvatarView = document.getElementById('profile-avatar-view');
 const profileNameView = document.getElementById('profile-name-view');
 const profileStatusView = document.getElementById('profile-status-view');
 const editProfileBtn = document.getElementById('edit-profile');
 const deleteProfileBtn = document.getElementById('delete-profile-btn');
-
 const backBtn = document.getElementById('back-btn');
 const chatAvatar = document.getElementById('chat-avatar');
 const chatName = document.getElementById('chat-name');
@@ -54,7 +49,6 @@ const textInput = document.getElementById('text-input');
 const sendBtn = document.getElementById('send-btn');
 const emojiToggle = document.getElementById('emoji-toggle');
 const emojiPicker = document.getElementById('emoji-picker');
-
 const profileModal = document.getElementById('profile-modal');
 const closeProfileModal = document.getElementById('close-profile-modal');
 const editName = document.getElementById('edit-name');
@@ -63,28 +57,40 @@ const editStatus = document.getElementById('edit-status');
 const avatarSelector = document.getElementById('avatar-selector');
 const cancelProfile = document.getElementById('cancel-profile');
 const saveProfile = document.getElementById('save-profile');
-
 const editPostModal = document.getElementById('edit-post-modal');
 const closeEditPostModal = document.getElementById('close-edit-post-modal');
 const editPostText = document.getElementById('edit-post-text');
 const cancelEditPost = document.getElementById('cancel-edit-post');
 const saveEditPost = document.getElementById('save-edit-post');
-
 const toast = document.getElementById('toast');
+const themeToggle = document.getElementById('theme-toggle');
+const notifyBtn = document.getElementById('header-notifications-btn');
+const notifyModal = document.getElementById('notifications-modal');
+const closeNotifyBtn = document.getElementById('close-notifications-btn');
+const notifyList = document.getElementById('notifications-list');
+const notifyBadge = document.getElementById('notifications-badge');
+const clearNotifyBtn = document.getElementById('clear-notifications-btn');
+const chatsBadge = document.getElementById('chats-badge');
 
 // 🌍 Глобальное состояние
 let currentUser = null;
 let currentChat = null;
 let currentEditPostId = null;
-let currentPostCommentsId = null; 
+let currentPostCommentsId = null;
 let unsubChat = null;
-let unsubComments = null; 
+let unsubComments = null;
 let unsubUsers = null;
 let unsubFeed = null;
 let unsubOwnProfile = null;
 let userProfile = {};
 let selectedAvatar = '';
 let lastSeenInterval = null;
+
+let isGridView = true;
+let isSelectMode = false;
+let selectedNoteIds = new Set();
+let currentSharingNoteText = "";
+let activeViewingNoteId = null;
 
 const AVATARS = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Spiderman&backgroundColor=b6e3f4',
@@ -108,95 +114,101 @@ const AVATARS = [
 const EMOJIS = ['😀','😂','😍','🤔','😎','👍','❤️','🔥','🎉','✨','🙌','💯','🤝','👋','🤗','😇','🤩','😜','🙃','💪','🎯','🌟','💬','🚀','✅','❌','⚡','🎮','🎵','🍕'];
 
 const svgEdit = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-const svgDelete = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+const svgDelete = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
 const svgLike = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
 const svgComment = `<svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
 
-// Динамическое создание экрана комментариев
-let commentScreen = document.getElementById('comment-screen');
-if (!commentScreen) {
-  commentScreen = document.createElement('div');
-  commentScreen.id = 'comment-screen';
-  commentScreen.className = 'screen';
-  commentScreen.innerHTML = `
-    <header class="main-header">
-      <h2>Лента</h2>
-    </header>
-    <div class="comment-nav-bar">
-      <button id="comment-back-btn" class="comment-back-icon-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      </button>
-      <div class="comment-meta-info">
-        <h3 id="comment-title">Комментарии</h3>
-        <span id="comment-subtitle">к публикации</span>
+// ============================================
+// 🏗️ ДИНАМИЧЕСКОЕ СОЗДАНИЕ ЭКРАНОВ
+// ============================================
+function initDynamicScreens() {
+  if (!document.getElementById('comment-screen')) {
+    const commentScreen = document.createElement('div');
+    commentScreen.id = 'comment-screen';
+    commentScreen.className = 'screen';
+    commentScreen.innerHTML = `
+      <header class="main-header">
+        <h2>Лента</h2>
+      </header>
+      <div class="comment-nav-bar">
+        <button id="comment-back-btn" class="comment-back-icon-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div class="comment-meta-info">
+          <h3 id="comment-title">Комментарии</h3>
+          <span id="comment-subtitle">к публикации</span>
+        </div>
       </div>
-    </div>
-    <div id="comment-msg-area" class="chat-messages"></div>
-    <div class="chat-input-area">
-      <textarea id="comment-text-input" placeholder="Напишите комментарий..."></textarea>
-      <button id="comment-send-btn" class="icon-btn active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
-    </div>
-  `;
-  document.body.appendChild(commentScreen);
-}
+      <div id="comment-msg-area" class="chat-messages"></div>
+      <div class="chat-input-area">
+        <textarea id="comment-text-input" placeholder="Напишите комментарий..."></textarea>
+        <button id="comment-send-btn" class="icon-btn active">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    `;
+    document.body.appendChild(commentScreen);
+  }
 
-const commentBackBtn = document.getElementById('comment-back-btn');
-const commentMsgArea = document.getElementById('comment-msg-area');
-const commentTextInput = document.getElementById('comment-text-input');
-const commentSendBtn = document.getElementById('comment-send-btn');
-
-if (commentBackBtn) {
-  commentBackBtn.onclick = () => {
-    if (commentScreen) commentScreen.classList.remove('active');
-    if (mainScreen) mainScreen.classList.add('active');
-    if (unsubComments) unsubComments();
-    currentPostCommentsId = null;
-  };
-}
-
-if (commentSendBtn) {
-  commentSendBtn.onclick = async () => {
-    const text = commentTextInput.value.trim();
-    if (!text || !currentPostCommentsId) return;
-    try {
-      await addDoc(collection(db, 'posts', currentPostCommentsId, 'comments'), {
-        authorId: currentUser.uid,
-        authorName: userProfile.displayName || 'Пользователь',
-        authorAvatar: userProfile.avatar || AVATARS[0],
-        text,
-        createdAt: serverTimestamp()
-      });
-
-      const postRef = doc(db, 'posts', currentPostCommentsId);
-      await updateDoc(postRef, { commentsCount: increment(1) });
-
-      // Отправляем уведомление автору поста (если это не мы сами)
-      if (typeof window.sendPostNotification === 'function') {
-        const postSnap = await getDocs(query(collection(db, 'posts')));
-        postSnap.forEach(d => {
-          if (d.id === currentPostCommentsId) {
-            window.sendPostNotification(d.data().authorId, 'comment', `прокомментировал: "${text}"`, currentPostCommentsId);
-          }
-        });
-      }
-
-      commentTextInput.value = '';
-    } catch (e) {
-      console.error("Ошибка отправки комментария:", e);
-      showToast('Не удалось отправить комментарий', 'error');
-    }
-  };
-}
-
-if (commentTextInput) {
-  commentTextInput.onkeypress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (commentSendBtn) commentSendBtn.click();
-    }
-  };
+  const notesTab = document.getElementById('notes-tab');
+  if (notesTab && !document.getElementById('notes-wrapper')) {
+    notesTab.innerHTML = `
+      <header class="main-header" id="notes-header">
+        <div class="header-default-view">
+          <h2>Заметки</h2>
+          <div class="header-actions">
+            <button id="toggle-notes-view-btn" class="feed-icon-btn" title="Изменить вид">
+              <svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="header-select-view" style="display: none;">
+          <button id="cancel-notes-select-btn" class="feed-icon-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <span id="notes-select-count">Выбрано: 0</span>
+          <button id="delete-selected-notes-btn" class="feed-icon-btn delete" style="margin-left: auto;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </header>
+      <div class="note-create-area">
+        <input type="text" id="note-title-input" placeholder="Заголовок (необязательно)" style="display: none;">
+        <div class="note-input-row">
+          <textarea id="note-text-input" placeholder="Новая заметка..."></textarea>
+          <button id="save-note-btn" class="icon-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="notes-wrapper" class="notes-grid-view"></div>
+      <div id="note-view-screen" class="screen">
+        <header class="main-header">
+          <button id="note-view-back-btn" class="comment-back-icon-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="comment-meta-info">
+            <h3>Просмотр заметки</h3>
+            <span id="note-view-date">Дата изменения</span>
+          </div>
+        </header>
+        <div class="note-view-body">
+          <input type="text" id="note-view-title" placeholder="Без заголовка">
+          <textarea id="note-view-text" placeholder="Текст заметки..."></textarea>
+        </div>
+      </div>
+      <div id="share-contact-sheet" class="bottom-sheet">
+        <div class="bottom-sheet-backdrop"></div>
+        <div class="bottom-sheet-content">
+          <div class="bottom-sheet-header">
+            <div class="drag-handle"></div>
+            <h3>Отправить контакту</h3>
+          </div>
+          <div id="share-contacts-list" class="share-contacts-list"></div>
+        </div>
+      </div>
+    `;
+  }
 }
 
 // ============================================
@@ -207,7 +219,6 @@ onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     if (authScreen) authScreen.classList.remove('active');
     if (mainScreen) mainScreen.classList.add('active');
-    
     try {
       await updateDoc(doc(db, 'users', user.uid), {
         status: 'online',
@@ -221,11 +232,10 @@ onAuthStateChanged(auth, async (user) => {
     loadUsersList();
     loadFeed();
     loadNotes();
-    
-    // Подключаем real-time уведомления и счетчик чатов при входе
+
     if (typeof window.loadRealtimeNotifications === 'function') window.loadRealtimeNotifications();
     if (typeof window.listenUnreadMessagesCount === 'function') window.listenUnreadMessagesCount();
-    
+
     updateLastSeen();
   } else {
     currentUser = null;
@@ -233,7 +243,8 @@ onAuthStateChanged(auth, async (user) => {
     if (authScreen) authScreen.classList.add('active');
     if (mainScreen) mainScreen.classList.remove('active');
     if (chatScreen) chatScreen.classList.remove('active');
-    if (commentScreen) commentScreen.classList.remove('active');
+    const cs = document.getElementById('comment-screen');
+    if (cs) cs.classList.remove('active');
     cleanupListeners();
   }
 });
@@ -275,9 +286,9 @@ if (logoutBtn) {
   logoutBtn.onclick = async () => {
     if (currentUser) {
       try {
-        await updateDoc(doc(db, 'users', currentUser.uid), { 
-          status: 'offline', 
-          lastSeen: serverTimestamp() 
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          status: 'offline',
+          lastSeen: serverTimestamp()
         });
         await signOut(auth);
       } catch (e) {
@@ -377,7 +388,6 @@ if (deleteProfileBtn) {
 // ============================================
 function loadUsersList(searchTerm = '') {
   if (unsubUsers) unsubUsers();
-  
   let q;
   if (searchTerm.trim()) {
     const endStr = searchTerm.trim() + '\uf8ff';
@@ -385,7 +395,7 @@ function loadUsersList(searchTerm = '') {
   } else {
     q = query(collection(db, 'users'), limit(50));
   }
-
+  
   unsubUsers = onSnapshot(q, (snap) => {
     if (!chatList) return;
     chatList.innerHTML = '';
@@ -401,10 +411,8 @@ function loadUsersList(searchTerm = '') {
       chatsEmpty.style.display = hasUsers ? 'none' : 'block';
       if (!hasUsers && searchTerm.trim()) {
         chatsEmpty.textContent = 'Никого не найдено 😔';
-        chatsEmpty.style.display = 'block';
       } else if (!hasUsers) {
         chatsEmpty.textContent = 'Пока никого нет.\nНайдите друга через поиск! 🧐';
-        chatsEmpty.style.display = 'block';
       }
     }
   });
@@ -419,11 +427,9 @@ if (userSearch) {
 function createUserListItem(uid, user) {
   const li = document.createElement('li');
   li.className = 'chat-item animate-fade-in';
-  
   const isOnline = user.status === 'online';
   const statusClass = isOnline ? 'status-online' : 'status-offline';
   const statusText = isOnline ? 'в сети' : 'был(а) недавно';
-
   li.innerHTML = `
     <div class="avatar-wrapper">
       <img class="avatar" src="${user.avatar || AVATARS[0]}" alt="avatar">
@@ -439,7 +445,7 @@ function createUserListItem(uid, user) {
 }
 
 // ============================================
-// ✉️ ЧАТ (БЕЗ МЕРЦАНИЯ И ПЕРЕРИСОВОК)
+// ✉️ ЧАТ
 // ============================================
 async function openChat(userId, name, avatar) {
   currentChat = { id: userId, name, avatar };
@@ -447,19 +453,16 @@ async function openChat(userId, name, avatar) {
   if (chatScreen) chatScreen.classList.add('active');
   if (chatName) chatName.textContent = name || 'Пользователь';
   if (chatAvatar) chatAvatar.src = avatar || AVATARS[0];
-  
   if (msgArea) msgArea.innerHTML = '<div class="empty-state">Загрузка сообщений...</div>';
   
   const room = [currentUser.uid, userId].sort().join('_');
   const q = query(collection(db, 'messages'), where('room', '==', room), orderBy('createdAt', 'asc'));
   
   if (unsubChat) unsubChat();
-  
   let isFirstLoad = true;
-
+  
   unsubChat = onSnapshot(q, (snap) => {
     if (!msgArea) return;
-
     if (isFirstLoad) {
       msgArea.innerHTML = '';
       if (snap.empty) {
@@ -471,7 +474,6 @@ async function openChat(userId, name, avatar) {
         msgArea.scrollTop = msgArea.scrollHeight;
       }
       isFirstLoad = false;
-      // Сбрасываем непрочитанные для этого чата
       if (typeof window.markMessagesAsRead === 'function') window.markMessagesAsRead(room);
       return;
     }
@@ -488,18 +490,15 @@ async function openChat(userId, name, avatar) {
         msgArea.appendChild(msgEl);
         msgArea.scrollTop = msgArea.scrollHeight;
         if (typeof window.markMessagesAsRead === 'function') window.markMessagesAsRead(room);
-      } 
-      else if (change.type === 'modified') {
+      } else if (change.type === 'modified') {
         const oldMsg = msgArea.querySelector(`[data-msg-id="${msgId}"]`);
         if (oldMsg) {
           const newMsg = renderMessage(msgId, msgData);
           oldMsg.replaceWith(newMsg);
         }
-      } 
-      else if (change.type === 'removed') {
+      } else if (change.type === 'removed') {
         const msgToDel = msgArea.querySelector(`[data-msg-id="${msgId}"]`);
         if (msgToDel) msgToDel.remove();
-        
         if (msgArea.children.length === 0) {
           msgArea.innerHTML = '<div class="empty-state">Напишите первое сообщение ✨</div>';
         }
@@ -513,30 +512,19 @@ function renderMessage(msgId, msg) {
   const isOwn = msg.senderId === currentUser?.uid;
   div.className = `msg ${isOwn ? 'out' : 'in'} animate-fade-in`;
   div.setAttribute('data-msg-id', msgId);
-  
   const time = formatTime(msg.createdAt);
   const editedTag = msg.isEdited ? ' <span style="font-size:10px; opacity:0.7">(изм.)</span>' : '';
-  
   let actionsHtml = '';
   if (isOwn) {
-    const safeText = escapeHtml(msg.text).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const safeText = escapeHtml(msg.text).replace(/'/g, "\\'").replace(/"/g, '\\"');
     actionsHtml = `
       <div class="msg-actions">
-        <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')" title="Редактировать">
-          ${svgEdit}
-        </button>
-        <button class="msg-action-btn delete" onclick="deleteMessage('${msgId}')" title="Удалить">
-          ${svgDelete}
-        </button>
+        <button class="msg-action-btn" onclick="editMessage('${msgId}', '${safeText}')" title="Редактировать">${svgEdit}</button>
+        <button class="msg-action-btn delete" onclick="deleteMessage('${msgId}')" title="Удалить">${svgDelete}</button>
       </div>
     `;
   }
-  
-  div.innerHTML = `
-    ${actionsHtml}
-    <div>${escapeHtml(msg.text)}${editedTag}</div>
-    <span class="time">${time}</span>
-  `;
+  div.innerHTML = `${actionsHtml}<div>${escapeHtml(msg.text)}${editedTag}</div><span class="time">${time}</span>`;
   return div;
 }
 
@@ -551,7 +539,7 @@ window.editMessage = async (msgId, currentText) => {
       });
       showToast('Сообщение обновлено');
     } catch (e) {
-      showToast('Ошибка editing', 'error');
+      showToast('Ошибка редактирования', 'error');
     }
   }
 };
@@ -560,7 +548,7 @@ window.deleteMessage = async (msgId) => {
   if (!confirm('Удалить это сообщение?')) return;
   try {
     await deleteDoc(doc(db, 'messages', msgId));
-    showToast('Сообщение deleted');
+    showToast('Сообщение удалено');
   } catch (e) {
     showToast('Ошибка удаления', 'error');
   }
@@ -575,19 +563,16 @@ if (sendBtn) {
     try {
       await addDoc(collection(db, 'messages'), {
         room,
-        chatRoomId: room, // Для совместимости с заметками
+        chatRoomId: room,
         senderId: currentUser.uid,
-        recipientId: currentChat.id, // Поле получателя для счетчиков
+        recipientId: currentChat.id,
         text,
         isRead: false,
         createdAt: serverTimestamp()
       });
-
-      // Отправка внутреннего уведомления
       if (typeof window.sendPostNotification === 'function') {
         window.sendPostNotification(currentChat.id, 'message', text, room);
       }
-
       textInput.value = '';
     } catch (e) {
       showToast('Не удалось отправить', 'error');
@@ -613,69 +598,8 @@ if (backBtn) {
   };
 }
 
-// КОНТЕЙНЕР ВКЛАДКИ ЗАМЕТОК
-const notesTab = document.getElementById('notes-tab'); 
-if (notesTab) {
-  notesTab.innerHTML = `
-    <header class="main-header" id="notes-header">
-      <div class="header-default-view">
-        <h2>Заметки</h2>
-        <div class="header-actions">
-          <button id="toggle-notes-view-btn" class="feed-icon-btn" title="Изменить вид">
-            <svg class="svg-feed-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7 stream"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="header-select-view" style="display: none;">
-        <button id="cancel-notes-select-btn" class="feed-icon-btn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <span id="notes-select-count">Выбрано: 0</span>
-        <button id="delete-selected-notes-btn" class="feed-icon-btn delete" style="margin-left: auto;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        </button>
-      </div>
-    </header>
-    <div class="note-create-area">
-      <input type="text" id="note-title-input" placeholder="Заголовок (необязательно)" style="display: none;">
-      <div class="note-input-row">
-        <textarea id="note-text-input" placeholder="Новая заметка..."></textarea>
-        <button id="save-note-btn" class="icon-btn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
-      </div>
-    </div>
-    <div id="notes-wrapper" class="notes-grid-view"></div>
-    <div id="note-view-screen" class="screen">
-      <header class="main-header">
-        <button id="note-view-back-btn" class="comment-back-icon-btn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        </button>
-        <div class="comment-meta-info">
-          <h3>Просмотр заметки</h3>
-          <span id="note-view-date">Дата изменения</span>
-        </div>
-      </header>
-      <div class="note-view-body">
-        <input type="text" id="note-view-title" placeholder="Без заголовка">
-        <textarea id="note-view-text" placeholder="Текст заметки..."></textarea>
-      </div>
-    </div>
-    <div id="share-contact-sheet" class="bottom-sheet">
-      <div class="bottom-sheet-backdrop"></div>
-      <div class="bottom-sheet-content">
-        <div class="bottom-sheet-header">
-          <div class="drag-handle"></div>
-          <h3>Отправить контакту</h3>
-        </div>
-        <div id="share-contacts-list" class="share-contacts-list"></div>
-      </div>
-    </div>
-  `;
-}
-
 // ============================================
-// 🌍 ЛЕНТА (FEED) WITH LIKES & COMMENTS
+// 🌍 ЛЕНТА (FEED)
 // ============================================
 function loadFeed() {
   if (unsubFeed) unsubFeed();
@@ -698,24 +622,19 @@ function renderPost(postId, post) {
   div.className = 'feed-post animate-fade-in';
   const isOwn = post.authorId === currentUser?.uid;
   const time = formatTime(post.createdAt);
-  
   const likesArr = post.likes || [];
   const hasLiked = likesArr.includes(currentUser?.uid);
   const likesCount = likesArr.length;
   const commentsCount = post.commentsCount || 0;
-
+  
   let ownerActionsHtml = '';
   if (isOwn) {
     ownerActionsHtml = `
-      <button class="feed-icon-btn" onclick="openEditPost('${postId}', '${escapeHtml(post.text).replace(/'/g, "\\'")}')" title="Изменить">
-        ${svgEdit}
-      </button>
-      <button class="feed-icon-btn delete" onclick="deletePost('${postId}')" title="Удалить">
-        ${svgDelete}
-      </button>
+      <button class="feed-icon-btn" onclick="openEditPost('${postId}', '${escapeHtml(post.text).replace(/'/g, "\\'")}')" title="Изменить">${svgEdit}</button>
+      <button class="feed-icon-btn delete" onclick="deletePost('${postId}')" title="Удалить">${svgDelete}</button>
     `;
   }
-
+  
   div.innerHTML = `
     <div class="feed-post-header">
       <img class="avatar" src="${post.authorAvatar || AVATARS[0]}" alt="avatar">
@@ -723,13 +642,11 @@ function renderPost(postId, post) {
         <h4>${escapeHtml(post.authorName || 'Пользователь')}</h4>
         <span>${time}${post.isEdited ? ' • (изменено)' : ''}</span>
       </div>
-      <div class="feed-post-owner-actions">
-        ${ownerActionsHtml}
-      </div>
+      <div class="feed-post-owner-actions">${ownerActionsHtml}</div>
     </div>
     <div class="feed-post-content">${escapeHtml(post.text).replace(/\n/g, '<br>')}</div>
     <div class="feed-post-footer">
-      <button class="feed-action-trigger ${hasLiked ? 'liked' : ''}" onclick="toggleLike('${postId}', ${hasLiked})">
+      <button class="feed-action-trigger ${hasLiked ? 'liked' : ''}" onclick="toggleLike('${postId}', ${hasLiked}, '${post.authorId}')">
         ${svgLike} <span class="counter">${likesCount}</span>
       </button>
       <button class="feed-action-trigger" onclick="openComments('${postId}')">
@@ -762,7 +679,7 @@ if (postBtn) {
   };
 }
 
-window.toggleLike = async (postId, hasLiked) => {
+window.toggleLike = async (postId, hasLiked, authorId) => {
   if (!currentUser) return;
   const postRef = doc(db, 'posts', postId);
   try {
@@ -770,13 +687,9 @@ window.toggleLike = async (postId, hasLiked) => {
       await updateDoc(postRef, { likes: arrayRemove(currentUser.uid) });
     } else {
       await updateDoc(postRef, { likes: arrayUnion(currentUser.uid) });
-      // Отправляем уведомление автору поста
-      const postSnap = await getDocs(query(collection(db, 'posts')));
-      postSnap.forEach(d => {
-        if (d.id === postId) {
-          window.sendPostNotification(d.data().authorId, 'like', 'поставил лайк вашему посту', postId);
-        }
-      });
+      if (authorId && authorId !== currentUser.uid) {
+        window.sendPostNotification(authorId, 'like', 'поставил лайк вашему посту', postId);
+      }
     }
   } catch (e) {
     console.error("Ошибка при переключении лайка:", e);
@@ -786,8 +699,9 @@ window.toggleLike = async (postId, hasLiked) => {
 window.openComments = (postId) => {
   currentPostCommentsId = postId;
   if (mainScreen) mainScreen.classList.remove('active');
-  if (commentScreen) commentScreen.classList.add('active');
-  
+  const cs = document.getElementById('comment-screen');
+  if (cs) cs.classList.add('active');
+  const commentMsgArea = document.getElementById('comment-msg-area');
   if (commentMsgArea) commentMsgArea.innerHTML = '<div class="empty-state">Загрузка комментариев...</div>';
   
   const q = query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc'));
@@ -796,23 +710,19 @@ window.openComments = (postId) => {
   unsubComments = onSnapshot(q, (snap) => {
     if (!commentMsgArea) return;
     commentMsgArea.innerHTML = '';
-    
     if (snap.empty) {
       commentMsgArea.innerHTML = '<div class="empty-state">Пока нет комментариев. Будьте первым! 💬</div>';
       return;
     }
-    
+
     snap.forEach(docSnap => {
       const comm = docSnap.data();
       const div = document.createElement('div');
       const isOwnComm = comm.authorId === currentUser?.uid;
-      
       div.className = `msg ${isOwnComm ? 'out' : 'in'} animate-fade-in`;
       div.style.flexDirection = 'column';
       div.style.alignItems = isOwnComm ? 'flex-end' : 'flex-start';
-      
       const commTime = formatTime(comm.createdAt);
-      
       div.innerHTML = `
         <div style="font-size: 11px; font-weight: bold; opacity: 0.6; margin-bottom: 2px;">${escapeHtml(comm.authorName)}</div>
         <div>${escapeHtml(comm.text)}</div>
@@ -823,6 +733,56 @@ window.openComments = (postId) => {
     commentMsgArea.scrollTop = commentMsgArea.scrollHeight;
   });
 };
+
+const commentBackBtn = document.getElementById('comment-back-btn');
+const commentTextInput = document.getElementById('comment-text-input');
+const commentSendBtn = document.getElementById('comment-send-btn');
+
+if (commentBackBtn) {
+  commentBackBtn.onclick = () => {
+    const cs = document.getElementById('comment-screen');
+    if (cs) cs.classList.remove('active');
+    if (mainScreen) mainScreen.classList.add('active');
+    if (unsubComments) unsubComments();
+    currentPostCommentsId = null;
+  };
+}
+
+if (commentSendBtn) {
+  commentSendBtn.onclick = async () => {
+    const text = commentTextInput.value.trim();
+    if (!text || !currentPostCommentsId) return;
+    try {
+      await addDoc(collection(db, 'posts', currentPostCommentsId, 'comments'), {
+        authorId: currentUser.uid,
+        authorName: userProfile.displayName || 'Пользователь',
+        authorAvatar: userProfile.avatar || AVATARS[0],
+        text,
+        createdAt: serverTimestamp()
+      });
+      const postRef = doc(db, 'posts', currentPostCommentsId);
+      await updateDoc(postRef, { commentsCount: increment(1) });
+
+      const postSnap = await getDoc(doc(db, 'posts', currentPostCommentsId));
+      if (postSnap.exists() && postSnap.data().authorId !== currentUser.uid) {
+        window.sendPostNotification(postSnap.data().authorId, 'comment', `прокомментировал: "${text}"`, currentPostCommentsId);
+      }
+      commentTextInput.value = '';
+    } catch (e) {
+      console.error("Ошибка отправки комментария:", e);
+      showToast('Не удалось отправить комментарий', 'error');
+    }
+  };
+}
+
+if (commentTextInput) {
+  commentTextInput.onkeypress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (commentSendBtn) commentSendBtn.click();
+    }
+  };
+}
 
 window.openEditPost = (postId, currentText) => {
   currentEditPostId = postId;
@@ -854,7 +814,7 @@ if (saveEditPost) {
 }
 
 window.deletePost = async (postId) => {
-  if (!confirm('Удалить этот post?')) return;
+  if (!confirm('Удалить этот пост?')) return;
   try {
     await deleteDoc(doc(db, 'posts', postId));
     showToast('Пост удалён');
@@ -864,158 +824,23 @@ window.deletePost = async (postId) => {
 };
 
 // ============================================
-// 🛠️ УТИЛИТЫ И UI
+// 📝 ЗАМЕТКИ
 // ============================================
-function initEmojiPicker() {
-  if (!emojiPicker) return;
-  emojiPicker.innerHTML = '';
-  EMOJIS.forEach(emoji => {
-    const btn = document.createElement('button');
-    btn.textContent = emoji;
-    btn.onclick = () => {
-      const start = textInput.selectionStart;
-      textInput.value = textInput.value.slice(0, start) + emoji + textInput.value.slice(start);
-      textInput.focus();
-      emojiPicker.classList.remove('active');
-    };
-    emojiPicker.appendChild(btn);
-  });
-}
-
-if (emojiToggle) {
-  emojiToggle.onclick = (e) => {
-    e.stopPropagation();
-    if (emojiPicker) emojiPicker.classList.toggle('active');
-  };
-}
-
-document.addEventListener('click', (e) => {
-  if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiToggle) {
-    emojiPicker.classList.remove('active');
-  }
-});
-
-function showToast(message, type = 'success') {
-  if (!toast) return;
-  toast.textContent = message;
-  toast.className = `toast show ${type}`;
-  setTimeout(() => toast.classList.remove('show'), 3000);
-}
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function formatTime(timestamp) {
-  if (!timestamp) return '--:--';
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-}
-
-function updateLastSeen() {
-  if (!currentUser) return;
-  if (lastSeenInterval) clearInterval(lastSeenInterval);
-
-  const sendPing = () => {
-    if (currentUser) {
-      updateDoc(doc(db, 'users', currentUser.uid), {
-        lastSeen: serverTimestamp(),
-        status: 'online'
-      }).catch((e) => console.error("Ошибка периодического пинга:", e));
-    }
-  };
-
-  sendPing(); 
-  lastSeenInterval = setInterval(sendPing, 45000); 
-}
-
-navBtns.forEach(btn => {
-  btn.onclick = () => {
-    navBtns.forEach(b => b.classList.remove('active'));
-    tabs.forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    const tabId = 'tab-' + btn.dataset.tab;
-    const targetTab = document.getElementById(tabId);
-    if (targetTab) targetTab.classList.add('active');
-    
-    const titles = { chats: 'Чаты', feed: 'Лента', profile: 'Профиль', contacts: 'Контакты', notes: 'Заметки' };
-    if (tabTitle) tabTitle.textContent = titles[btn.dataset.tab] || 'Woops';
-  };
-});
-
-function cleanupListeners() {
-  if (unsubChat) unsubChat();
-  if (unsubUsers) unsubUsers();
-  if (unsubFeed) unsubFeed();
-  if (unsubOwnProfile) unsubOwnProfile();
-  if (unsubComments) unsubComments();
-  if (lastSeenInterval) {
-    clearInterval(lastSeenInterval);
-    lastSeenInterval = null;
-  }
-}
-
-// ============================================
-// 🌓 ЛОГИКА СМЕНЫ ТЕМЫ (ДЕНЬ / НОЧЬ)
-// ============================================
-const themeToggle = document.getElementById('theme-toggle');
-const savedTheme = localStorage.getItem('theme');
-
-const sunSvg = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`;
-const moonSvg = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
-
-if (savedTheme === 'light') {
-  document.body.classList.add('light-theme');
-  if (themeToggle) themeToggle.innerHTML = sunSvg;
-} else {
-  if (themeToggle) themeToggle.innerHTML = moonSvg;
-}
-
-if (themeToggle) {
-  themeToggle.onclick = () => {
-    const isLight = document.body.classList.toggle('light-theme');
-    if (isLight) {
-      themeToggle.innerHTML = sunSvg;
-      localStorage.setItem('theme', 'light');
-      showToast('Включена дневная тема');
-    } else {
-      themeToggle.innerHTML = moonSvg;
-      localStorage.setItem('theme', 'dark');
-      showToast('Включена ночная тема');
-    }
-  };
-}
-
-// ==========================================
-// 📝 ЗАМЕТКИ (РАБОЧИЙ МОДУЛЬ)
-// ==========================================
-let isGridView = true;
-let isSelectMode = false;
-let selectedNoteIds = new Set();
-let currentSharingNoteText = "";
-
 const noteTextInput = document.getElementById('note-text-input');
 const noteTitleInput = document.getElementById('note-title-input');
 const saveNoteBtn = document.getElementById('save-note-btn');
 const notesWrapper = document.getElementById('notes-wrapper');
 const toggleNotesViewBtn = document.getElementById('toggle-notes-view-btn');
-
 const defaultHeaderView = document.querySelector('.header-default-view');
 const selectHeaderView = document.querySelector('.header-select-view');
 const notesSelectCount = document.getElementById('notes-select-count');
 const cancelNotesSelectBtn = document.getElementById('cancel-notes-select-btn');
 const deleteSelectedNotesBtn = document.getElementById('delete-selected-notes-btn');
-
 const noteViewScreen = document.getElementById('note-view-screen');
 const noteViewBackBtn = document.getElementById('note-view-back-btn');
 const noteViewTitle = document.getElementById('note-view-title');
 const noteViewText = document.getElementById('note-view-text');
 const noteViewDate = document.getElementById('note-view-date');
-let activeViewingNoteId = null;
-
 const shareContactSheet = document.getElementById('share-contact-sheet');
 const shareContactsList = document.getElementById('share-contacts-list');
 const backdrop = document.querySelector('.bottom-sheet-backdrop');
@@ -1041,7 +866,6 @@ if (saveNoteBtn) {
     const text = noteTextInput.value.trim();
     const title = noteTitleInput ? noteTitleInput.value.trim() : '';
     if (!text) return;
-
     try {
       await addDoc(collection(db, 'notes'), {
         userId: currentUser.uid,
@@ -1079,14 +903,12 @@ if (toggleNotesViewBtn) {
 function loadNotes() {
   if (!currentUser || !notesWrapper) return;
   const q = query(collection(db, 'notes'), where('userId', '==', currentUser.uid), orderBy('updatedAt', 'desc'));
-  
   onSnapshot(q, (snapshot) => {
     notesWrapper.innerHTML = '';
     if (snapshot.empty) {
       notesWrapper.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:gray; padding:40px;">У вас пока нет заметок 🏜️</div>`;
       return;
     }
-
     snapshot.forEach((docSnap) => {
       const note = docSnap.data();
       const noteId = docSnap.id;
@@ -1126,13 +948,13 @@ function setupNoteEvents(card, noteId, note) {
     }, 600);
   };
   const cancelPress = () => clearTimeout(pressTimer);
-
+  
   card.addEventListener('mousedown', startPress);
   card.addEventListener('touchstart', startPress);
   card.addEventListener('mouseup', cancelPress);
   card.addEventListener('mouseleave', cancelPress);
   card.addEventListener('touchend', cancelPress);
-
+  
   card.onclick = () => {
     if (isSelectMode) {
       toggleNoteSelection(card, noteId);
@@ -1140,28 +962,36 @@ function setupNoteEvents(card, noteId, note) {
       openNoteFullScreen(noteId, note);
     }
   };
-
-  card.querySelector('.share-feed').onclick = async (e) => {
-    e.stopPropagation();
-    try {
-      await addDoc(collection(db, 'posts'), {
-        authorId: currentUser.uid,
-        authorName: userProfile.displayName || 'Пользователь',
-        authorAvatar: userProfile.avatar || AVATARS[0],
-        text: `📢 Из заметок:\n\n${note.title ? `*${note.title}*\n` : ''}${note.text}`,
-        likes: [],
-        commentsCount: 0,
-        createdAt: serverTimestamp()
-      });
-      showToast('Заметка опубликована в ленте! 🌍');
-    } catch(err) { showToast('Ошибка публикации', 'error'); }
-  };
-
-  card.querySelector('.share-contact').onclick = (e) => {
-    e.stopPropagation();
-    currentSharingNoteText = `${note.title ? `📝 ${note.title}\n` : ''}${note.text}`;
-    openShareContactSheet();
-  };
+  
+  const shareFeedBtn = card.querySelector('.share-feed');
+  if (shareFeedBtn) {
+    shareFeedBtn.onclick = async (e) => {
+      e.stopPropagation();
+      try {
+        await addDoc(collection(db, 'posts'), {
+          authorId: currentUser.uid,
+          authorName: userProfile.displayName || 'Пользователь',
+          authorAvatar: userProfile.avatar || AVATARS[0],
+          text: `📢 Из заметок:\n\n${note.title ? `${note.title}\n` : ''}${note.text}`,
+          likes: [],
+          commentsCount: 0,
+          createdAt: serverTimestamp()
+        });
+        showToast('Заметка опубликована в ленте! 🌍');
+      } catch (err) { 
+        showToast('Ошибка публикации', 'error'); 
+      }
+    };
+  }
+  
+  const shareContactBtn = card.querySelector('.share-contact');
+  if (shareContactBtn) {
+    shareContactBtn.onclick = (e) => {
+      e.stopPropagation();
+      currentSharingNoteText = `${note.title ? `📝 ${note.title}\n` : ''}${note.text}`;
+      openShareContactSheet();
+    };
+  }
 }
 
 function enableSelectMode() {
@@ -1240,21 +1070,18 @@ function openShareContactSheet() {
   if (!shareContactSheet || !shareContactsList) return;
   shareContactSheet.classList.add('active');
   shareContactsList.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">Загрузка контактов...</div>';
-  
   const q = query(collection(db, 'users'), limit(20));
   onSnapshot(q, (snapshot) => {
     shareContactsList.innerHTML = '';
     snapshot.forEach(userSnap => {
       const u = userSnap.data();
       if (userSnap.id === currentUser.uid) return;
-      
       const row = document.createElement('div');
       row.className = 'share-contact-item';
       row.innerHTML = `
         <img src="${u.avatar || AVATARS[0]}" style="width:36px; height:36px; border-radius:50%">
         <span>${escapeHtml(u.displayName || 'Пользователь')}</span>
       `;
-      
       row.onclick = async () => {
         const chatRoomId = currentUser.uid < userSnap.id ? `${currentUser.uid}_${userSnap.id}` : `${userSnap.id}_${currentUser.uid}`;
         await addDoc(collection(db, 'messages'), {
@@ -1266,7 +1093,6 @@ function openShareContactSheet() {
           isRead: false,
           createdAt: serverTimestamp()
         });
-        
         shareContactSheet.classList.remove('active');
         showToast(`Отправлено пользователю ${u.displayName || 'Пользователь'}! ✈️`);
       };
@@ -1277,30 +1103,22 @@ function openShareContactSheet() {
 
 if (backdrop) backdrop.onclick = () => shareContactSheet?.classList.remove('active');
 
-
-/* ======================================================== */
-/* 🔔 МОДУЛЬ ИНТЕРАКТИВНЫХ УВЕДОМЛЕНИЙ ДЛЯ WOOPS           */
-/* ======================================================== */
-
-const notifyBtn = document.getElementById('header-notifications-btn');
-const notifyModal = document.getElementById('notifications-modal');
-const closeNotifyBtn = document.getElementById('close-notifications-btn');
-const notifyList = document.getElementById('notifications-list');
-const notifyBadge = document.getElementById('notifications-badge');
-const clearNotifyBtn = document.getElementById('clear-notifications-btn');
-const chatsBadge = document.getElementById('chats-badge');
-
+// ============================================
+// 🔔 УВЕДОМЛЕНИЯ
+// ============================================
 if (notifyBtn) {
   notifyBtn.onclick = () => {
     if (notifyModal) notifyModal.style.display = 'flex';
     markAllNotificationsAsRead();
   };
 }
+
 if (closeNotifyBtn) {
   closeNotifyBtn.onclick = () => {
     if (notifyModal) notifyModal.style.display = 'none';
   };
 }
+
 if (notifyModal) {
   notifyModal.onclick = (e) => {
     if (e.target === notifyModal) notifyModal.style.display = 'none';
@@ -1315,7 +1133,7 @@ window.sendPostNotification = async function(targetUserId, type, text, relatedId
       fromUserId: currentUser.uid,
       fromUserName: userProfile.displayName || 'Пользователь',
       fromUserAvatar: userProfile.avatar || AVATARS[0],
-      type: type, 
+      type: type,
       text: text,
       relatedId: relatedId,
       isRead: false,
@@ -1329,11 +1147,9 @@ window.sendPostNotification = async function(targetUserId, type, text, relatedId
 window.loadRealtimeNotifications = function() {
   if (!currentUser || !notifyList) return;
   const q = query(collection(db, 'notifications'), where('toUserId', '==', currentUser.uid), orderBy('createdAt', 'desc'), limit(25));
-
   onSnapshot(q, (snapshot) => {
     notifyList.innerHTML = '';
     let unreadCount = 0;
-
     if (snapshot.empty) {
       notifyList.innerHTML = `<div style="color: #888; text-align: center; padding: 20px;">Новых уведомлений пока нет 🏜️</div>`;
       if (notifyBadge) notifyBadge.style.display = 'none';
@@ -1367,7 +1183,8 @@ window.loadRealtimeNotifications = function() {
 
     if (notifyBadge) {
       if (unreadCount > 0) {
-        if (parseInt(notifyBadge.innerText || '0') < unreadCount) {
+        const currentBadge = parseInt(notifyBadge.innerText || '0');
+        if (currentBadge < unreadCount) {
           triggerNotificationEffects();
         }
         notifyBadge.innerText = unreadCount;
@@ -1394,7 +1211,7 @@ async function markAllNotificationsAsRead() {
     snapshot.forEach(async (docSnap) => {
       await updateDoc(doc(db, 'notifications', docSnap.id), { isRead: true });
     });
-  } catch(e) {}
+  } catch (e) {}
 }
 
 if (clearNotifyBtn) {
@@ -1406,14 +1223,13 @@ if (clearNotifyBtn) {
       snapshot.forEach(async (docSnap) => {
         await deleteDoc(doc(db, 'notifications', docSnap.id));
       });
-    } catch(e) {}
+    } catch (e) {}
   };
 }
 
 window.listenUnreadMessagesCount = function() {
   if (!currentUser || !chatsBadge) return;
   const q = query(collection(db, 'messages'), where('recipientId', '==', currentUser.uid), where('isRead', '==', false));
-
   onSnapshot(q, (snapshot) => {
     const count = snapshot.size;
     if (count > 0) {
@@ -1433,9 +1249,138 @@ window.markMessagesAsRead = async function(chatRoomId) {
     snap.forEach(async (docSnap) => {
       await updateDoc(doc(db, 'messages', docSnap.id), { isRead: true });
     });
-  } catch(e) {}
+  } catch (e) {}
 };
 
-// Инициализация
+// ============================================
+// 🛠️ УТИЛИТЫ И UI
+// ============================================
+function initEmojiPicker() {
+  if (!emojiPicker) return;
+  emojiPicker.innerHTML = '';
+  EMOJIS.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.textContent = emoji;
+    btn.onclick = () => {
+      const start = textInput.selectionStart;
+      textInput.value = textInput.value.slice(0, start) + emoji + textInput.value.slice(start);
+      textInput.focus();
+      emojiPicker.classList.remove('active');
+    };
+    emojiPicker.appendChild(btn);
+  });
+}
+
+if (emojiToggle) {
+  emojiToggle.onclick = (e) => {
+    e.stopPropagation();
+    if (emojiPicker) emojiPicker.classList.toggle('active');
+  };
+}
+
+document.addEventListener('click', (e) => {
+  if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiToggle) {
+    emojiPicker.classList.remove('active');
+  }
+});
+
+function showToast(message, type = 'success') {
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = `toast show ${type}`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatTime(timestamp) {
+  if (!timestamp) return '--:--';
+  try {
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    return '--:--';
+  }
+}
+
+function updateLastSeen() {
+  if (!currentUser) return;
+  if (lastSeenInterval) clearInterval(lastSeenInterval);
+  const sendPing = () => {
+    if (currentUser) {
+      updateDoc(doc(db, 'users', currentUser.uid), {
+        lastSeen: serverTimestamp(),
+        status: 'online'
+      }).catch((e) => console.error("Ошибка периодического пинга:", e));
+    }
+  };
+  sendPing();
+  lastSeenInterval = setInterval(sendPing, 45000);
+}
+
+navBtns.forEach(btn => {
+  btn.onclick = () => {
+    navBtns.forEach(b => b.classList.remove('active'));
+    tabs.forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const tabId = 'tab-' + btn.dataset.tab;
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) targetTab.classList.add('active');
+    const titles = { chats: 'Чаты', feed: 'Лента', profile: 'Профиль', contacts: 'Контакты', notes: 'Заметки' };
+    if (tabTitle) tabTitle.textContent = titles[btn.dataset.tab] || 'Woops';
+  };
+});
+
+function cleanupListeners() {
+  if (unsubChat) unsubChat();
+  if (unsubUsers) unsubUsers();
+  if (unsubFeed) unsubFeed();
+  if (unsubOwnProfile) unsubOwnProfile();
+  if (unsubComments) unsubComments();
+  if (lastSeenInterval) {
+    clearInterval(lastSeenInterval);
+    lastSeenInterval = null;
+  }
+}
+
+// ============================================
+// 🌓 ЛОГИКА СМЕНЫ ТЕМЫ
+// ============================================
+const savedTheme = localStorage.getItem('theme');
+const sunSvg = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`;
+const moonSvg = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+
+if (savedTheme === 'light') {
+  document.body.classList.add('light-theme');
+  if (themeToggle) themeToggle.innerHTML = sunSvg;
+} else {
+  if (themeToggle) themeToggle.innerHTML = moonSvg;
+}
+
+if (themeToggle) {
+  themeToggle.onclick = () => {
+    const isLight = document.body.classList.toggle('light-theme');
+    if (isLight) {
+      themeToggle.innerHTML = sunSvg;
+      localStorage.setItem('theme', 'light');
+      showToast('Включена дневная тема');
+    } else {
+      themeToggle.innerHTML = moonSvg;
+      localStorage.setItem('theme', 'dark');
+      showToast('Включена ночная тема');
+    }
+  };
+}
+
+// ============================================
+// 🚀 ИНИЦИАЛИЗАЦИЯ
+// ============================================
+initDynamicScreens();
 initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
+```
