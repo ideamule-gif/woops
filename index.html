@@ -3,157 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Быстрый, красивый и удобный мессенджер">
     <title>Woops Messenger</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#6366f1">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.19/index.min.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
+    <!-- Экран авторизации -->
     <div id="auth-screen" class="screen active">
         <div class="auth-card">
             <h2>Woops</h2>
             <p>Вход в аккаунт</p>
-            <input type="email" id="auth-email" placeholder="Email">
-            <input type="password" id="auth-password" placeholder="Пароль">
-            <div id="auth-error" class="error-text"></div>
+            <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
+            <input type="password" id="auth-password" placeholder="Пароль" autocomplete="current-password">
+            <p id="auth-error" class="error-text"></p>
             <button id="login-btn" class="btn primary full-width">Войти</button>
-            <button id="register-btn" class="btn secondary full-width" style="margin-top: 10px;">Регистрация</button>
+            <button id="register-btn" class="btn secondary full-width" style="margin-top: 12px;">Регистрация</button>
         </div>
     </div>
 
+    <!-- Основной экран -->
     <div id="main-screen" class="screen">
+        <!-- Верхняя панель -->
         <header class="main-header">
             <h1 id="tab-title">Чаты</h1>
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <button id="header-notifications-btn" class="icon-btn" title="Уведомления" style="position: relative;">
-                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    <span id="notifications-badge" style="display: none; position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; border-radius: 50%; padding: 1px 5px; min-width: 10px; text-align: center; line-height: 1.2;">0</span>
+            <div class="header-actions">
+                <button id="header-notifications-btn" class="icon-btn" style="position: relative;">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span id="notifications-badge" style="display: none; position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 99px; min-width: 16px; text-align: center;">0</span>
                 </button>
-
-                <button id="theme-toggle" class="icon-btn" title="Сменить тему">
-                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"/>
-                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                    </svg>
+                <button id="theme-toggle" class="icon-btn">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                 </button>
-
-                <button id="logout-btn" class="icon-btn" title="Выйти">
-                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 9 21 12 16 15"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
+                <button id="logout-btn" class="icon-btn">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 </button>
             </div>
         </header>
-        
+
+        <!-- Область контента (вкладки) -->
         <div class="tabs-container">
+            
+            <!-- Вкладка Чаты -->
             <div id="tab-chats" class="tab active">
                 <div class="search-bar">
-                    <input type="text" id="user-search" placeholder="Поиск по имени...">
+                    <input type="text" id="user-search" placeholder="Поиск пользователей...">
                 </div>
                 <ul id="chat-list" class="chat-list">
-                    <li id="chats-empty" class="empty-state">Пока никого нет.<br>Найдите друга через поиск! 🧐</li>
+                    <!-- Сюда JS будет добавлять пользователей -->
                 </ul>
+                <div id="chats-empty" class="empty-state" style="display: none;">Пока никого нет.<br>Найдите друга через поиск! 🧐</div>
             </div>
 
+            <!-- Вкладка Лента -->
             <div id="tab-feed" class="tab">
                 <div class="feed-composer">
-                    <textarea id="feed-input" placeholder="Что у вас нового? 📝" rows="3"></textarea>
+                    <textarea id="feed-input" placeholder="Что у вас нового?"></textarea>
                     <button id="post-btn" class="btn primary full-width">Опубликовать</button>
                 </div>
-                <div id="feed-list" class="feed-list"></div>
+                <div id="feed-list" class="feed-list">
+                    <!-- Сюда JS будет добавлять посты -->
+                </div>
             </div>
 
+            <!-- Вкладка Заметки -->
             <div id="tab-notes" class="tab">
-                <div id="notes-tab" style="display: flex; flex-direction: column; height: 100%;"></div>
+                <!-- JS динамически заполнит эту вкладку -->
+                <div id="notes-tab"></div>
             </div>
 
+            <!-- Вкладка Профиль -->
             <div id="tab-profile" class="tab">
                 <div class="profile-view">
-                    <img id="profile-avatar-view" class="avatar huge" src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" alt="Аватар">
-                    <h2 id="profile-name-view">Пользователь</h2>
-                    <p id="profile-status-view" class="text-muted">В сети</p>
+                    <div class="profile-header">
+                        <img id="profile-avatar-view" src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" alt="avatar" class="avatar huge">
+                        <h2 id="profile-name-view">Пользователь</h2>
+                        <p id="profile-status-view" class="text-muted">В сети</p>
+                    </div>
                     <div class="profile-actions">
-                        <button id="edit-profile" class="btn primary">Редактировать профиль</button>
-                        <button id="delete-profile-btn" class="btn danger">Удалить аккаунт</button>
+                        <button id="edit-profile" class="btn secondary full-width">Редактировать профиль</button>
+                        <button id="delete-profile-btn" class="btn danger full-width">Удалить аккаунт</button>
                     </div>
                 </div>
             </div>
+
         </div>
 
+        <!-- Нижняя навигация -->
         <nav class="nav-bar">
-            <button class="nav-btn active" data-tab="chats" style="position: relative;">
-                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
+            <button class="nav-btn active" data-tab="chats">
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 <span>Чаты</span>
-                <span id="chats-badge" style="display: none; position: absolute; top: 2px; right: 22px; background: #6366f1; color: white; font-size: 10px; font-weight: bold; border-radius: 50%; padding: 1px 5px; min-width: 10px; text-align: center; line-height: 1.2;">0</span>
+                <span id="chats-badge" style="display: none; position: absolute; top: 4px; right: 25%; background: #ef4444; color: white; font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 99px; min-width: 14px; text-align: center;">0</span>
             </button>
-
             <button class="nav-btn" data-tab="feed">
-                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="3" y1="9" x2="21" y2="9"/>
-                    <line x1="9" y1="21" x2="9" y2="9"/>
-                </svg>
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
                 <span>Лента</span>
             </button>
-
             <button class="nav-btn" data-tab="notes">
-                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                </svg>
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 <span>Заметки</span>
             </button>
-
             <button class="nav-btn" data-tab="profile">
-                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                </svg>
+                <svg class="nav-svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 <span>Профиль</span>
             </button>
         </nav>
     </div>
 
+    <!-- Экран чата -->
     <div id="chat-screen" class="screen">
         <header class="chat-header">
-            <button id="back-btn" class="icon-btn">←</button>
-            <img id="chat-avatar" class="avatar" src="" alt="">
+            <button id="back-btn" class="icon-btn">
+                <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <img id="chat-avatar" src="" alt="avatar" class="avatar">
             <div class="chat-info">
                 <h4 id="chat-name">Собеседник</h4>
                 <p id="chat-status">в сети</p>
             </div>
         </header>
         <div id="msg-area" class="msg-area"></div>
-        <footer class="chat-footer">
-            <button id="emoji-toggle" class="icon-btn">😊</button>
+        <div class="chat-footer">
+            <button id="emoji-toggle" class="icon-btn">
+                <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+            </button>
             <div class="input-wrapper">
-              <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off" autocorrect="off" autocapitalize="off">
+                <input type="text" id="text-input" placeholder="Сообщение..." autocomplete="off">
             </div>
-            <button id="send-btn" class="icon-btn send">➤</button>
-        </footer>
+            <button id="send-btn" class="icon-btn send">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
         <div id="emoji-picker" class="emoji-picker"></div>
     </div>
 
+    <!-- Модальное окно редактирования профиля -->
     <dialog id="profile-modal" class="modal">
         <div class="modal-box">
             <div class="modal-header">
                 <h3>Редактировать профиль</h3>
-                <button id="close-profile-modal" class="icon-btn">✕</button>
+                <button id="close-profile-modal" class="icon-btn">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             <div class="modal-body">
                 <label>Имя</label>
                 <input type="text" id="edit-name" placeholder="Ваше имя">
-                
                 <label>Статус</label>
                 <select id="edit-status">
                     <option value="online">В сети</option>
@@ -161,10 +160,8 @@
                     <option value="away">Отошёл</option>
                     <option value="offline">Не в сети</option>
                 </select>
-
                 <label>Текст статуса</label>
-                <input type="text" id="edit-status-text" placeholder="О себе...">
-
+                <input type="text" id="edit-status-text" placeholder="О чем вы думаете?">
                 <label>Аватар</label>
                 <div id="avatar-selector" class="avatar-selector"></div>
             </div>
@@ -175,14 +172,17 @@
         </div>
     </dialog>
 
+    <!-- Модальное окно редактирования поста -->
     <dialog id="edit-post-modal" class="modal">
         <div class="modal-box">
             <div class="modal-header">
                 <h3>Редактировать пост</h3>
-                <button id="close-edit-post-modal" class="icon-btn">✕</button>
+                <button id="close-edit-post-modal" class="icon-btn">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             <div class="modal-body">
-                <textarea id="edit-post-text" rows="4" placeholder="Текст поста..."></textarea>
+                <textarea id="edit-post-text" rows="4" placeholder="Текст поста"></textarea>
             </div>
             <div class="modal-footer">
                 <button id="cancel-edit-post" class="btn secondary">Отмена</button>
@@ -191,23 +191,38 @@
         </div>
     </dialog>
 
-    <div id="toast" class="toast"></div>
-
-    <div id="notifications-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
-        <div style="background: #1e1e1e; width: 90%; max-width: 400px; border-radius: 12px; display: flex; flex-direction: column; max-height: 80vh; box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <h3 style="margin: 0; font-size: 18px; color: #fff; font-family: sans-serif;">Уведомления</h3>
-                <button id="close-notifications-btn" style="background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 4px 8px;">✕</button>
+    <!-- Модальное окно уведомлений -->
+    <div id="notifications-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 999; align-items: center; justify-content: center;">
+        <div class="modal-box" style="max-height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3>Уведомления</h3>
+                <button id="close-notifications-btn" class="icon-btn">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
-            <div id="notifications-list" style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-                <div style="color: #888; text-align: center; padding: 20px; font-family: sans-serif;">Нет новых уведомлений</div>
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 16px;">
+                <div id="notifications-list">
+                    <div style="color: #888; text-align: center; padding: 20px;">Нет новых уведомлений</div>
+                </div>
             </div>
-            <div style="padding: 12px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.1);">
-                <button id="clear-notifications-btn" style="background: none; border: none; color: #6366f1; cursor: pointer; font-size: 14px; font-weight: 600;">Очистить всё</button>
+            <div class="modal-footer" style="border-top: 1px solid var(--glass-border);">
+                <button id="clear-notifications-btn" class="btn danger full-width">Очистить всё</button>
             </div>
         </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <!-- Тост (всплывающее уведомление) -->
+    <div id="toast" class="toast"></div>
+
+    <script src="./app.js" type="module"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW зарегистрирован:', reg.scope))
+                    .catch(err => console.log('Ошибка SW:', err));
+            });
+        }
+    </script>
 </body>
 </html>
