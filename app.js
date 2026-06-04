@@ -1,4 +1,3 @@
-```javascript
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, doc, setDoc, serverTimestamp, updateDoc, deleteDoc, limit, arrayUnion, arrayRemove, increment, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -85,7 +84,6 @@ let unsubOwnProfile = null;
 let userProfile = {};
 let selectedAvatar = '';
 let lastSeenInterval = null;
-
 let isGridView = true;
 let isSelectMode = false;
 let selectedNoteIds = new Set();
@@ -127,9 +125,7 @@ function initDynamicScreens() {
     commentScreen.id = 'comment-screen';
     commentScreen.className = 'screen';
     commentScreen.innerHTML = `
-      <header class="main-header">
-        <h2>Лента</h2>
-      </header>
+      <header class="main-header"><h2>Лента</h2></header>
       <div class="comment-nav-bar">
         <button id="comment-back-btn" class="comment-back-icon-btn">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -1383,4 +1379,3 @@ if (themeToggle) {
 initDynamicScreens();
 initEmojiPicker();
 console.log('%cWoops Messenger загружен успешно 🚀', 'color: #6366f1; font-weight: bold; font-size: 14px;');
-```
